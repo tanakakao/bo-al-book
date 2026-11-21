@@ -1,0 +1,6 @@
+:root { --bs-body-color: #192c3a; --bs-link-color: #17558b; }
+main.content { line-height: 1.8; }
+main.content h1, main.content h2 { color: #143c60; line-height: 1.45; }
+main.content h2 { margin-top: 2.1rem; }
+figcaption { color: #41586a; font-size: 0.9rem; }
+div.sourceCode { border-left: 3px solid #aac1d3; }

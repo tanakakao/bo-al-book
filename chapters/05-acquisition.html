@@ -1,0 +1,1170 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" lang="ja" xml:lang="ja"><head>
+
+<meta charset="utf-8">
+<meta name="generator" content="quarto-1.11.9">
+
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+
+<meta name="description" content="ガウス過程の基礎からベイズ最適化、能動学習、二値GP分類をPythonで学びます。">
+
+<title>第5章　獲得関数の理論 – Pythonで学ぶベイズ最適化と能動学習</title>
+<style>
+/* Default styles provided by pandoc.
+** See https://pandoc.org/MANUAL.html#variables-for-html for config info.
+*/
+span.smallcaps{font-variant: small-caps;}
+div.columns{display: flex; gap: 1.5em;}
+div.column{flex: auto;}
+@media screen {
+div.columns{gap: min(4vw, 1.5em);}
+div.column{overflow-x: auto;}
+}
+div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+ul.task-list{list-style: none;}
+ul.task-list li input[type="checkbox"] {
+  width: 0.8em;
+  margin: 0 0.8em 0.2em -1em; /* quarto-specific, see https://github.com/quarto-dev/quarto-cli/issues/4556 */ 
+  vertical-align: middle;
+}
+/* CSS for syntax highlighting */
+html { -webkit-text-size-adjust: 100%; }
+pre > code.sourceCode { white-space: pre; position: relative; }
+pre > code.sourceCode > span { display: inline-block; line-height: 1.25; }
+pre > code.sourceCode > span:empty { height: 1.2em; }
+.sourceCode { overflow: visible; }
+code.sourceCode > span { color: inherit; text-decoration: inherit; }
+div.sourceCode { margin: 1em 0; }
+pre.sourceCode { margin: 0; }
+@media screen {
+div.sourceCode { overflow: auto; }
+}
+@media print {
+pre > code.sourceCode { white-space: pre-wrap; }
+pre > code.sourceCode > span { text-indent: -5em; padding-left: 5em; }
+}
+pre.numberSource code
+  { counter-reset: source-line 0; }
+pre.numberSource code > span
+  { position: relative; left: -4em; counter-increment: source-line; }
+pre.numberSource code > span > a:first-child::before
+  { content: counter(source-line);
+    position: relative; left: -1em; text-align: right; vertical-align: baseline;
+    border: none; display: inline-block;
+    -webkit-touch-callout: none; -webkit-user-select: none;
+    -khtml-user-select: none; -moz-user-select: none;
+    -ms-user-select: none; user-select: none;
+    padding: 0 4px; width: 4em;
+  }
+pre.numberSource { margin-left: 3em;  padding-left: 4px; }
+div.sourceCode
+  {   }
+@media screen {
+pre > code.sourceCode > span > a:first-child::before { text-decoration: underline; }
+}
+/* CSS for citations */
+div.csl-bib-body { }
+div.csl-entry {
+  clear: both;
+}
+.hanging-indent div.csl-entry {
+  margin-left:2em;
+  text-indent:-2em;
+}
+div.csl-left-margin {
+  min-width:2em;
+  float:left;
+}
+div.csl-right-inline {
+  margin-left:2em;
+  padding-left:1em;
+}
+div.csl-indent {
+  margin-left: 2em;
+}</style>
+
+
+<script src="../site_libs/quarto-nav/quarto-nav.js"></script>
+<script src="../site_libs/quarto-nav/headroom.min.js"></script>
+<script src="../site_libs/clipboard/clipboard.min.js"></script>
+<script src="../site_libs/quarto-search/autocomplete.umd.js"></script>
+<script src="../site_libs/quarto-search/fuse.min.js"></script>
+<script src="../site_libs/quarto-search/quarto-search.js"></script>
+<meta name="quarto:offset" content="../">
+<link href="../chapters/06-bo-execution.html" rel="next">
+<link href="../chapters/04-gp-prediction.html" rel="prev">
+<script src="../site_libs/quarto-html/quarto.js" type="module"></script>
+<script src="../site_libs/quarto-html/tabsets/tabsets.js" type="module"></script>
+<script src="../site_libs/quarto-html/scrollable-regions/scrollable-regions.js" type="module"></script>
+<script src="../site_libs/quarto-html/popper.min.js"></script>
+<script src="../site_libs/quarto-html/tippy.umd.min.js"></script>
+<script src="../site_libs/quarto-html/anchor.min.js"></script>
+<link href="../site_libs/quarto-html/tippy.css" rel="stylesheet">
+<link href="../site_libs/quarto-html/quarto-syntax-highlighting-63b5708e65d6cd79cd7618c58d0c21e7.css" rel="stylesheet" id="quarto-text-highlighting-styles">
+<script src="../site_libs/bootstrap/bootstrap.min.js"></script>
+<link href="../site_libs/bootstrap/bootstrap-icons.css" rel="stylesheet">
+<link href="../site_libs/bootstrap/bootstrap-2b485985435918271ec255a9552b4d7e.min.css" rel="stylesheet" append-hash="true" id="quarto-bootstrap" data-mode="light">
+<script id="quarto-search-options" type="application/json">{
+  "location": "sidebar",
+  "copy-button": false,
+  "collapse-after": 3,
+  "panel-placement": "start",
+  "type": "textbox",
+  "limit": 50,
+  "keyboard-shortcut": [
+    "f",
+    "/",
+    "s"
+  ],
+  "show-item-context": false,
+  "language": {
+    "search-no-results-text": "一致なし",
+    "search-matching-documents-text": "一致した文書",
+    "search-copy-link-title": "検索へのリンクをコピー",
+    "search-hide-matches-text": "追加の検索結果を非表示",
+    "search-more-match-text": "追加の検索結果",
+    "search-more-matches-text": "追加の検索結果",
+    "search-clear-button-title": "消去",
+    "search-text-placeholder": "",
+    "search-detached-cancel-button-title": "取消",
+    "search-submit-button-title": "検索",
+    "search-label": "サーチ"
+  }
+}</script>
+
+  <script src="https://cdnjs.cloudflare.com/polyfill/v3/polyfill.min.js?features=es6"></script>
+  <script defer="" src="https://cdn.jsdelivr.net/npm/mathjax@4/tex-chtml.js" type="text/javascript"></script>
+
+<script type="text/javascript">
+const typesetMath = (el) => {
+  if (window.MathJax) {
+    // MathJax Typeset
+    window.MathJax.typeset([el]);
+  } else if (window.katex) {
+    // KaTeX Render
+    var mathElements = el.getElementsByClassName("math");
+    var macros = [];
+    for (var i = 0; i < mathElements.length; i++) {
+      var texText = mathElements[i].firstChild;
+      if (mathElements[i].tagName == "SPAN" && texText && texText.data) {
+        window.katex.render(texText.data, mathElements[i], {
+          displayMode: mathElements[i].classList.contains('display'),
+          throwOnError: false,
+          macros: macros,
+          fleqn: false
+        });
+      }
+    }
+  }
+}
+window.Quarto = {
+  typesetMath
+};
+</script>
+
+<link rel="stylesheet" href="../book.css">
+</head>
+
+<body class="nav-sidebar floating quarto-light"><a id="quarto-skip-link" class="visually-hidden-focusable" href="#quarto-document-content">メインコンテンツにスキップ</a>
+
+<div id="quarto-search-results"></div>
+  <header id="quarto-header" class="headroom fixed-top">
+  <nav class="quarto-secondary-nav" aria-label="ツールバー">
+    <div class="container-fluid d-flex">
+      <button type="button" class="quarto-btn-toggle btn" data-bs-toggle="collapse" role="button" data-bs-target=".quarto-sidebar-collapse-item" aria-controls="quarto-sidebar" aria-expanded="false" aria-label="サイドバーを切り替える" onclick="if (window.quartoToggleHeadroom) { window.quartoToggleHeadroom(); }">
+        <i class="bi bi-layout-text-sidebar-reverse"></i>
+      </button>
+        <nav class="quarto-page-breadcrumbs" aria-label="パンくずリスト"><ol class="breadcrumb"><li class="breadcrumb-item"><a href="../chapters/05-acquisition.html">第III部 ベイズ最適化の基礎</a></li><li class="breadcrumb-item"><a href="../chapters/05-acquisition.html"><span class="chapter-title">第5章　獲得関数の理論</span></a></li></ol></nav>
+        <a class="flex-grow-1" data-bs-toggle="collapse" data-bs-target=".quarto-sidebar-collapse-item" onclick="if (window.quartoToggleHeadroom) { window.quartoToggleHeadroom(); }">      
+        </a>
+      <button type="button" class="btn quarto-search-button" aria-label="サーチ" onclick="window.quartoOpenSearch();">
+        <i class="bi bi-search"></i>
+      </button>
+    </div>
+  </nav>
+</header>
+<!-- content -->
+<div id="quarto-content" class="quarto-container page-columns page-rows-contents page-layout-article">
+<!-- sidebar -->
+  <nav id="quarto-sidebar" class="sidebar collapse collapse-horizontal quarto-sidebar-collapse-item sidebar-navigation floating overflow-auto" aria-label="ウェブサイト">
+    <div class="pt-lg-2 mt-2 text-left sidebar-header">
+    <div class="sidebar-title mb-0 py-0">
+      <a href="../">Pythonで学ぶベイズ最適化と能動学習</a> 
+        <div class="sidebar-tools-main">
+    <a href="../BO_AL_book_vol1_v1.0.0.pdf" title="Download PDF" class="quarto-navigation-tool px-1" aria-label="Download PDF"><i class="bi bi-file-pdf"></i></a>
+</div>
+    </div>
+      </div>
+        <div class="mt-2 flex-shrink-0 align-items-center">
+        <div class="sidebar-search">
+        <div id="quarto-search" class="" title="サーチ"></div>
+        </div>
+        </div>
+    <div class="sidebar-menu-container"> 
+    <ul class="list-unstyled mt-1">
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../index.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">はじめに</span></a>
+  </div>
+</li>
+        <li class="sidebar-item sidebar-item-section">
+      <div class="sidebar-item-container"> 
+            <button type="button" class="sidebar-item-text sidebar-item-toggle sidebar-link text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-1" aria-controls="quarto-sidebar-section-1" aria-expanded="true">
+ <span class="menu-text" id="quarto-sidebar-section-1-label">第I部 ベイズ最適化への導入</span><i class="bi bi-chevron-right" aria-hidden="true"></i></button>
+      </div>
+      <ul id="quarto-sidebar-section-1" aria-labelledby="quarto-sidebar-section-1-label" class="collapse list-unstyled sidebar-section depth1 show">  
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../chapters/01-bayesian-optimization.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">第1章　ベイズ最適化とは何か</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../chapters/02-probability.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">第2章　確率・統計・ベイズ推論の基礎</span></a>
+  </div>
+</li>
+      </ul>
+  </li>
+        <li class="sidebar-item sidebar-item-section">
+      <div class="sidebar-item-container"> 
+            <button type="button" class="sidebar-item-text sidebar-item-toggle sidebar-link text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-2" aria-controls="quarto-sidebar-section-2" aria-expanded="true">
+ <span class="menu-text" id="quarto-sidebar-section-2-label">第II部 ガウス過程回帰</span><i class="bi bi-chevron-right" aria-hidden="true"></i></button>
+      </div>
+      <ul id="quarto-sidebar-section-2" aria-labelledby="quarto-sidebar-section-2-label" class="collapse list-unstyled sidebar-section depth1 show">  
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../chapters/03-gp-basics.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">第3章　ガウス過程の基礎</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../chapters/04-gp-prediction.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">第4章　ガウス過程による予測</span></a>
+  </div>
+</li>
+      </ul>
+  </li>
+        <li class="sidebar-item sidebar-item-section">
+      <div class="sidebar-item-container"> 
+            <button type="button" class="sidebar-item-text sidebar-item-toggle sidebar-link text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-3" aria-controls="quarto-sidebar-section-3" aria-expanded="true">
+ <span class="menu-text" id="quarto-sidebar-section-3-label">第III部 ベイズ最適化の基礎</span><i class="bi bi-chevron-right" aria-hidden="true"></i></button>
+      </div>
+      <ul id="quarto-sidebar-section-3" aria-labelledby="quarto-sidebar-section-3-label" class="collapse list-unstyled sidebar-section depth1 show">  
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../chapters/05-acquisition.html" class="sidebar-item-text sidebar-link active"><span class="chapter-title">第5章　獲得関数の理論</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../chapters/06-bo-execution.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">第6章　ベイズ最適化の実行</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../chapters/07-practical-bo.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">第7章　ベイズ最適化の実践上の課題</span></a>
+  </div>
+</li>
+      </ul>
+  </li>
+        <li class="sidebar-item sidebar-item-section">
+      <div class="sidebar-item-container"> 
+            <button type="button" class="sidebar-item-text sidebar-item-toggle sidebar-link text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-4" aria-controls="quarto-sidebar-section-4" aria-expanded="true">
+ <span class="menu-text" id="quarto-sidebar-section-4-label">第IV部 能動学習と分類</span><i class="bi bi-chevron-right" aria-hidden="true"></i></button>
+      </div>
+      <ul id="quarto-sidebar-section-4" aria-labelledby="quarto-sidebar-section-4-label" class="collapse list-unstyled sidebar-section depth1 show">  
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../chapters/08-active-learning.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">第8章　能動学習の基礎</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../chapters/09-gp-classification.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">第9章　ガウス過程による分類</span></a>
+  </div>
+</li>
+      </ul>
+  </li>
+        <li class="sidebar-item sidebar-item-section">
+      <div class="sidebar-item-container"> 
+            <button type="button" class="sidebar-item-text sidebar-item-toggle sidebar-link text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-5" aria-controls="quarto-sidebar-section-5" aria-expanded="true">
+ <span class="menu-text" id="quarto-sidebar-section-5-label">第V部 実践と発展</span><i class="bi bi-chevron-right" aria-hidden="true"></i></button>
+      </div>
+      <ul id="quarto-sidebar-section-5" aria-labelledby="quarto-sidebar-section-5-label" class="collapse list-unstyled sidebar-section depth1 show">  
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../chapters/10-practical-application.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">第10章　実問題への適用</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../chapters/11-advanced-topics.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">第11章　ベイズ最適化・能動学習の発展</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../chapters/12-method-selection.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">第12章　まとめと次の学習</span></a>
+  </div>
+</li>
+      </ul>
+  </li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../references.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">参考文献</span></a>
+  </div>
+</li>
+        <li class="sidebar-item sidebar-item-section">
+      <div class="sidebar-item-container"> 
+            <button type="button" class="sidebar-item-text sidebar-item-toggle sidebar-link text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-6" aria-controls="quarto-sidebar-section-6" aria-expanded="true">
+ <span class="menu-text" id="quarto-sidebar-section-6-label">付録</span><i class="bi bi-chevron-right" aria-hidden="true"></i></button>
+      </div>
+      <ul id="quarto-sidebar-section-6" aria-labelledby="quarto-sidebar-section-6-label" class="collapse list-unstyled sidebar-section depth1 show">  
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../appendices/exercises.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">章末演習の解答・解説</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../appendices/term-index.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">索引</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../appendices/colophon.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">奥付・引用方法</span></a>
+  </div>
+</li>
+      </ul>
+  </li>
+    </ul>
+    </div>
+</nav>
+<div id="quarto-sidebar-glass" class="quarto-sidebar-collapse-item" data-bs-toggle="collapse" data-bs-target=".quarto-sidebar-collapse-item"></div>
+<!-- margin-sidebar -->
+    <div id="quarto-margin-sidebar" class="sidebar margin-sidebar">
+        <nav id="TOC" role="doc-toc" aria-labelledby="toc-title" class="toc-active">
+    <h2 id="toc-title">目次</h2>
+   
+  <ul class="collapse">
+  <li><a href="#sec-acq-first-run" id="toc-sec-acq-first-run" class="nav-link active" data-scroll-target="#sec-acq-first-run">5.1 同じ事後で候補を提案する</a></li>
+  <li><a href="#ix-section-5-2" id="toc-ix-section-5-2" class="nav-link" data-scroll-target="#ix-section-5-2">5.2 改善したかどうかを数えるPI</a></li>
+  <li><a href="#ix-section-5-3" id="toc-ix-section-5-3" class="nav-link" data-scroll-target="#ix-section-5-3">5.3 期待値からEIを導く</a></li>
+  <li><a href="#ix-section-5-4" id="toc-ix-section-5-4" class="nav-link" data-scroll-target="#ix-section-5-4">5.4 UCBで探索の重みを変える</a></li>
+  <li><a href="#ix-section-5-5" id="toc-ix-section-5-5" class="nav-link" data-scroll-target="#ix-section-5-5">5.5 LogEIで浮動小数点の影響を調べる</a></li>
+  <li><a href="#ix-section-5-6" id="toc-ix-section-5-6" class="nav-link" data-scroll-target="#ix-section-5-6">5.6 ノイズ、バッチ、最適化の限界</a></li>
+  <li><a href="#章末演習" id="toc-章末演習" class="nav-link" data-scroll-target="#章末演習">5.7 章末演習</a></li>
+  <li><a href="#まとめと次のステップ" id="toc-まとめと次のステップ" class="nav-link" data-scroll-target="#まとめと次のステップ">まとめと次のステップ</a></li>
+  </ul>
+</nav>
+    </div>
+<!-- main -->
+<main class="content" id="quarto-document-content" tabindex="-1">
+
+<header id="title-block-header" class="quarto-title-block default"><nav class="quarto-page-breadcrumbs quarto-title-breadcrumbs d-none d-lg-block" aria-label="パンくずリスト"><ol class="breadcrumb"><li class="breadcrumb-item"><a href="../chapters/05-acquisition.html">第III部 ベイズ最適化の基礎</a></li><li class="breadcrumb-item"><a href="../chapters/05-acquisition.html"><span class="chapter-title">第5章　獲得関数の理論</span></a></li></ol></nav>
+<div class="quarto-title">
+<h1 class="title"><span id="sec-acquisition" class="quarto-section-identifier"><span class="chapter-title">第5章　獲得関数の理論</span></span></h1>
+</div>
+
+
+
+<div class="quarto-title-meta">
+
+    
+  
+    
+  </div>
+  
+
+
+</header>
+
+
+<p>この章では、<strong>次に一回だけ測れるとき、何を根拠に温度を選ぶか</strong>を考えます。前章のGPから得た同じ予測分布で、改善確率（PI）、期待改善量（EI）、上側信頼限界（UCB）を比較します。EIは期待値の定義から導き、計算機で値がゼロに丸まる領域をLogEIで調べます。</p>
+<section id="sec-acq-first-run" class="level2">
+<h2 class="anchored" data-anchor-id="sec-acq-first-run">5.1 同じ事後で候補を提案する</h2>
+<p>仮想材料の強度を最大化します。使える入力は <a href="../chapters/04-gp-prediction.html#sec-gp-first-run">第4章</a> と同じ正規化温度 <span class="math inline">\(x\in[0,1]\)</span> です。獲得関数 <span class="math inline">\(a(x)\)</span> は、現在の情報を使って、温度 <span class="math inline">\(x\)</span> を<strong>次に測る価値</strong>を数値にしたものです。</p>
+<p>6点の観測データを <span class="math inline">\(\mathcal D=\{(x_i,y_i)\}_{i=1}^6\)</span>、候補温度での潜在強度を <span class="math inline">\(F_x=f(x)\)</span> とします。GPによる単点事後分布は <span class="math inline">\(F_x\mid\mathcal D\sim\mathcal N(\mu(x),\sigma^2(x))\)</span> です。<span class="math inline">\(\mu(x)\)</span> と <span class="math inline">\(\sigma(x)\)</span> は <a href="../chapters/04-gp-prediction.html#sec-gp-observation-interval">第4章の予測区間</a> で青い帯に使った平均と標準偏差です。今回の設定では、例えば次の値を両章で共有しています。</p>
+<p>正規化温度 <span class="math inline">\(x=0.50\)</span>（160 °C）の潜在強度は、事後平均 <strong>75.56 MPa</strong>、標準偏差 <strong>2.00 MPa</strong> です。この二つの値を出発点にすると、同じ温度について予測した強度を次の測定候補の評価に使えます。</p>
+<p>改善の基準値を <span class="math inline">\(b\)</span> と書きます。この例では、観測最大値を固定した <span class="math inline">\(b\)</span> として使います。測定ノイズの影響で観測最大値と測定済み温度の潜在強度の最大値には差が出ることがあります。第5.6節で、この差が候補選びに与える影響を扱います。</p>
+<p><a href="../notebooks/ch05_acquisition.ipynb">第5章のNotebook</a>では、予測分布を渡し、公開の獲得関数で候補を提案します。</p>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb1"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> torch</span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> botorch.acquisition.analytic <span class="im">import</span> (</span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a>    LogExpectedImprovement, ProbabilityOfImprovement, UpperConfidenceBound,</span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a>)</span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> robotorchan.optim <span class="im">import</span> optimize_acqf</span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> experiment <span class="im">import</span> DTYPE, fit_material_gp, observations, setup</span>
+<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a>setup()</span>
+<span id="cb1-9"><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a>train_x, train_y, train_yvar <span class="op">=</span> observations()</span>
+<span id="cb1-10"><a href="#cb1-10" aria-hidden="true" tabindex="-1"></a>model <span class="op">=</span> fit_material_gp(train_x, train_y, train_yvar)</span>
+<span id="cb1-11"><a href="#cb1-11" aria-hidden="true" tabindex="-1"></a>best_f <span class="op">=</span> train_y.<span class="bu">max</span>()</span>
+<span id="cb1-12"><a href="#cb1-12" aria-hidden="true" tabindex="-1"></a>bounds <span class="op">=</span> torch.tensor([[<span class="fl">0.0</span>], [<span class="fl">1.0</span>]], dtype<span class="op">=</span>DTYPE)</span>
+<span id="cb1-13"><a href="#cb1-13" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-14"><a href="#cb1-14" aria-hidden="true" tabindex="-1"></a>acquisitions <span class="op">=</span> {</span>
+<span id="cb1-15"><a href="#cb1-15" aria-hidden="true" tabindex="-1"></a>    <span class="st">"PI"</span>: ProbabilityOfImprovement(model, best_f<span class="op">=</span>best_f),</span>
+<span id="cb1-16"><a href="#cb1-16" aria-hidden="true" tabindex="-1"></a>    <span class="st">"LogEI"</span>: LogExpectedImprovement(model, best_f<span class="op">=</span>best_f),</span>
+<span id="cb1-17"><a href="#cb1-17" aria-hidden="true" tabindex="-1"></a>    <span class="st">"UCB"</span>: UpperConfidenceBound(model, beta<span class="op">=</span><span class="fl">4.0</span>),</span>
+<span id="cb1-18"><a href="#cb1-18" aria-hidden="true" tabindex="-1"></a>}</span></code></pre></div><button title="コピー" class="code-copy-button"><i class="bi"></i></button></div>
+<p>次に、3つの基準それぞれで測定候補を1点求めます。EIの候補計算には対数スコアのLogEIを使い、図の縦軸は元のEI [MPa] で表示します。</p>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb2"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="cf">for</span> name, acquisition <span class="kw">in</span> acquisitions.items():</span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a>    candidate, _ <span class="op">=</span> optimize_acqf(</span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a>        acquisition, bounds, q<span class="op">=</span><span class="dv">1</span>, num_restarts<span class="op">=</span><span class="dv">8</span>,</span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a>        raw_samples<span class="op">=</span><span class="dv">128</span>, options<span class="op">=</span>{<span class="st">"seed"</span>: <span class="dv">2026</span>},</span>
+<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a>    )</span>
+<span id="cb2-6"><a href="#cb2-6" aria-hidden="true" tabindex="-1"></a>    <span class="bu">print</span>(name, candidate.item())</span></code></pre></div><button title="コピー" class="code-copy-button"><i class="bi"></i></button></div>
+<p>このコードが返すのは、獲得関数を大きくする<strong>次の測定候補</strong>です。探索中に評価するのはGPが予測した分布と獲得関数で、実測は候補が決まった後に行います。<code>optimize_acqf</code> の出力から候補を受け取り、温度の数値を °C で求めるときは <span class="math inline">\(140+40x\)</span> を使います。</p>
+<div id="fig-acq-comparison" class="quarto-float quarto-figure quarto-figure-center anchored" data-fig-pos="!ht">
+<figure class="quarto-float quarto-float-fig figure">
+<div aria-describedby="fig-acq-comparison-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+<img src="../figures/ch05_acquisition_comparison.svg" class="img-fluid figure-img" style="width:83.0%" data-fig-pos="!ht">
+</div>
+<figcaption class="quarto-float-caption-bottom quarto-float-caption quarto-float-fig" id="fig-acq-comparison-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+図&nbsp;5.1: 同じ潜在事後から得た3つのスコア。破線は0.0025間隔の描画グリッド上での最大、丸印は連続最適化で得た候補。丸と破線が近い場合は重なって見える。各パネルの縦軸は意味と単位が異なる。
+</figcaption>
+</figure>
+</div>
+<p>閾値はこの実行で約 <strong>83.063 MPa</strong> です。</p>
+<table class="caption-top table">
+<thead>
+<tr class="header">
+<th>獲得関数</th>
+<th style="text-align: right;">グリッド最大 <span class="math inline">\(x\)</span></th>
+<th style="text-align: right;">連続最適化の <span class="math inline">\(x\)</span></th>
+<th style="text-align: right;">温度 [°C]</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>PI</td>
+<td style="text-align: right;">0.2975</td>
+<td style="text-align: right;">0.2977</td>
+<td style="text-align: right;">151.91</td>
+</tr>
+<tr class="even">
+<td>EI</td>
+<td style="text-align: right;">0.3025</td>
+<td style="text-align: right;">0.3017</td>
+<td style="text-align: right;">152.07</td>
+</tr>
+<tr class="odd">
+<td>UCB</td>
+<td style="text-align: right;">0.3075</td>
+<td style="text-align: right;">0.3074</td>
+<td style="text-align: right;">152.30</td>
+</tr>
+</tbody>
+</table>
+<p>この実行では3つとも同じ強度の山を選びました。基準によって判断が分かれる場合は、第5.3節の二候補で確かめます。</p>
+<p>グリッド入力の形は <code>(401, 1, 1)</code> です。先頭の401は比較する候補組の数、二番目の1が同時に選ぶ点数 <span class="math inline">\(q\)</span>、最後の1が入力の列数 <span class="math inline">\(d\)</span> です。一般に、<span class="math inline">\(B\)</span> 組の候補を一度に採点するテンソルは <span class="math inline">\((B,q,d)\)</span> です。APIが返す候補の形はこの例では <code>(1, 1)</code> です。<span class="math inline">\(q=1\)</span> は一つの温度を提案する設定です。候補の微小な差を読むときは、図のグリッド間隔と連続ソルバーの違いにも注意します。</p>
+</section>
+<section id="ix-section-5-2" class="level2">
+<h2 class="anchored" data-anchor-id="ix-section-5-2">5.2 改善したかどうかを数えるPI</h2>
+<p>標準正規分布の密度を <span class="math inline">\(\phi(t)=(2\pi)^{-1/2}\exp(-t^2/2)\)</span>、累積分布関数を <span class="math inline">\(\Phi(t)=\int_{-\infty}^{t}\phi(v)\,dv\)</span> とします。固定した候補 <span class="math inline">\(x\)</span> で <span class="math inline">\(\sigma(x)&gt;0\)</span> なら、以下では <span class="math inline">\(\mu=\mu(x)\)</span>、<span class="math inline">\(\sigma=\sigma(x)\)</span>、<span class="math inline">\(z=(\mu-b)/\sigma\)</span> と略記します。PIは「潜在値が閾値を上回る」確率です。</p>
+<p><span id="eq-pi"><span class="math display">\[
+\begin{aligned}
+\mathrm{PI}(x)&amp;=P(F_x&gt;b\mid\mathcal D)\\
+             &amp;=P\!\left(\frac{F_x-\mu}{\sigma}&gt;\frac{b-\mu}{\sigma}\right)\\
+             &amp;=1-\Phi(-z)=\Phi(z).
+\end{aligned}
+\tag{5.1}\]</span></span></p>
+<p>第4章から引き継いだ <span class="math inline">\(x=0.50\)</span> の値と、この実験の基準値 <span class="math inline">\(b=83.063\)</span> MPa を使います。丸め前の数値で <span class="math inline">\(z\approx -3.746\)</span>、<span class="math inline">\(\mathrm{PI}=0.000090\)</span>（約 0.009%）です。標準正規分布の累積確率とBoTorchの計算を同じ入力で照合しています。</p>
+<p>PIが数えるのは、潜在強度が基準を超える確率です。<a href="#fig-improvement-tails" class="quarto-xref">図&nbsp;<span>5.2</span></a> では、縦線の右側にある色付きの面積として読めます。たとえば、<span class="math inline">\(\mu&gt;b\)</span> の候補の <span class="math inline">\(\sigma\)</span> を小さくすると <span class="math inline">\(z\)</span> は大きくなり、PIは1に近づきます。逆に <span class="math inline">\(\mu&lt;b\)</span> の候補では、同じ <span class="math inline">\(\mu\)</span> なら <span class="math inline">\(\sigma\)</span> が大きい方がPIは高くなります。<span class="math inline">\(\sigma=0\)</span> の場合、<span class="math inline">\(F_x\)</span> は定数 <span class="math inline">\(\mu\)</span> になるので、厳密不等号を使うPIは <span class="math inline">\(\mu&gt;b\)</span> のとき1、その他は0です。特に <span class="math inline">\(\mu=b\)</span> を保ったまま正の <span class="math inline">\(\sigma\)</span> をゼロへ近づけると <span class="math inline">\(\Phi(0)=0.5\)</span> であり、点質量での確率とは挙動が異なります。</p>
+</section>
+<section id="ix-section-5-3" class="level2">
+<h2 class="anchored" data-anchor-id="ix-section-5-3">5.3 期待値からEIを導く</h2>
+<p>期待改善量は、改善したときの大きさも数えます。<span class="math inline">\((u)_+=\max(u,0)\)</span> として、<span class="math inline">\(F_x\)</span> の改善量を <span class="math inline">\((F_x-b)_+\)</span> と置きます。<span class="math inline">\(\sigma&gt;0\)</span> のとき、<span class="math inline">\(F_x=\mu+\sigma Z\)</span>、<span class="math inline">\(Z\sim\mathcal N(0,1)\)</span> と書けます。改善量が正になる領域は <span class="math inline">\(Z&gt;-z\)</span> です。</p>
+<p><span id="eq-ei"><span class="math display">\[
+\begin{aligned}
+\mathrm{EI}(x)
+&amp;=\mathbb E[(F_x-b)_+\mid \mathcal D]\\
+&amp;=\int_{-z}^{\infty}(\mu-b+\sigma t)\phi(t)\,dt\\
+&amp;=(\mu-b)\int_{-z}^{\infty}\phi(t)\,dt
+    +\sigma\int_{-z}^{\infty}t\phi(t)\,dt\\
+&amp;=(\mu-b)\Phi(z)+\sigma\phi(z).
+\end{aligned}
+\tag{5.2}\]</span></span></p>
+<p>最後の行は、<span class="math inline">\(\int_{-z}^{\infty}\phi(t)\,dt=\Phi(z)\)</span> と、<span class="math inline">\(\phi'(t)=-t\phi(t)\)</span> により <span class="math inline">\(\int_{-z}^{\infty}t\phi(t)\,dt=\phi(-z)=\phi(z)\)</span> になることを使いました。<span class="math inline">\(\sigma=0\)</span> では定義から <span class="math inline">\(\mathrm{EI}(x)=(\mu-b)_+\)</span> です。固定 <span class="math inline">\(\mu,b\)</span> で正の <span class="math inline">\(\sigma\)</span> をゼロへ近づけても同じ値に収束します。ここでは最大化を採用しており、最小化では改善量を <span class="math inline">\((b-F_x)_+\)</span> と定義します <span class="citation" data-cites="jones1998">(<a href="../references.html#ref-jones1998" role="doc-biblioref">Jones ほか 1998年</a>)</span>。</p>
+<p>EIの単位は元の強度と同じ MPa です。たとえば <span class="math inline">\(\mu=b\)</span> ならPIは <span class="math inline">\(1/2\)</span> で、EIは <span class="math inline">\(\sigma/\sqrt{2\pi}\)</span> です。改善の確率が同じでも、改善した場合の幅が大きい候補のEIが高くなります。逆に <span class="math inline">\(\mu&lt;b\)</span> のとき第1項は負になります。2項で非負の期待改善量を表すので、個々の項を独立した報酬として足し合わせるという読み方は避けます。この点は数値精度にも関係します。</p>
+<section id="sec-acq-worked-example" class="level3">
+<h3 class="anchored" data-anchor-id="sec-acq-worked-example">二候補の順位が入れ替わる場合</h3>
+<p>ここでは二つの温度で得られたと仮定する<strong>潜在強度の周辺分布</strong>を比べます。改善の基準値は <span class="math inline">\(b=80\)</span> MPa です。Aは平均が高く予測が集中しています。Bは平均が低く、予測のばらつきが大きい候補です。二候補の平均と標準偏差は、判断の違いを見やすくするために指定しました。</p>
+<div id="fig-improvement-tails" class="quarto-float quarto-figure quarto-figure-center anchored" data-fig-pos="!ht">
+<figure class="quarto-float quarto-float-fig figure">
+<div aria-describedby="fig-improvement-tails-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+<img src="../figures/ch05_improvement_tails.svg" class="img-fluid figure-img" style="width:96.0%" data-fig-pos="!ht">
+</div>
+<figcaption class="quarto-float-caption-bottom quarto-float-caption quarto-float-fig" id="fig-improvement-tails-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+図&nbsp;5.2: 潜在強度の確率密度と改善の基準値。色付きで示した右裾全体の面積がPI。EIはこの範囲の各強度に、基準を超えた量を掛けて積分する。二つのパネルで横軸と縦軸の尺度を揃えた。
+</figcaption>
+</figure>
+</div>
+<table class="caption-top table">
+<colgroup>
+<col style="width: 13%">
+<col style="width: 17%">
+<col style="width: 17%">
+<col style="width: 17%">
+<col style="width: 17%">
+<col style="width: 17%">
+</colgroup>
+<thead>
+<tr class="header">
+<th>候補</th>
+<th style="text-align: right;">平均 [MPa]</th>
+<th style="text-align: right;">標準偏差 [MPa]</th>
+<th style="text-align: right;">PI</th>
+<th style="text-align: right;">EI [MPa]</th>
+<th style="text-align: right;">改善した場合の平均改善量 [MPa]</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>A</td>
+<td style="text-align: right;">81.5</td>
+<td style="text-align: right;">1.0</td>
+<td style="text-align: right;">0.933</td>
+<td style="text-align: right;">1.529</td>
+<td style="text-align: right;">1.639</td>
+</tr>
+<tr class="even">
+<td>B</td>
+<td style="text-align: right;">79.0</td>
+<td style="text-align: right;">6.0</td>
+<td style="text-align: right;">0.434</td>
+<td style="text-align: right;">1.927</td>
+<td style="text-align: right;">4.442</td>
+</tr>
+</tbody>
+</table>
+<p>EIを「改善確率 <span class="math inline">\(\times\)</span> 改善した場合の平均改善量」と考えると、二候補の違いを説明できます。<span class="math inline">\(P(F_x&gt;b\mid\mathcal D)&gt;0\)</span> のとき、期待値を改善の有無で分けると、改善しない場合の項がゼロになるためです。Aは基準を超えやすく、Bは基準を超えた場合の伸びが大きい候補です。Notebookでは、色付き部分の面積を正規分布の右裾確率で計算し、EIは超過量を重みにした数値積分で求めます。</p>
+</section>
+<section id="数値積分およびbotorchとの照合" class="level3">
+<h3 class="anchored" data-anchor-id="数値積分およびbotorchとの照合">数値積分およびBoTorchとの照合</h3>
+<p>Notebookでは、<span class="math inline">\(-5\le z\le 5\)</span> の描画点を選び、<a href="#eq-ei" class="quarto-xref">式&nbsp;<span>5.2</span></a> の閉形式、SciPyの積分、BoTorchの <code>ExpectedImprovement</code> を比較します。さらに、BoTorchの <code>ProbabilityOfImprovement</code> と <span class="math inline">\(\Phi(z)\)</span>、安定な領域で <span class="math inline">\(\log(\mathrm{EI})\)</span> と <code>LogExpectedImprovement</code> を照合します。実験の許容誤差と実測差は教材の検証記録にあります。実際の候補選択は公開最適化APIで行います。検算時は閾値も入力と同じ倍精度のテンソルで渡し、丸めによる閾値の差を避けています。</p>
+</section>
+</section>
+<section id="ix-section-5-4" class="level2">
+<h2 class="anchored" data-anchor-id="ix-section-5-4">5.4 UCBで探索の重みを変える</h2>
+<p>この章で使うUCBは、平均に標準偏差の重み付きの値を足します。</p>
+<p><span id="eq-ucb"><span class="math display">\[
+\mathrm{UCB}_\beta(x)=\mu(x)+\sqrt{\beta}\,\sigma(x),\qquad \beta\ge 0.
+\tag{5.3}\]</span></span></p>
+<p><span class="math inline">\(\beta\)</span> は無次元です。<span class="math inline">\(\beta=0\)</span> なら事後平均の最大を選び、値を大きくすると標準偏差が大きい場所も有力になります。正の標準偏差を持つ単点正規分布では、UCBは分位点 <span class="math inline">\(\Phi(\sqrt{\beta})\)</span> に対応します。<span class="math inline">\(\beta=4\)</span> の <span class="math inline">\(\sqrt{\beta}=2\)</span> は片側で約97.7%に相当します。同時の確率保証や、未知関数が必ずUCBより下にあることをこの解釈から導くことはできません。原著GP-UCBの理論では、<span class="math inline">\(\beta\)</span> の設定や問題の仮定が後悔の評価に関わります <span class="citation" data-cites="srinivas2010">(<a href="../references.html#ref-srinivas2010" role="doc-biblioref">Srinivas ほか 2010年</a>)</span>。</p>
+<div id="fig-ucb-sensitivity" class="quarto-float quarto-figure quarto-figure-center anchored">
+<figure class="quarto-float quarto-float-fig figure">
+<div aria-describedby="fig-ucb-sensitivity-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+<img src="../figures/ch05_ucb_sensitivity.svg" class="img-fluid figure-img" style="width:94.0%">
+</div>
+<figcaption class="quarto-float-caption-bottom quarto-float-caption quarto-float-fig" id="fig-ucb-sensitivity-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+図&nbsp;5.3: UCBの係数を変えた感度比較。各色の点は対応する係数で連続最適化した候補。この例で候補は同じ強度の山の周辺を少しずつ移動した。
+</figcaption>
+</figure>
+</div>
+<p>曲線上の点が左から右へ単調に移動する必要はありません。<span class="math inline">\(\beta\)</span> は温度を直接動かす値ではなく、平均と標準偏差に異なる重みをかける値です。候補が飛んだときは、平均と標準偏差の曲線を見直すと解釈できます。</p>
+</section>
+<section id="ix-section-5-5" class="level2">
+<h2 class="anchored" data-anchor-id="ix-section-5-5">5.5 LogEIで浮動小数点の影響を調べる</h2>
+<p>EIが数学的に正でも、低い改善確率の下では浮動小数点でゼロに丸まることがあります。<a href="#eq-ei" class="quarto-xref">式&nbsp;<span>5.2</span></a> の2項が打ち消し合う領域もあります。最適化では値だけでなく勾配が小さくなると候補の探索が難しくなります。解析型LogEIは、EIを求めてから対数を取るコードとは計算順と式の組み立てを変え、対数領域で安定に計算します <span class="citation" data-cites="ament2023">(<a href="../references.html#ref-ament2023" role="doc-biblioref">Ament ほか 2023年, sec. 4.1</a>)</span>。</p>
+<p>正のEIに対し、対数は単調増加なので、厳密な値でEIを最大にする入力と解析型LogEIを最大にする入力は一致します。本章では強度の数値単位を MPa に固定して対数スコアを比較します。厳密なゼロのEIの対数は <span class="math inline">\(-\infty\)</span> です。極端な例でLogEIが有限になるのは、正規モデルでは理論上は正の量が、生の浮動小数点計算でゼロになる場合です。</p>
+<div id="fig-logei-tail" class="quarto-float quarto-figure quarto-figure-center anchored">
+<figure class="quarto-float quarto-float-fig figure">
+<div aria-describedby="fig-logei-tail-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+<img src="../figures/ch05_logei_tail.svg" class="img-fluid figure-img" style="width:94.0%">
+</div>
+<figcaption class="quarto-float-caption-bottom quarto-float-caption quarto-float-fig" id="fig-logei-tail-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+図&nbsp;5.4: 入力を x = 0.50 に固定して閾値を上げた数値診断。橙の帯では、生のEIがこの実行で0となるため対数を描けない。青は直接計算したLogEI。軸は z と対数スコアで、候補順位の図とは異なる。
+</figcaption>
+</figure>
+</div>
+<p>この実験は入力と事後分布を固定し、閾値だけを変えて <span class="math inline">\(z\in[-50,-1]\)</span> を作りました。ゼロになる境界はdtypeや実装に依存します。図は数値安定性を示す実験であり、特定のベイズ最適化手法が他より優れることを測った比較ではありません。</p>
+</section>
+<section id="ix-section-5-6" class="level2">
+<h2 class="anchored" data-anchor-id="ix-section-5-6">5.6 ノイズ、バッチ、最適化の限界</h2>
+<table class="caption-top table">
+<colgroup>
+<col style="width: 50%">
+<col style="width: 50%">
+</colgroup>
+<thead>
+<tr class="header">
+<th>条件</th>
+<th>確認すること</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>測定ノイズが強い</td>
+<td>観測最大値はノイズで大きくなり得ます。既に測った点の潜在値にも不確かさがあるなら、潜在の基準値を統合して評価する noisy EI 系を検討します。既観測点を渡す設計が必要です。</td>
+</tr>
+<tr class="even">
+<td>一度に <span class="math inline">\(q&gt;1\)</span> 点測る</td>
+<td>候補集合で得る最大改善を評価する場合、複数点の事後共分散が効きます。単点スコアの順位だけでは似た点を重複して選びやすくなります。モンテカルロ系のLogEIには滑らかな近似を使うものがあり、解析型単点LogEIと同じ議論をそのまま適用できません。</td>
+</tr>
+<tr class="odd">
+<td>制約や複数の局所解がある</td>
+<td>正しい式でスコアを計算した後も実行可能な候補を探索する必要があります。再スタート数、変数範囲、座標、返る候補とスコアを点検します。</td>
+</tr>
+<tr class="even">
+<td>最後に選ぶ条件を知りたい</td>
+<td>次に測る候補と、実験を終えた後に推薦する条件は別の判断です。後者では利用目的に合わせ、たとえば事後平均を最大にする条件を別途検討します。</td>
+</tr>
+</tbody>
+</table>
+<section id="sec-acquisition-selection" class="level3">
+<h3 class="anchored" data-anchor-id="sec-acquisition-selection">実装で最初に決めること</h3>
+<p>目的を最大化し、次に選ぶ点数と、改善の基準に使える情報を決めます。章内の比較では、同じ事後分布を使ったうえで評価基準を変えました。後続の実行では、次のように使い分けます。</p>
+<table class="caption-top table">
+<colgroup>
+<col style="width: 50%">
+<col style="width: 50%">
+</colgroup>
+<thead>
+<tr class="header">
+<th>問題設定</th>
+<th>本書で使う入口</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>1点を評価し、比較用の基準 <span class="math inline">\(b\)</span> を固定する</td>
+<td>解析型LogEI。最適化のたびに採用した <span class="math inline">\(b\)</span> と尺度を記録する。第6章は、決定論的な試験の最良観測値で <span class="math inline">\(b\)</span> を更新する</td>
+</tr>
+<tr class="even">
+<td>複数点を測定前にまとめて提案し、<span class="math inline">\(b\)</span> を固定する</td>
+<td>qLogEI。第7章で <span class="math inline">\(q=2\)</span> の同時最適化と逐次貪欲法を扱う</td>
+</tr>
+<tr class="odd">
+<td>既測定点の潜在値に測定ノイズ由来の不確かさがある</td>
+<td>qLogNEI。第7章で既観測入力を比較の基準集合として渡す</td>
+</tr>
+</tbody>
+</table>
+<p>最小化では改善の向きと <span class="math inline">\(b\)</span> の定義も反転します。本書の材料試験は、最後まで強度の<strong>最大化</strong>で統一します。</p>
+</section>
+</section>
+<section id="章末演習" class="level2">
+<h2 class="anchored" data-anchor-id="章末演習">5.7 章末演習</h2>
+<ol type="1">
+<li><strong>確認。</strong> <span class="math inline">\(b=80\)</span> MPa、候補Aは <span class="math inline">\((\mu,\sigma)=(81,0.5)\)</span>、候補Bは <span class="math inline">\((79,4)\)</span> とします。PI、EI、<span class="math inline">\(\beta=4\)</span> のUCBを計算し、順位の違いを説明してください。</li>
+<li><strong>操作。</strong> UCBで <span class="math inline">\(\beta=0,1,4,25\)</span> を試し、候補位置を記録してください。候補が動いたときに平均と標準偏差がどう変わるか、前章の図と照らし合わせてください。</li>
+<li><strong>操作。</strong> 問題1の二候補について <span class="math inline">\(b=78\)</span> と <span class="math inline">\(b=82\)</span> に変え、PIとEIそれぞれでAとBの順位を調べてください。数値上の同点と数学的な同点の違いも考えてください。</li>
+<li><strong>発展。</strong> 観測ノイズを大きくしたとき「現在最良の観測を超えること」と「最良の潜在強度を見つけること」が乖離する状況を説明してください。</li>
+</ol>
+</section>
+<section id="まとめと次のステップ" class="level2">
+<h2 class="anchored" data-anchor-id="まとめと次のステップ">まとめと次のステップ</h2>
+<p>PIは改善する確率、EIは改善の期待量、UCBは平均と不確かさを係数で組み合わせたスコアです。今の実験で目的とする価値と分布を揃えて候補を評価します。<a href="../chapters/06-bo-execution.html#sec-bo-execution">第6章</a>では、候補を測定してデータを更新し、残りの予算で次の候補を選びます。<a href="../chapters/07-practical-bo.html#sec-bo-practice">第7章</a>では、測定ノイズやバッチの場合の基準を扱います。</p>
+
+
+<div id="refs" class="references csl-bib-body hanging-indent" role="list" style="display: none">
+<div id="ref-ament2023" class="csl-entry" role="listitem">
+Ament, Sebastian, Samuel Daulton, David Eriksson, Maximilian Balandat, と Eytan Bakshy. 2023年. <span>「Unexpected Improvements to Expected Improvement for Bayesian Optimization」</span>. <em>Advances in Neural Information Processing Systems</em> 36. <a href="https://doi.org/10.52202/075280-0904">https://doi.org/10.52202/075280-0904</a>.
+</div>
+<div id="ref-jones1998" class="csl-entry" role="listitem">
+Jones, Donald R., Matthias Schonlau, と William J. Welch. 1998年. <span>「Efficient Global Optimization of Expensive Black-Box Functions」</span>. <em>Journal of Global Optimization</em> 13: 455–92. <a href="https://doi.org/10.1023/A:1008306431147">https://doi.org/10.1023/A:1008306431147</a>.
+</div>
+<div id="ref-srinivas2010" class="csl-entry" role="listitem">
+Srinivas, Niranjan, Andreas Krause, Sham M. Kakade, と Matthias Seeger. 2010年. <span>「Gaussian Process Optimization in the Bandit Setting: No Regret and Experimental Design」</span>. <em>Proceedings of the 27th International Conference on Machine Learning</em>, 1015–22. <a href="https://arxiv.org/abs/0912.3995">https://arxiv.org/abs/0912.3995</a>.
+</div>
+</div>
+</section>
+
+</main> <!-- /main -->
+<script id="quarto-html-after-body" type="application/javascript">
+  window.document.addEventListener("DOMContentLoaded", function (event) {
+    const icon = "";
+    const anchorJS = new window.AnchorJS();
+    anchorJS.options = {
+      placement: 'right',
+      icon: icon
+    };
+    anchorJS.add('.anchored');
+    const isCodeAnnotation = (el) => {
+      for (const clz of el.classList) {
+        if (clz.startsWith('code-annotation-')) {                     
+          return true;
+        }
+      }
+      return false;
+    }
+    const onCopySuccess = function(e) {
+      // button target
+      const button = e.trigger;
+      // don't keep focus
+      button.blur();
+      // flash "checked"
+      button.classList.add('code-copy-button-checked');
+      var currentTitle = button.getAttribute("title");
+      button.setAttribute("title", "コピーしました");
+      let tooltip;
+      if (window.bootstrap) {
+        button.setAttribute("data-bs-toggle", "tooltip");
+        button.setAttribute("data-bs-placement", "left");
+        button.setAttribute("data-bs-title", "コピーしました");
+        tooltip = new bootstrap.Tooltip(button, 
+          { trigger: "manual", 
+            customClass: "code-copy-button-tooltip",
+            offset: [0, -8]});
+        tooltip.show();    
+      }
+      setTimeout(function() {
+        if (tooltip) {
+          tooltip.hide();
+          button.removeAttribute("data-bs-title");
+          button.removeAttribute("data-bs-toggle");
+          button.removeAttribute("data-bs-placement");
+        }
+        button.setAttribute("title", currentTitle);
+        button.classList.remove('code-copy-button-checked');
+      }, 1000);
+      // clear code selection
+      e.clearSelection();
+    }
+    const getTextToCopy = function(trigger) {
+      const outerScaffold = trigger.parentElement.cloneNode(true);
+      const codeEl = outerScaffold.querySelector('code');
+      for (const childEl of codeEl.children) {
+        if (isCodeAnnotation(childEl)) {
+          childEl.remove();
+        }
+      }
+      return codeEl.innerText;
+    }
+    const clipboard = new window.ClipboardJS('.code-copy-button:not([data-in-quarto-modal])', {
+      text: getTextToCopy
+    });
+    clipboard.on('success', onCopySuccess);
+    if (window.document.getElementById('quarto-embedded-source-code-modal')) {
+      const clipboardModal = new window.ClipboardJS('.code-copy-button[data-in-quarto-modal]', {
+        text: getTextToCopy,
+        container: window.document.getElementById('quarto-embedded-source-code-modal')
+      });
+      clipboardModal.on('success', onCopySuccess);
+    }
+      var localhostRegex = new RegExp(/^(?:http|https):\/\/localhost\:?[0-9]*\//);
+      var mailtoRegex = new RegExp(/^mailto:/);
+        var filterRegex = new RegExp("https:\/\/tanakakao\.github\.io\/bo-al-book\/");
+      var isInternal = (href) => {
+          return filterRegex.test(href) || localhostRegex.test(href) || mailtoRegex.test(href);
+      }
+      // Inspect non-navigation links and adorn them if external
+      window.quartoDecorateExternalLinks = function (root) {
+     var links = (root || window.document).querySelectorAll('a[href]:not(.nav-link):not(.navbar-brand):not(.toc-action):not(.sidebar-link):not(.sidebar-item-toggle):not(.pagination-link):not(.no-external):not([aria-hidden]):not(.dropdown-item):not(.quarto-navigation-tool):not(.about-link)');
+      for (var i=0; i<links.length; i++) {
+        const link = links[i];
+        if (!isInternal(link.href)) {
+          // undo the damage that might have been done by quarto-nav.js in the case of
+          // links that we want to consider external
+          if (link.dataset.originalHref !== undefined) {
+            link.href = link.dataset.originalHref;
+          }
+          if (!link.classList.contains('no-external-icon')) {
+          }
+        }
+      }
+      };
+      window.quartoDecorateExternalLinks(window.document);
+    // Esc closes the popup (WCAG 1.4.13) and focus leaving both trigger and
+    // popup closes it (WCAG 2.4.11); tippy handles neither for interactive popups.
+    const hideOnEscAndFocusOut = {
+      name: 'hideOnEscAndFocusOut',
+      defaultValue: true,
+      fn(instance) {
+        const dismiss = () => {
+          // A show scheduled by the trigger delay would otherwise reopen it
+          instance.clearDelayTimeouts();
+          instance.hide();
+        };
+        const onKeyDown = (event) => {
+          if (event.key !== 'Escape') {
+            return;
+          }
+          // Keep Esc from also reaching page handlers (e.g. reveal.js overview),
+          // except an open reveal.js slide menu, which Esc should close too.
+          // The menu handles keys only when its keyboard option is on.
+          const menuHandlesEsc = window.Reveal?.getPlugin?.('menu')?.isOpen() &&
+            window.Reveal.getConfig().menu?.keyboard !== false;
+          if (!menuHandlesEsc) {
+            event.stopPropagation();
+          }
+          if (instance.popper.contains(window.document.activeElement)) {
+            // Disabled while refocusing so the focus trigger does not reopen it
+            instance.disable();
+            instance.reference.focus();
+            instance.enable();
+          }
+          dismiss();
+        };
+        const onFocusOut = (event) => {
+          const target = event.relatedTarget;
+          if (target && !instance.reference.contains(target) &&
+              !instance.popper.contains(target)) {
+            dismiss();
+          }
+        };
+        // On the trigger too: a click trigger (code-annotations: select) has no
+        // blur handling. Attached for the instance's lifetime so leaving the
+        // trigger also cancels a show still pending on the trigger delay.
+        instance.reference.addEventListener('focusout', onFocusOut);
+        return {
+          onShow() {
+            window.document.addEventListener('keydown', onKeyDown, true);
+            instance.popper.addEventListener('focusout', onFocusOut);
+          },
+          onHide() {
+            window.document.removeEventListener('keydown', onKeyDown, true);
+            instance.popper.removeEventListener('focusout', onFocusOut);
+          },
+          onDestroy() {
+            instance.reference.removeEventListener('focusout', onFocusOut);
+          },
+        };
+      },
+    };
+    function tippyHover(el, contentFn, onTriggerFn, onUntriggerFn) {
+      const config = {
+        allowHTML: true,
+        maxWidth: 500,
+        delay: 100,
+        arrow: false,
+        appendTo: function(el) {
+            return el.parentElement;
+        },
+        interactive: true,
+        interactiveBorder: 10,
+        theme: 'quarto',
+        placement: 'bottom-start',
+        plugins: [hideOnEscAndFocusOut],
+      };
+      if (contentFn) {
+        config.content = contentFn;
+      }
+      if (onTriggerFn) {
+        config.onTrigger = onTriggerFn;
+      }
+      if (onUntriggerFn) {
+        config.onUntrigger = onUntriggerFn;
+      }
+      window.tippy(el, config); 
+    }
+    const noterefs = window.document.querySelectorAll('a[role="doc-noteref"]');
+    for (var i=0; i<noterefs.length; i++) {
+      const ref = noterefs[i];
+      tippyHover(ref, function() {
+        // use id or data attribute instead here
+        let href = ref.getAttribute('data-footnote-href') || ref.getAttribute('href');
+        try { href = new URL(href).hash; } catch {}
+        const id = href.replace(/^#\/?/, "");
+        const note = window.document.getElementById(id);
+        if (note) {
+          return note.innerHTML;
+        } else {
+          return "";
+        }
+      });
+    }
+    const xrefs = window.document.querySelectorAll('a.quarto-xref');
+    const processXRef = (id, note) => {
+      // Strip column container classes
+      const stripColumnClz = (el) => {
+        el.classList.remove("page-full", "page-columns");
+        if (el.children) {
+          for (const child of el.children) {
+            stripColumnClz(child);
+          }
+        }
+      }
+      stripColumnClz(note)
+      if (id === null || id.startsWith('sec-')) {
+        // Special case sections, only their first couple elements
+        const container = document.createElement("div");
+        if (note.children && note.children.length > 2) {
+          container.appendChild(note.children[0].cloneNode(true));
+          for (let i = 1; i < note.children.length; i++) {
+            const child = note.children[i];
+            if (child.tagName === "P" && child.innerText === "") {
+              continue;
+            } else {
+              container.appendChild(child.cloneNode(true));
+              break;
+            }
+          }
+          if (window.Quarto?.typesetMath) {
+            window.Quarto.typesetMath(container);
+          }
+          return container.innerHTML
+        } else {
+          if (window.Quarto?.typesetMath) {
+            window.Quarto.typesetMath(note);
+          }
+          return note.innerHTML;
+        }
+      } else {
+        // Remove any anchor links if they are present
+        const anchorLink = note.querySelector('a.anchorjs-link');
+        if (anchorLink) {
+          anchorLink.remove();
+        }
+        if (window.Quarto?.typesetMath) {
+          window.Quarto.typesetMath(note);
+        }
+        if (note.classList.contains("callout")) {
+          return note.outerHTML;
+        } else {
+          return note.innerHTML;
+        }
+      }
+    }
+    for (var i=0; i<xrefs.length; i++) {
+      const xref = xrefs[i];
+      tippyHover(xref, undefined, function(instance) {
+        instance.disable();
+        let url = xref.getAttribute('href');
+        let hash = undefined; 
+        if (url.startsWith('#')) {
+          hash = url;
+        } else {
+          try { hash = new URL(url).hash; } catch {}
+        }
+        if (hash) {
+          const id = hash.replace(/^#\/?/, "");
+          const note = window.document.getElementById(id);
+          if (note !== null) {
+            try {
+              const html = processXRef(id, note.cloneNode(true));
+              instance.setContent(html);
+            } finally {
+              instance.enable();
+              instance.show();
+            }
+          } else {
+            // See if we can fetch this
+            fetch(url.split('#')[0])
+            .then(res => res.text())
+            .then(html => {
+              const parser = new DOMParser();
+              const htmlDoc = parser.parseFromString(html, "text/html");
+              const note = htmlDoc.getElementById(id);
+              if (note !== null) {
+                const html = processXRef(id, note);
+                instance.setContent(html);
+              } 
+            }).finally(() => {
+              instance.enable();
+              instance.show();
+            });
+          }
+        } else {
+          // See if we can fetch a full url (with no hash to target)
+          // This is a special case and we should probably do some content thinning / targeting
+          fetch(url)
+          .then(res => res.text())
+          .then(html => {
+            const parser = new DOMParser();
+            const htmlDoc = parser.parseFromString(html, "text/html");
+            const note = htmlDoc.querySelector('main.content');
+            if (note !== null) {
+              // This should only happen for chapter cross references
+              // (since there is no id in the URL)
+              // remove the first header
+              if (note.children.length > 0 && note.children[0].tagName === "HEADER") {
+                note.children[0].remove();
+              }
+              const html = processXRef(null, note);
+              instance.setContent(html);
+            } 
+          }).finally(() => {
+            instance.enable();
+            instance.show();
+          });
+        }
+      }, function(instance) {
+      });
+    }
+        let selectedAnnoteEl;
+        const selectorForAnnotation = ( cell, annotation) => {
+          let cellAttr = 'data-code-cell="' + cell + '"';
+          let lineAttr = 'data-code-annotation="' +  annotation + '"';
+          const selector = 'span[' + cellAttr + '][' + lineAttr + ']';
+          return selector;
+        }
+        const selectCodeLines = (annoteEl) => {
+          const doc = window.document;
+          const targetCell = annoteEl.getAttribute("data-target-cell");
+          const targetAnnotation = annoteEl.getAttribute("data-target-annotation");
+          const annoteSpan = window.document.querySelector(selectorForAnnotation(targetCell, targetAnnotation));
+          const lines = annoteSpan.getAttribute("data-code-lines").split(",");
+          const lineIds = lines.map((line) => {
+            return targetCell + "-" + line;
+          })
+          // Each band is positioned against its own containing block, which is
+          // not the offsetParent of the lines, so place it from client rects.
+          const placeBand = (band, firstEl, lastEl, codeBlock) => {
+            const container = band.offsetParent;
+            if (container === null) {
+              return;
+            }
+            const containerRect = container.getBoundingClientRect();
+            // Reveal.js scales slides with a transform, so convert client
+            // pixels back to the CSS pixels of the container.
+            const scale = containerRect.height / container.offsetHeight || 1;
+            const firstRect = firstEl.getBoundingClientRect();
+            const lastRect = lastEl.getBoundingClientRect();
+            const top = (firstRect.top - containerRect.top) / scale - container.clientTop + container.scrollTop;
+            const height = (lastRect.bottom - firstRect.top) / scale;
+            band.style.top = top - 2 + "px";
+            band.style.height = height + 4 + "px";
+            if (codeBlock) {
+              // Without the copy button wrapper, the containing block is wider
+              // than the code block, so span the code block explicitly.
+              const blockRect = codeBlock.getBoundingClientRect();
+              band.style.left = (blockRect.left - containerRect.left) / scale - container.clientLeft + container.scrollLeft + "px";
+              band.style.width = blockRect.width / scale + "px";
+            }
+          };
+          if (lineIds.length > 0) {
+            const el = window.document.getElementById(lineIds[0]);
+            const lastEl = window.document.getElementById(lineIds[lineIds.length - 1]);
+            const parent = el.parentElement.parentElement;
+            // cook up a div (if necessary) and position it
+            let div = window.document.getElementById("code-annotation-line-highlight");
+            if (div === null) {
+              div = window.document.createElement("div");
+              div.setAttribute("id", "code-annotation-line-highlight");
+              div.style.position = 'absolute';
+              parent.appendChild(div);
+            }
+            placeBand(div, el, lastEl, parent.closest("div.sourceCode") || parent);
+            let gutterDiv = window.document.getElementById("code-annotation-line-highlight-gutter");
+            if (gutterDiv === null) {
+              gutterDiv = window.document.createElement("div");
+              gutterDiv.setAttribute("id", "code-annotation-line-highlight-gutter");
+              gutterDiv.style.position = 'absolute';
+              const codeCell = window.document.getElementById(targetCell);
+              const gutter = codeCell.querySelector('.code-annotation-gutter');
+              gutter.appendChild(gutterDiv);
+            }
+            placeBand(gutterDiv, el, lastEl);
+            selectedAnnoteEl = annoteEl;
+          }
+        };
+        const unselectCodeLines = () => {
+          const elementsIds = ["code-annotation-line-highlight", "code-annotation-line-highlight-gutter"];
+          elementsIds.forEach((elId) => {
+            const div = window.document.getElementById(elId);
+            if (div) {
+              div.remove();
+            }
+          });
+          selectedAnnoteEl = undefined;
+        };
+          // Handle positioning of the toggle
+      window.addEventListener(
+        "resize",
+        throttle(() => {
+          elRect = undefined;
+          if (selectedAnnoteEl) {
+            selectCodeLines(selectedAnnoteEl);
+          }
+        }, 10)
+      );
+      function throttle(fn, ms) {
+      let throttle = false;
+      let timer;
+        return (...args) => {
+          if(!throttle) { // first call gets through
+              fn.apply(this, args);
+              throttle = true;
+          } else { // all the others get throttled
+              if(timer) clearTimeout(timer); // cancel #2
+              timer = setTimeout(() => {
+                fn.apply(this, args);
+                timer = throttle = false;
+              }, ms);
+          }
+        };
+      }
+        // Attach click handler to the DT
+        const annoteDls = window.document.querySelectorAll('dt[data-target-cell]');
+        for (const annoteDlNode of annoteDls) {
+          annoteDlNode.addEventListener('click', (event) => {
+            const clickedEl = event.target;
+            if (clickedEl !== selectedAnnoteEl) {
+              unselectCodeLines();
+              const activeEl = window.document.querySelector('dt[data-target-cell].code-annotation-active');
+              if (activeEl) {
+                activeEl.classList.remove('code-annotation-active');
+              }
+              selectCodeLines(clickedEl);
+              clickedEl.classList.add('code-annotation-active');
+            } else {
+              // Unselect the line
+              unselectCodeLines();
+              clickedEl.classList.remove('code-annotation-active');
+            }
+          });
+        }
+    const findCites = (el) => {
+      const parentEl = el.parentElement;
+      if (parentEl) {
+        const cites = parentEl.dataset.cites;
+        if (cites) {
+          return {
+            el,
+            cites: cites.split(' ')
+          };
+        } else {
+          return findCites(el.parentElement)
+        }
+      } else {
+        return undefined;
+      }
+    };
+    var bibliorefs = window.document.querySelectorAll('a[role="doc-biblioref"]');
+    for (var i=0; i<bibliorefs.length; i++) {
+      const ref = bibliorefs[i];
+      const citeInfo = findCites(ref);
+      if (citeInfo) {
+        tippyHover(citeInfo.el, function() {
+          var popup = window.document.createElement('div');
+          citeInfo.cites.forEach(function(cite) {
+            var citeDiv = window.document.createElement('div');
+            citeDiv.classList.add('hanging-indent');
+            citeDiv.classList.add('csl-entry');
+            var biblioDiv = window.document.getElementById('ref-' + cite);
+            if (biblioDiv) {
+              citeDiv.innerHTML = biblioDiv.innerHTML;
+            }
+            popup.appendChild(citeDiv);
+          });
+          return popup.innerHTML;
+        });
+      }
+    }
+  });
+  </script>
+  <script type="application/javascript">
+  window.quartoScrollableRegionsLabels = {"code":"スクロール可能なコード","output":"スクロール可能な出力"};
+  </script>
+<nav class="page-navigation" aria-label="ページ">
+  <div class="nav-page nav-page-previous">
+      <a href="../chapters/04-gp-prediction.html" class="pagination-link" aria-label="第4章　ガウス過程による予測">
+        <i class="bi bi-arrow-left-short"></i> <span class="nav-page-text"><span class="chapter-title">第4章　ガウス過程による予測</span></span>
+      </a>          
+  </div>
+  <div class="nav-page nav-page-next">
+      <a href="../chapters/06-bo-execution.html" class="pagination-link" aria-label="第6章　ベイズ最適化の実行">
+        <span class="nav-page-text"><span class="chapter-title">第6章　ベイズ最適化の実行</span></span> <i class="bi bi-arrow-right-short"></i>
+      </a>
+  </div>
+</nav>
+</div> <!-- /content -->
+
+
+
+
+</body></html>

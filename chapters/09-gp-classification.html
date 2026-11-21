@@ -1,0 +1,1098 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" lang="ja" xml:lang="ja"><head>
+
+<meta charset="utf-8">
+<meta name="generator" content="quarto-1.11.9">
+
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+
+<meta name="description" content="ガウス過程の基礎からベイズ最適化、能動学習、二値GP分類をPythonで学びます。">
+
+<title>第9章　ガウス過程による分類 – Pythonで学ぶベイズ最適化と能動学習</title>
+<style>
+/* Default styles provided by pandoc.
+** See https://pandoc.org/MANUAL.html#variables-for-html for config info.
+*/
+span.smallcaps{font-variant: small-caps;}
+div.columns{display: flex; gap: 1.5em;}
+div.column{flex: auto;}
+@media screen {
+div.columns{gap: min(4vw, 1.5em);}
+div.column{overflow-x: auto;}
+}
+div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+ul.task-list{list-style: none;}
+ul.task-list li input[type="checkbox"] {
+  width: 0.8em;
+  margin: 0 0.8em 0.2em -1em; /* quarto-specific, see https://github.com/quarto-dev/quarto-cli/issues/4556 */ 
+  vertical-align: middle;
+}
+/* CSS for syntax highlighting */
+html { -webkit-text-size-adjust: 100%; }
+pre > code.sourceCode { white-space: pre; position: relative; }
+pre > code.sourceCode > span { display: inline-block; line-height: 1.25; }
+pre > code.sourceCode > span:empty { height: 1.2em; }
+.sourceCode { overflow: visible; }
+code.sourceCode > span { color: inherit; text-decoration: inherit; }
+div.sourceCode { margin: 1em 0; }
+pre.sourceCode { margin: 0; }
+@media screen {
+div.sourceCode { overflow: auto; }
+}
+@media print {
+pre > code.sourceCode { white-space: pre-wrap; }
+pre > code.sourceCode > span { text-indent: -5em; padding-left: 5em; }
+}
+pre.numberSource code
+  { counter-reset: source-line 0; }
+pre.numberSource code > span
+  { position: relative; left: -4em; counter-increment: source-line; }
+pre.numberSource code > span > a:first-child::before
+  { content: counter(source-line);
+    position: relative; left: -1em; text-align: right; vertical-align: baseline;
+    border: none; display: inline-block;
+    -webkit-touch-callout: none; -webkit-user-select: none;
+    -khtml-user-select: none; -moz-user-select: none;
+    -ms-user-select: none; user-select: none;
+    padding: 0 4px; width: 4em;
+  }
+pre.numberSource { margin-left: 3em;  padding-left: 4px; }
+div.sourceCode
+  {   }
+@media screen {
+pre > code.sourceCode > span > a:first-child::before { text-decoration: underline; }
+}
+/* CSS for citations */
+div.csl-bib-body { }
+div.csl-entry {
+  clear: both;
+}
+.hanging-indent div.csl-entry {
+  margin-left:2em;
+  text-indent:-2em;
+}
+div.csl-left-margin {
+  min-width:2em;
+  float:left;
+}
+div.csl-right-inline {
+  margin-left:2em;
+  padding-left:1em;
+}
+div.csl-indent {
+  margin-left: 2em;
+}</style>
+
+
+<script src="../site_libs/quarto-nav/quarto-nav.js"></script>
+<script src="../site_libs/quarto-nav/headroom.min.js"></script>
+<script src="../site_libs/clipboard/clipboard.min.js"></script>
+<script src="../site_libs/quarto-search/autocomplete.umd.js"></script>
+<script src="../site_libs/quarto-search/fuse.min.js"></script>
+<script src="../site_libs/quarto-search/quarto-search.js"></script>
+<meta name="quarto:offset" content="../">
+<link href="../chapters/10-practical-application.html" rel="next">
+<link href="../chapters/08-active-learning.html" rel="prev">
+<script src="../site_libs/quarto-html/quarto.js" type="module"></script>
+<script src="../site_libs/quarto-html/tabsets/tabsets.js" type="module"></script>
+<script src="../site_libs/quarto-html/scrollable-regions/scrollable-regions.js" type="module"></script>
+<script src="../site_libs/quarto-html/popper.min.js"></script>
+<script src="../site_libs/quarto-html/tippy.umd.min.js"></script>
+<script src="../site_libs/quarto-html/anchor.min.js"></script>
+<link href="../site_libs/quarto-html/tippy.css" rel="stylesheet">
+<link href="../site_libs/quarto-html/quarto-syntax-highlighting-63b5708e65d6cd79cd7618c58d0c21e7.css" rel="stylesheet" id="quarto-text-highlighting-styles">
+<script src="../site_libs/bootstrap/bootstrap.min.js"></script>
+<link href="../site_libs/bootstrap/bootstrap-icons.css" rel="stylesheet">
+<link href="../site_libs/bootstrap/bootstrap-2b485985435918271ec255a9552b4d7e.min.css" rel="stylesheet" append-hash="true" id="quarto-bootstrap" data-mode="light">
+<script id="quarto-search-options" type="application/json">{
+  "location": "sidebar",
+  "copy-button": false,
+  "collapse-after": 3,
+  "panel-placement": "start",
+  "type": "textbox",
+  "limit": 50,
+  "keyboard-shortcut": [
+    "f",
+    "/",
+    "s"
+  ],
+  "show-item-context": false,
+  "language": {
+    "search-no-results-text": "一致なし",
+    "search-matching-documents-text": "一致した文書",
+    "search-copy-link-title": "検索へのリンクをコピー",
+    "search-hide-matches-text": "追加の検索結果を非表示",
+    "search-more-match-text": "追加の検索結果",
+    "search-more-matches-text": "追加の検索結果",
+    "search-clear-button-title": "消去",
+    "search-text-placeholder": "",
+    "search-detached-cancel-button-title": "取消",
+    "search-submit-button-title": "検索",
+    "search-label": "サーチ"
+  }
+}</script>
+
+  <script src="https://cdnjs.cloudflare.com/polyfill/v3/polyfill.min.js?features=es6"></script>
+  <script defer="" src="https://cdn.jsdelivr.net/npm/mathjax@4/tex-chtml.js" type="text/javascript"></script>
+
+<script type="text/javascript">
+const typesetMath = (el) => {
+  if (window.MathJax) {
+    // MathJax Typeset
+    window.MathJax.typeset([el]);
+  } else if (window.katex) {
+    // KaTeX Render
+    var mathElements = el.getElementsByClassName("math");
+    var macros = [];
+    for (var i = 0; i < mathElements.length; i++) {
+      var texText = mathElements[i].firstChild;
+      if (mathElements[i].tagName == "SPAN" && texText && texText.data) {
+        window.katex.render(texText.data, mathElements[i], {
+          displayMode: mathElements[i].classList.contains('display'),
+          throwOnError: false,
+          macros: macros,
+          fleqn: false
+        });
+      }
+    }
+  }
+}
+window.Quarto = {
+  typesetMath
+};
+</script>
+
+<link rel="stylesheet" href="../book.css">
+</head>
+
+<body class="nav-sidebar floating quarto-light"><a id="quarto-skip-link" class="visually-hidden-focusable" href="#quarto-document-content">メインコンテンツにスキップ</a>
+
+<div id="quarto-search-results"></div>
+  <header id="quarto-header" class="headroom fixed-top">
+  <nav class="quarto-secondary-nav" aria-label="ツールバー">
+    <div class="container-fluid d-flex">
+      <button type="button" class="quarto-btn-toggle btn" data-bs-toggle="collapse" role="button" data-bs-target=".quarto-sidebar-collapse-item" aria-controls="quarto-sidebar" aria-expanded="false" aria-label="サイドバーを切り替える" onclick="if (window.quartoToggleHeadroom) { window.quartoToggleHeadroom(); }">
+        <i class="bi bi-layout-text-sidebar-reverse"></i>
+      </button>
+        <nav class="quarto-page-breadcrumbs" aria-label="パンくずリスト"><ol class="breadcrumb"><li class="breadcrumb-item"><a href="../chapters/08-active-learning.html">第IV部 能動学習と分類</a></li><li class="breadcrumb-item"><a href="../chapters/09-gp-classification.html"><span class="chapter-title">第9章　ガウス過程による分類</span></a></li></ol></nav>
+        <a class="flex-grow-1" data-bs-toggle="collapse" data-bs-target=".quarto-sidebar-collapse-item" onclick="if (window.quartoToggleHeadroom) { window.quartoToggleHeadroom(); }">      
+        </a>
+      <button type="button" class="btn quarto-search-button" aria-label="サーチ" onclick="window.quartoOpenSearch();">
+        <i class="bi bi-search"></i>
+      </button>
+    </div>
+  </nav>
+</header>
+<!-- content -->
+<div id="quarto-content" class="quarto-container page-columns page-rows-contents page-layout-article">
+<!-- sidebar -->
+  <nav id="quarto-sidebar" class="sidebar collapse collapse-horizontal quarto-sidebar-collapse-item sidebar-navigation floating overflow-auto" aria-label="ウェブサイト">
+    <div class="pt-lg-2 mt-2 text-left sidebar-header">
+    <div class="sidebar-title mb-0 py-0">
+      <a href="../">Pythonで学ぶベイズ最適化と能動学習</a> 
+        <div class="sidebar-tools-main">
+    <a href="../BO_AL_book_vol1_v1.0.0.pdf" title="Download PDF" class="quarto-navigation-tool px-1" aria-label="Download PDF"><i class="bi bi-file-pdf"></i></a>
+</div>
+    </div>
+      </div>
+        <div class="mt-2 flex-shrink-0 align-items-center">
+        <div class="sidebar-search">
+        <div id="quarto-search" class="" title="サーチ"></div>
+        </div>
+        </div>
+    <div class="sidebar-menu-container"> 
+    <ul class="list-unstyled mt-1">
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../index.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">はじめに</span></a>
+  </div>
+</li>
+        <li class="sidebar-item sidebar-item-section">
+      <div class="sidebar-item-container"> 
+            <button type="button" class="sidebar-item-text sidebar-item-toggle sidebar-link text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-1" aria-controls="quarto-sidebar-section-1" aria-expanded="true">
+ <span class="menu-text" id="quarto-sidebar-section-1-label">第I部 ベイズ最適化への導入</span><i class="bi bi-chevron-right" aria-hidden="true"></i></button>
+      </div>
+      <ul id="quarto-sidebar-section-1" aria-labelledby="quarto-sidebar-section-1-label" class="collapse list-unstyled sidebar-section depth1 show">  
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../chapters/01-bayesian-optimization.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">第1章　ベイズ最適化とは何か</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../chapters/02-probability.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">第2章　確率・統計・ベイズ推論の基礎</span></a>
+  </div>
+</li>
+      </ul>
+  </li>
+        <li class="sidebar-item sidebar-item-section">
+      <div class="sidebar-item-container"> 
+            <button type="button" class="sidebar-item-text sidebar-item-toggle sidebar-link text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-2" aria-controls="quarto-sidebar-section-2" aria-expanded="true">
+ <span class="menu-text" id="quarto-sidebar-section-2-label">第II部 ガウス過程回帰</span><i class="bi bi-chevron-right" aria-hidden="true"></i></button>
+      </div>
+      <ul id="quarto-sidebar-section-2" aria-labelledby="quarto-sidebar-section-2-label" class="collapse list-unstyled sidebar-section depth1 show">  
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../chapters/03-gp-basics.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">第3章　ガウス過程の基礎</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../chapters/04-gp-prediction.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">第4章　ガウス過程による予測</span></a>
+  </div>
+</li>
+      </ul>
+  </li>
+        <li class="sidebar-item sidebar-item-section">
+      <div class="sidebar-item-container"> 
+            <button type="button" class="sidebar-item-text sidebar-item-toggle sidebar-link text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-3" aria-controls="quarto-sidebar-section-3" aria-expanded="true">
+ <span class="menu-text" id="quarto-sidebar-section-3-label">第III部 ベイズ最適化の基礎</span><i class="bi bi-chevron-right" aria-hidden="true"></i></button>
+      </div>
+      <ul id="quarto-sidebar-section-3" aria-labelledby="quarto-sidebar-section-3-label" class="collapse list-unstyled sidebar-section depth1 show">  
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../chapters/05-acquisition.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">第5章　獲得関数の理論</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../chapters/06-bo-execution.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">第6章　ベイズ最適化の実行</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../chapters/07-practical-bo.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">第7章　ベイズ最適化の実践上の課題</span></a>
+  </div>
+</li>
+      </ul>
+  </li>
+        <li class="sidebar-item sidebar-item-section">
+      <div class="sidebar-item-container"> 
+            <button type="button" class="sidebar-item-text sidebar-item-toggle sidebar-link text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-4" aria-controls="quarto-sidebar-section-4" aria-expanded="true">
+ <span class="menu-text" id="quarto-sidebar-section-4-label">第IV部 能動学習と分類</span><i class="bi bi-chevron-right" aria-hidden="true"></i></button>
+      </div>
+      <ul id="quarto-sidebar-section-4" aria-labelledby="quarto-sidebar-section-4-label" class="collapse list-unstyled sidebar-section depth1 show">  
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../chapters/08-active-learning.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">第8章　能動学習の基礎</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../chapters/09-gp-classification.html" class="sidebar-item-text sidebar-link active"><span class="chapter-title">第9章　ガウス過程による分類</span></a>
+  </div>
+</li>
+      </ul>
+  </li>
+        <li class="sidebar-item sidebar-item-section">
+      <div class="sidebar-item-container"> 
+            <button type="button" class="sidebar-item-text sidebar-item-toggle sidebar-link text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-5" aria-controls="quarto-sidebar-section-5" aria-expanded="true">
+ <span class="menu-text" id="quarto-sidebar-section-5-label">第V部 実践と発展</span><i class="bi bi-chevron-right" aria-hidden="true"></i></button>
+      </div>
+      <ul id="quarto-sidebar-section-5" aria-labelledby="quarto-sidebar-section-5-label" class="collapse list-unstyled sidebar-section depth1 show">  
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../chapters/10-practical-application.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">第10章　実問題への適用</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../chapters/11-advanced-topics.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">第11章　ベイズ最適化・能動学習の発展</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../chapters/12-method-selection.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">第12章　まとめと次の学習</span></a>
+  </div>
+</li>
+      </ul>
+  </li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../references.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">参考文献</span></a>
+  </div>
+</li>
+        <li class="sidebar-item sidebar-item-section">
+      <div class="sidebar-item-container"> 
+            <button type="button" class="sidebar-item-text sidebar-item-toggle sidebar-link text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-6" aria-controls="quarto-sidebar-section-6" aria-expanded="true">
+ <span class="menu-text" id="quarto-sidebar-section-6-label">付録</span><i class="bi bi-chevron-right" aria-hidden="true"></i></button>
+      </div>
+      <ul id="quarto-sidebar-section-6" aria-labelledby="quarto-sidebar-section-6-label" class="collapse list-unstyled sidebar-section depth1 show">  
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../appendices/exercises.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">章末演習の解答・解説</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../appendices/term-index.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">索引</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../appendices/colophon.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">奥付・引用方法</span></a>
+  </div>
+</li>
+      </ul>
+  </li>
+    </ul>
+    </div>
+</nav>
+<div id="quarto-sidebar-glass" class="quarto-sidebar-collapse-item" data-bs-toggle="collapse" data-bs-target=".quarto-sidebar-collapse-item"></div>
+<!-- margin-sidebar -->
+    <div id="quarto-margin-sidebar" class="sidebar margin-sidebar">
+        <nav id="TOC" role="doc-toc" aria-labelledby="toc-title" class="toc-active">
+    <h2 id="toc-title">目次</h2>
+   
+  <ul class="collapse">
+  <li><a href="#ix-section-9-1" id="toc-ix-section-9-1" class="nav-link active" data-scroll-target="#ix-section-9-1">9.1 8件の合否から確率を予測する</a></li>
+  <li><a href="#ix-section-9-2" id="toc-ix-section-9-2" class="nav-link" data-scroll-target="#ix-section-9-2">9.2 潜在関数とBernoulli尤度</a></li>
+  <li><a href="#ix-section-9-3" id="toc-ix-section-9-3" class="nav-link" data-scroll-target="#ix-section-9-3">9.3 この事後分布を近似する理由</a></li>
+  <li><a href="#ix-section-9-4" id="toc-ix-section-9-4" class="nav-link" data-scroll-target="#ix-section-9-4">9.4 近似潜在事後から合格確率を計算する</a></li>
+  <li><a href="#ix-section-9-5" id="toc-ix-section-9-5" class="nav-link" data-scroll-target="#ix-section-9-5">9.5 ラベルの揺れと、確率についての不確実性</a></li>
+  <li><a href="#ix-section-9-6" id="toc-ix-section-9-6" class="nav-link" data-scroll-target="#ix-section-9-6">9.6 合否判定と確率予測を別々に評価する</a></li>
+  <li><a href="#演習とまとめ" id="toc-演習とまとめ" class="nav-link" data-scroll-target="#演習とまとめ">9.7 演習とまとめ</a></li>
+  </ul>
+</nav>
+    </div>
+<!-- main -->
+<main class="content" id="quarto-document-content" tabindex="-1">
+
+<header id="title-block-header" class="quarto-title-block default"><nav class="quarto-page-breadcrumbs quarto-title-breadcrumbs d-none d-lg-block" aria-label="パンくずリスト"><ol class="breadcrumb"><li class="breadcrumb-item"><a href="../chapters/08-active-learning.html">第IV部 能動学習と分類</a></li><li class="breadcrumb-item"><a href="../chapters/09-gp-classification.html"><span class="chapter-title">第9章　ガウス過程による分類</span></a></li></ol></nav>
+<div class="quarto-title">
+<h1 class="title"><span id="sec-gp-classification" class="quarto-section-identifier"><span class="chapter-title">第9章　ガウス過程による分類</span></span></h1>
+</div>
+
+
+
+<div class="quarto-title-meta">
+
+    
+  
+    
+  </div>
+  
+
+
+</header>
+
+
+<p><strong>学習目標</strong>　Bernoulli尤度で合否を表し、潜在事後から合格確率とその信用区間を求める。変分下界が何を近似するかを説明し、別に取得したラベルで予測を評価する。</p>
+<section id="ix-section-9-1" class="level2">
+<h2 class="anchored" data-anchor-id="ix-section-9-1">9.1 8件の合否から確率を予測する</h2>
+<p>第4章では、温度から強度 [MPa] を予測しました。第8章と同じ合成試験を使い、この章では温度ごとの0・1ラベルから次の合格確率を学習します。合否しか保存されていない8件を初期データとし、観測した温度の間で合格確率を予測します。真の強度 <span class="math inline">\(g(x)\)</span> [MPa] はラベルの生成に使い、GP分類器には温度と合否のみを渡します。</p>
+<p><a href="../notebooks/ch09_gp_classification.ipynb">第9章のNotebook</a> と同じフォルダで実行します。<code>predict_proba</code> は最後の軸に <span class="math inline">\(\Pr(Y=0)\)</span> と <span class="math inline">\(\Pr(Y=1)\)</span> をこの順で返します。</p>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb1"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> torch</span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> gpytorch.kernels <span class="im">import</span> MaternKernel, ScaleKernel</span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> robotorchan.models.classification <span class="im">import</span> BinarySingleTaskGPClassifier</span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> classification_experiment <span class="im">import</span> reveal_labels, uniforms</span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> experiment <span class="im">import</span> DTYPE, SEED, setup</span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a>setup()</span>
+<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a>torch.set_default_dtype(DTYPE)</span>
+<span id="cb1-9"><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a>pool <span class="op">=</span> torch.linspace(<span class="dv">0</span>, <span class="dv">1</span>, <span class="dv">81</span>, dtype<span class="op">=</span>DTYPE).unsqueeze(<span class="op">-</span><span class="dv">1</span>)</span>
+<span id="cb1-10"><a href="#cb1-10" aria-hidden="true" tabindex="-1"></a>indices <span class="op">=</span> torch.tensor([<span class="dv">0</span>, <span class="dv">12</span>, <span class="dv">26</span>, <span class="dv">40</span>, <span class="dv">50</span>, <span class="dv">64</span>, <span class="dv">74</span>, <span class="dv">80</span>])</span>
+<span id="cb1-11"><a href="#cb1-11" aria-hidden="true" tabindex="-1"></a>train_x <span class="op">=</span> pool[indices]</span>
+<span id="cb1-12"><a href="#cb1-12" aria-hidden="true" tabindex="-1"></a>draws <span class="op">=</span> uniforms(pool, SEED <span class="op">+</span> <span class="dv">9</span>)</span>
+<span id="cb1-13"><a href="#cb1-13" aria-hidden="true" tabindex="-1"></a>train_y <span class="op">=</span> reveal_labels(train_x, draws[indices])</span>
+<span id="cb1-14"><a href="#cb1-14" aria-hidden="true" tabindex="-1"></a>torch.manual_seed(SEED <span class="op">+</span> <span class="dv">9</span>)</span>
+<span id="cb1-15"><a href="#cb1-15" aria-hidden="true" tabindex="-1"></a>kernel <span class="op">=</span> ScaleKernel(MaternKernel(nu<span class="op">=</span><span class="fl">2.5</span>))</span>
+<span id="cb1-16"><a href="#cb1-16" aria-hidden="true" tabindex="-1"></a>kernel.base_kernel.lengthscale <span class="op">=</span> <span class="fl">0.18</span></span>
+<span id="cb1-17"><a href="#cb1-17" aria-hidden="true" tabindex="-1"></a>inducing <span class="op">=</span> torch.linspace(<span class="dv">0</span>, <span class="dv">1</span>, <span class="dv">9</span>, dtype<span class="op">=</span>DTYPE).unsqueeze(<span class="op">-</span><span class="dv">1</span>)</span>
+<span id="cb1-18"><a href="#cb1-18" aria-hidden="true" tabindex="-1"></a>model <span class="op">=</span> BinarySingleTaskGPClassifier(</span>
+<span id="cb1-19"><a href="#cb1-19" aria-hidden="true" tabindex="-1"></a>    train_x, train_y, covar_module<span class="op">=</span>kernel, inducing_points<span class="op">=</span>inducing,</span>
+<span id="cb1-20"><a href="#cb1-20" aria-hidden="true" tabindex="-1"></a>    learn_inducing_points<span class="op">=</span><span class="va">False</span>,</span>
+<span id="cb1-21"><a href="#cb1-21" aria-hidden="true" tabindex="-1"></a>)</span>
+<span id="cb1-22"><a href="#cb1-22" aria-hidden="true" tabindex="-1"></a>model.fit(epochs<span class="op">=</span><span class="dv">120</span>, lr<span class="op">=</span><span class="fl">0.03</span>)</span>
+<span id="cb1-23"><a href="#cb1-23" aria-hidden="true" tabindex="-1"></a>test_x <span class="op">=</span> (torch.arange(<span class="dv">120</span>, dtype<span class="op">=</span>DTYPE) <span class="op">+</span> <span class="fl">0.37</span>).unsqueeze(<span class="op">-</span><span class="dv">1</span>) <span class="op">/</span> <span class="dv">120</span></span>
+<span id="cb1-24"><a href="#cb1-24" aria-hidden="true" tabindex="-1"></a><span class="cf">with</span> torch.no_grad():</span>
+<span id="cb1-25"><a href="#cb1-25" aria-hidden="true" tabindex="-1"></a>    p <span class="op">=</span> model.predict_proba(test_x)[..., <span class="dv">1</span>]</span>
+<span id="cb1-26"><a href="#cb1-26" aria-hidden="true" tabindex="-1"></a>    labels <span class="op">=</span> model.predict_class(test_x, threshold<span class="op">=</span><span class="fl">0.5</span>)</span></code></pre></div><button title="コピー" class="code-copy-button"><i class="bi"></i></button></div>
+<p>最初の評価点 <strong>140.12 °C</strong> での予測合格確率は <strong>0.468</strong> でした。</p>
+<p>図の上段は無次元の潜在スコア、下段はそのスコアから得る合格確率です。合格確率の青線は、「新しい試験片1個の合否」を繰り返し予測するときの合格の確率です。青い帯は合格確率そのものについての不確実性を表します。例えば帯が狭く、予測が0.5付近なら、「合否は五分五分だとかなり分かっている」という読み方になります。</p>
+<div id="fig-gp-classification-probability" class="quarto-float quarto-figure quarto-figure-center anchored" data-fig-pos="!ht">
+<figure class="quarto-float quarto-float-fig figure">
+<div aria-describedby="fig-gp-classification-probability-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+<img src="../figures/ch09_latent_probability.svg" class="img-fluid figure-img" style="width:93.0%" data-fig-pos="!ht">
+</div>
+<figcaption class="quarto-float-caption-bottom quarto-float-caption quarto-float-fig" id="fig-gp-classification-probability-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+図&nbsp;9.1: 8件で学習した変分GP分類器。上段は潜在スコア、下段は合格確率。帯は点ごとの95%信用区間、点は観測ラベル、破線は合成試験の真の合格確率。
+</figcaption>
+</figure>
+</div>
+</section>
+<section id="ix-section-9-2" class="level2">
+<h2 class="anchored" data-anchor-id="ix-section-9-2">9.2 潜在関数とBernoulli尤度</h2>
+<p>入力 <span class="math inline">\(x_i\)</span> のラベル <span class="math inline">\(y_i\)</span> は0または1です。潜在関数 <span class="math inline">\(f\)</span> に第3章と同じGP事前 <span class="math inline">\(\mathcal{GP}(m_0,k_\theta)\)</span> を置き、<span class="math inline">\(f_i=f(x_i)\)</span> とします。<span class="math inline">\(m_0\)</span> は事前平均関数、<span class="math inline">\(k_\theta\)</span> はハイパーパラメータ <span class="math inline">\(\theta\)</span> を持つカーネルです。ここでの <span class="math inline">\(f_i\)</span> は無次元の分類スコアです。関数 <span class="math inline">\(s:\mathbb R\to(0,1)\)</span> がスコアを確率に変換します。<span class="math inline">\(s\)</span> は<strong>逆リンク関数</strong>です。各観測のラベルは潜在スコアを与えると条件付きで独立と仮定し、1件の<strong>Bernoulli尤度</strong>は</p>
+<p><span class="math display">\[
+p(y_i\mid f_i)=s(f_i)^{y_i}\{1-s(f_i)\}^{1-y_i}
+\]</span></p>
+<p>です。例えば <span class="math inline">\(y_i=1\)</span> なら <span class="math inline">\(s(f_i)\)</span>、<span class="math inline">\(y_i=0\)</span> なら <span class="math inline">\(1-s(f_i)\)</span> が尤度になります。条件付き独立は、<span class="math inline">\(f\)</span> を積分した後のラベル同士の独立を意味しません。近い温度のスコアはGPのカーネルを通じて相関します <span class="citation" data-cites="rasmussen2006">(<a href="../references.html#ref-rasmussen2006" role="doc-biblioref">Rasmussen と Williams 2006年, 第3章</a>)</span>。</p>
+<table class="caption-top table">
+<thead>
+<tr class="header">
+<th>リンク（確率からスコアへ）</th>
+<th>逆リンク <span class="math inline">\(s(t)\)</span></th>
+<th style="text-align: right;">スコア <span class="math inline">\(t=2\)</span> での確率</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>Probit <span class="math inline">\(\Phi^{-1}\)</span></td>
+<td><span class="math inline">\(\Phi(t)\)</span></td>
+<td style="text-align: right;">約0.977</td>
+</tr>
+<tr class="even">
+<td>Logit <span class="math inline">\(p\mapsto \log(p/(1-p))\)</span></td>
+<td><span class="math inline">\(1/(1+\exp(-t))\)</span></td>
+<td style="text-align: right;">約0.881</td>
+</tr>
+</tbody>
+</table>
+<p>表の同じ <span class="math inline">\(t\)</span> は同一の潜在尺度で逆リンクの形を比べるための値です。学習した各モデルでは潜在関数の尺度も推定されます。教材の公開API <code>robotorchan.models.classification.BinarySingleTaskGPClassifier</code> は、GPyTorchの <code>BernoulliLikelihood</code> を使用し、逆リンクはProbitです <span class="citation" data-cites="robotorchan gpytorch-likelihoods">(<a href="../references.html#ref-robotorchan" role="doc-biblioref"><span class="nocase">robotorchan contributors</span> 2026年</a>; <a href="../references.html#ref-gpytorch-likelihoods" role="doc-biblioref">GPyTorch contributors, 日付なし-a</a>)</span>。</p>
+</section>
+<section id="ix-section-9-3" class="level2">
+<h2 class="anchored" data-anchor-id="ix-section-9-3">9.3 この事後分布を近似する理由</h2>
+<p><span class="math inline">\(n\)</span> 件の入力 <span class="math inline">\(X=(x_1,\dots,x_n)\)</span>、ラベル <span class="math inline">\(\mathbf y=(y_1,\dots,y_n)^\mathsf T\)</span>、潜在値 <span class="math inline">\(\mathbf f=(f_1,\dots,f_n)^\mathsf T\)</span> を考えます。ここではGPのハイパーパラメータをいったん固定します。Bayesの定理は</p>
+<p><span class="math display">\[
+p(\mathbf f\mid X,\mathbf y)
+=\frac{p(\mathbf f\mid X)\prod_{i=1}^n p(y_i\mid f_i)}
+       {p(\mathbf y\mid X)}
+\]</span></p>
+<p>です。分母は分子を <span class="math inline">\(\mathbf f\)</span> について積分した周辺尤度です。第4章のガウス回帰では、事前と尤度の対数が <span class="math inline">\(\mathbf f\)</span> の二次式なので、積を正規分布として平方完成できました。ここでは、例えば合格の寄与が <span class="math inline">\(\log\Phi(f_i)\)</span> となり、<span class="math inline">\(f_i\)</span> の二次式ではありません。事後は一般に非ガウスで、正規分布の条件付き公式だけでは得られません。Laplace近似、期待値伝播、変分推論、モンテカルロ法などが候補になります <span class="citation" data-cites="rasmussen2006">(<a href="../references.html#ref-rasmussen2006" role="doc-biblioref">Rasmussen と Williams 2006年, 第3章</a>)</span>。</p>
+<section id="変分下界を作る" class="level3">
+<h3 class="anchored" data-anchor-id="変分下界を作る">変分下界を作る</h3>
+<p>変分推論では計算しやすい分布の族を決め、その中で事後を近似する分布を探します。補助の入力 <span class="math inline">\(Z=(z_1,\dots,z_M)\)</span> における潜在値 <span class="math inline">\(\mathbf u=f(Z)\)</span> を<strong>誘導変数</strong>と呼びます。<span class="math inline">\(M\)</span> は誘導点数です。訓練入力の事前と同じGPから、結合事前を <span class="math inline">\(p(\mathbf f,\mathbf u)=p(\mathbf f\mid\mathbf u)p(\mathbf u)\)</span> と分解します。式では固定した <span class="math inline">\(X,Z,\theta\)</span> を省略します。</p>
+<p>近似分布を <span class="math inline">\(Q(\mathbf f,\mathbf u)=p(\mathbf f\mid\mathbf u)Q(\mathbf u)\)</span> と置き、<span class="math inline">\(Q(\mathbf u)\)</span> を学習可能な多変量正規分布とします。事前分布 <span class="math inline">\(p(\mathbf u)\)</span> の共分散が正定値で、以下の期待値とKLが有限とします。<span class="math inline">\(\mathrm{KL}(Q\|P)=\mathbb E_Q[\log(Q/P)]\)</span> は、分布 <span class="math inline">\(Q\)</span> と <span class="math inline">\(P\)</span> のずれを測る非負の量です。Bayesの定理で真の結合事後を代入すると、周辺対数尤度は</p>
+<p><span id="eq-classification-elbo"><span class="math display">\[
+\begin{aligned}
+\log p(\mathbf y)
+  &amp;=\mathcal L+\mathrm{KL}\bigl(Q(\mathbf f,\mathbf u)\|
+                            p(\mathbf f,\mathbf u\mid\mathbf y)\bigr),\\
+\mathcal L
+  &amp;=\sum_{i=1}^n\mathbb E_{Q(f_i)}[\log p(y_i\mid f_i)]
+    -\mathrm{KL}\bigl(Q(\mathbf u)\|p(\mathbf u)\bigr).
+\end{aligned}
+\tag{9.1}\]</span></span></p>
+<p>第一式は、KLの定義に <span class="math inline">\(p(\mathbf f,\mathbf u\mid\mathbf y)=p(\mathbf y,\mathbf f,\mathbf u)/p(\mathbf y)\)</span> を入れ、<span class="math inline">\(\log p(\mathbf y)\)</span> を期待値の外に出して得ます。残る <span class="math inline">\(\mathbb E_Q[\log p(\mathbf y,\mathbf f,\mathbf u)-\log Q(\mathbf f,\mathbf u)]\)</span> が <span class="math inline">\(\mathcal L\)</span> です。第二式では、尤度がラベルごとに積に分かれることと、<span class="math inline">\(Q/p\)</span> の比から <span class="math inline">\(p(\mathbf f\mid\mathbf u)\)</span> が消えることを使いました。<span class="math inline">\(\mathcal L\)</span> は対数周辺尤度の下界なので、<strong>ELBO</strong>（evidence lower bound）と呼びます。第一項は既知ラベルへの適合、第二項は誘導変数の近似分布が事前から離れることへの罰則です。同じモデルのもとでは、下界を上げるほど制約した分布族での事後へのKLが小さくなります。ハイパーパラメータも同時に変える場合は、近似とモデルの両方が更新されます <span class="citation" data-cites="hensman2015 gpytorch-elbo">(<a href="../references.html#ref-hensman2015" role="doc-biblioref">Hensman ほか 2015年</a>; <a href="../references.html#ref-gpytorch-elbo" role="doc-biblioref">GPyTorch contributors, 日付なし-b</a>)</span>。</p>
+<p>この教材では誘導入力を <span class="math inline">\([0,1]\)</span> の等間隔9点に固定します。Matérn 5/2カーネルの長さ尺度の初期値を0.18として、カーネルのパラメータと変分分布をAdamで学習します。小例の初回学習は全8件を使って120エポックです。<code>fit(epochs=120, lr=0.03)</code> が、<code>make_mll</code> で構築した公開API <code>VariationalELBO</code> を使います。期待対数尤度は数値求積で評価します。誘導点の配置や数、学習率、最適化の停止位置で結果は変わります。誘導点の数が訓練数より少ないことは、この定式化を使う必須条件ではありません。</p>
+</section>
+</section>
+<section id="ix-section-9-4" class="level2">
+<h2 class="anchored" data-anchor-id="ix-section-9-4">9.4 近似潜在事後から合格確率を計算する</h2>
+<p>新しい温度 <span class="math inline">\(x\)</span> のスコア <span class="math inline">\(F_x\)</span> の近似事後を <span class="math inline">\(\mathcal N(m_x,s_x^2)\)</span> とします。これは、誘導変数の正規分布とGPの条件付き正規分布から得る周辺分布です。第4章ではガウス観測から事後を直接求めました。この章では、変分学習で得た近似事後を出発点にします。次のラベルの合格確率 <span class="math inline">\(\bar p_x\)</span> は、<span class="math inline">\(P_x=\Phi(F_x)\)</span> の事後平均です。<span class="math inline">\(F_x\)</span> と独立な標準正規変数 <span class="math inline">\(V\)</span> を用意すると、</p>
+<p><span id="eq-probit-marginal"><span class="math display">\[
+\begin{aligned}
+\bar p_x&amp;=\mathbb E[\Phi(F_x)]
+         =\Pr(V\le F_x)=\Pr(F_x-V\ge 0)\\
+        &amp;=\Phi\!\left(\frac{m_x}{\sqrt{1+s_x^2}}\right).
+\end{aligned}
+\tag{9.2}\]</span></span></p>
+<p>最後の等式で <span class="math inline">\(F_x-V\sim\mathcal N(m_x,1+s_x^2)\)</span> を使いました。この式は<strong>与えた近似正規分布に対して解析的に正確</strong>です。近似の対象は真の潜在事後です。<span class="math inline">\(\Phi(m_x)\)</span> だけを使うと潜在側の分散が式から消えます。例えば <span class="math inline">\(m_x=1\)</span> で <span class="math inline">\(s_x^2=0\)</span> なら約0.841、<span class="math inline">\(s_x^2=3\)</span> なら約0.691です。Logitの逆リンクに替える場合、一般には数値求積やモンテカルロ積分を用います <span class="citation" data-cites="rasmussen2006 gpytorch-likelihoods">(<a href="../references.html#ref-rasmussen2006" role="doc-biblioref">Rasmussen と Williams 2006年, 第3章</a>; <a href="../references.html#ref-gpytorch-likelihoods" role="doc-biblioref">GPyTorch contributors, 日付なし-a</a>)</span>。</p>
+<p><span class="math inline">\(z_{.975}=\Phi^{-1}(0.975)\)</span> とします。<span class="math inline">\(\Phi\)</span> は単調増加なので、<span class="math inline">\(P_x\)</span> の点ごとの等裾95%信用区間の端点は <span class="math inline">\(\Phi(m_x-z_{.975}s_x)\)</span> と <span class="math inline">\(\Phi(m_x+z_{.975}s_x)\)</span> です。帯が複数温度にまたがっても、全曲線が同時に帯へ入る確率を95%と解釈することはできません。<span class="math inline">\(Y_x\)</span> の取り得る値は0か1で、帯をその予測範囲として読みません。<code>predict_proba</code> で平均確率を、<code>probability_posterior</code> と <code>credible_interval</code> で確率の区間を求めます。</p>
+<p>241点で <code>predict_proba</code> とProbitの解析式を照合した最大絶対差は <strong>1.11e-16</strong> でした。48点Gauss–Hermite求積と公開APIの差は最大 <strong>3.33e-16</strong> でした。</p>
+</section>
+<section id="ix-section-9-5" class="level2">
+<h2 class="anchored" data-anchor-id="ix-section-9-5">9.5 ラベルの揺れと、確率についての不確実性</h2>
+<p><span class="math inline">\(F_x\)</span> を取得済みデータで条件付け、次のラベルは <span class="math inline">\(F_x\)</span> が与えられればBernoulli<span class="math inline">\((P_x)\)</span> とします。全分散の法則は</p>
+<p><span id="eq-label-total-variance"><span class="math display">\[
+\bar p_x(1-\bar p_x)
+=\mathbb E[P_x(1-P_x)]+\mathrm{Var}(P_x)
+\tag{9.3}\]</span></span></p>
+<p>です。左辺は次の1ラベルの予測分散です。右の第1項は確率が分かっても残るラベルの揺れ、第2項は合格確率についての事後不確実性です。第8章の予測エントロピーとBALDは、同じ二つの側面を情報の尺度で区別します。分散の分解と相互情報量は別の量です。図は上段に分散、下段にnatで測る獲得スコアを示します。</p>
+<div id="fig-classification-uncertainty" class="quarto-float quarto-figure quarto-figure-center anchored" data-fig-pos="!ht">
+<figure class="quarto-float quarto-float-fig figure">
+<div aria-describedby="fig-classification-uncertainty-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+<img src="../figures/ch09_uncertainty_queries.svg" class="img-fluid figure-img" style="width:93.0%" data-fig-pos="!ht">
+</div>
+<figcaption class="quarto-float-caption-bottom quarto-float-caption quarto-float-fig" id="fig-classification-uncertainty-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+図&nbsp;9.2: 上段はBernoulli予測分散とその2成分。下段の丸と菱形は、それぞれ予測エントロピーとBALDで選ぶ候補。線は未測定候補のスコアを結んだ。
+</figcaption>
+</figure>
+</div>
+<p>予測エントロピーが選んだのは <strong>162.5 °C</strong>、BALDが選んだのは <strong>149.5 °C</strong> でした。BALDの候補でラベル <strong>1</strong> を記録し、9件で学習し直しました。</p>
+</section>
+<section id="ix-section-9-6" class="level2">
+<h2 class="anchored" data-anchor-id="ix-section-9-6">9.6 合否判定と確率予測を別々に評価する</h2>
+<p>確率を判定に変えるとき、<span class="math inline">\(\bar p_x\ge0.5\)</span> は二つの誤りを同じ費用とした場合の閾値です。誤って合格とする費用を <span class="math inline">\(c_{\mathrm{FP}}&gt;0\)</span>、誤って不合格とする費用を <span class="math inline">\(c_{\mathrm{FN}}&gt;0\)</span>、正しい判定の費用を0とします。合格と判定するときの期待費用は <span class="math inline">\((1-\bar p_x)c_{\mathrm{FP}}\)</span>、不合格と判定するときは <span class="math inline">\(\bar p_xc_{\mathrm{FN}}\)</span> です。前者が後者以下になる条件から、合格判定の閾値は <span class="math inline">\(c_{\mathrm{FP}}/(c_{\mathrm{FP}}+c_{\mathrm{FN}})\)</span> になります。これは試験片の強度を合否に変える74 MPaの規格値とは役割が異なります。</p>
+<p>独立な評価点 <span class="math inline">\(x_j\)</span> とそのラベル <span class="math inline">\(y_j\)</span> に対し、合格確率の予測を <span class="math inline">\(p_j\)</span> とします。誤分類率は閾値に依存します。Brier損失と対数損失は確率を直接評価します。</p>
+<table class="caption-top table">
+<thead>
+<tr class="header">
+<th>指標</th>
+<th>1件の損失</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>誤分類率に用いる損失</td>
+<td>予測ラベルと <span class="math inline">\(y_j\)</span> が異なれば1、一致すれば0</td>
+</tr>
+<tr class="even">
+<td>Brier損失</td>
+<td><span class="math inline">\((p_j-y_j)^2\)</span></td>
+</tr>
+<tr class="odd">
+<td>対数損失</td>
+<td><span class="math inline">\(-y_j\log p_j-(1-y_j)\log(1-p_j)\)</span></td>
+</tr>
+</tbody>
+</table>
+<p>評価点で各損失を平均します。Notebookの対数損失は、浮動小数点で <span class="math inline">\(\log 0\)</span> を評価しないよう、確率を <span class="math inline">\([10^{-12},1-10^{-12}]\)</span> に丸め込みます。評価温度120点は候補グリッドと重ならず、ラベルも別の乱数で発生させます。BALDの候補を1件測り、同じ設定で再学習しても、個々の評価指標の改善は保証されません。</p>
+<table class="caption-top table">
+<thead>
+<tr class="header">
+<th>訓練データ</th>
+<th style="text-align: right;">Brier損失</th>
+<th style="text-align: right;">対数損失 [nat/件]</th>
+<th style="text-align: right;">誤分類率（閾値0.5）</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>初期8件</td>
+<td style="text-align: right;">0.2004</td>
+<td style="text-align: right;">0.5931</td>
+<td style="text-align: right;">10.8%</td>
+</tr>
+<tr class="even">
+<td>BALDで1件追加</td>
+<td style="text-align: right;">0.1575</td>
+<td style="text-align: right;">0.5014</td>
+<td style="text-align: right;">10.8%</td>
+</tr>
+</tbody>
+</table>
+<p>希少な不良では、全件を合格と判定しても誤分類率が低く見える場合があります。運用ではクラス別の誤りや判定コストを見ます。例えば「0.8と予測した試験片のうち約8割が合格するか」を点検するのが確率の<strong>較正</strong>の考え方です。少数データでは温度域ごとに評価のばらつきも大きく、ラベルを取得した候補だけで較正や実用性能を判断すると、選択方策の偏りが影響します。</p>
+</section>
+<section id="演習とまとめ" class="level2">
+<h2 class="anchored" data-anchor-id="演習とまとめ">9.7 演習とまとめ</h2>
+<ol type="1">
+<li><strong>確認。</strong> <span class="math inline">\(m_x=1\)</span> を固定して <span class="math inline">\(s_x^2=0,3,8\)</span> の合格確率を計算してください。次に <span class="math inline">\(m_x=0\)</span> で <span class="math inline">\(s_x^2\)</span> を変えて、確率の平均と信用区間の両方を考えてください。</li>
+<li><strong>操作。</strong> Notebookの判定閾値を0.5から0.8へ変え、誤分類率と、Brier損失・対数損失を比較してください。同じモデルのままならどの指標が変わらないでしょうか。</li>
+<li><strong>発展。</strong> 誘導点の数、位置、エポック数のうち一つだけを変更して再学習し、予測確率、信用区間、BALDの候補、評価損失を比較してください。評価ラベルは変更しないでください。</li>
+<li><strong>導出。</strong> <a href="#eq-label-total-variance" class="quarto-xref">式&nbsp;<span>9.3</span></a> の右辺を展開し、<span class="math inline">\(\mathbb E[P_x^2]\)</span> の項が相殺されることを確かめてください。</li>
+</ol>
+<p>二値のGP分類では、GP事前を潜在スコアに置き、逆リンクで確率へ写します。非ガウス尤度に対する潜在事後の推論と、得た事後を使うProbitの周辺化では、近似の意味が異なります。分類GPの基礎はRasmussenとWilliamsの第3章、誘導変数を用いた変分近似はHensmanらを参照してください <span class="citation" data-cites="rasmussen2006 hensman2015">(<a href="../references.html#ref-rasmussen2006" role="doc-biblioref">Rasmussen と Williams 2006年</a>; <a href="../references.html#ref-hensman2015" role="doc-biblioref">Hensman ほか 2015年</a>)</span>。</p>
+<p><a href="../chapters/10-practical-application.html">第10章</a>では、同じ合成材料に保持時間を加え、表で管理した測定を候補提案と確認試験につなげます。</p>
+
+
+<div id="refs" class="references csl-bib-body hanging-indent" role="list" style="display: none">
+<div id="ref-gpytorch-likelihoods" class="csl-entry" role="listitem">
+GPyTorch contributors. 日付なし-a. <em><span>GPyTorch 1.15.2</span>: Likelihoods</em>. <a href="https://docs.gpytorch.ai/en/v1.15.2/likelihoods.html">https://docs.gpytorch.ai/en/v1.15.2/likelihoods.html</a>.
+</div>
+<div id="ref-gpytorch-elbo" class="csl-entry" role="listitem">
+GPyTorch contributors. 日付なし-b. <em><span>GPyTorch 1.15.2</span>: Marginal Log Likelihoods</em>. <a href="https://docs.gpytorch.ai/en/v1.15.2/marginal_log_likelihoods.html">https://docs.gpytorch.ai/en/v1.15.2/marginal_log_likelihoods.html</a>.
+</div>
+<div id="ref-hensman2015" class="csl-entry" role="listitem">
+Hensman, James, Alexander Matthews, と Zoubin Ghahramani. 2015年. <span>「Scalable Variational Gaussian Process Classification」</span>. <em>Proceedings of the Eighteenth International Conference on Artificial Intelligence and Statistics</em>, Proceedings of Machine Learning Research, vol. 38: 351–60. <a href="https://proceedings.mlr.press/v38/hensman15.html">https://proceedings.mlr.press/v38/hensman15.html</a>.
+</div>
+<div id="ref-rasmussen2006" class="csl-entry" role="listitem">
+Rasmussen, Carl Edward, と Christopher K. I. Williams. 2006年. <em>Gaussian Processes for Machine Learning</em>. MIT Press. <a href="https://doi.org/10.7551/mitpress/3206.001.0001">https://doi.org/10.7551/mitpress/3206.001.0001</a>.
+</div>
+<div id="ref-robotorchan" class="csl-entry" role="listitem">
+<span class="nocase">robotorchan contributors</span>. 2026年. <em><span>robotorchan</span>: Bayesian Optimization and Active Learning with BoTorch</em>. <a href="https://github.com/tanakakao/robotorchan/tree/b1bb77087cd117d83ed21a226a6fce39ccd5b497">https://github.com/tanakakao/robotorchan/tree/b1bb77087cd117d83ed21a226a6fce39ccd5b497</a>.
+</div>
+</div>
+</section>
+
+</main> <!-- /main -->
+<script id="quarto-html-after-body" type="application/javascript">
+  window.document.addEventListener("DOMContentLoaded", function (event) {
+    const icon = "";
+    const anchorJS = new window.AnchorJS();
+    anchorJS.options = {
+      placement: 'right',
+      icon: icon
+    };
+    anchorJS.add('.anchored');
+    const isCodeAnnotation = (el) => {
+      for (const clz of el.classList) {
+        if (clz.startsWith('code-annotation-')) {                     
+          return true;
+        }
+      }
+      return false;
+    }
+    const onCopySuccess = function(e) {
+      // button target
+      const button = e.trigger;
+      // don't keep focus
+      button.blur();
+      // flash "checked"
+      button.classList.add('code-copy-button-checked');
+      var currentTitle = button.getAttribute("title");
+      button.setAttribute("title", "コピーしました");
+      let tooltip;
+      if (window.bootstrap) {
+        button.setAttribute("data-bs-toggle", "tooltip");
+        button.setAttribute("data-bs-placement", "left");
+        button.setAttribute("data-bs-title", "コピーしました");
+        tooltip = new bootstrap.Tooltip(button, 
+          { trigger: "manual", 
+            customClass: "code-copy-button-tooltip",
+            offset: [0, -8]});
+        tooltip.show();    
+      }
+      setTimeout(function() {
+        if (tooltip) {
+          tooltip.hide();
+          button.removeAttribute("data-bs-title");
+          button.removeAttribute("data-bs-toggle");
+          button.removeAttribute("data-bs-placement");
+        }
+        button.setAttribute("title", currentTitle);
+        button.classList.remove('code-copy-button-checked');
+      }, 1000);
+      // clear code selection
+      e.clearSelection();
+    }
+    const getTextToCopy = function(trigger) {
+      const outerScaffold = trigger.parentElement.cloneNode(true);
+      const codeEl = outerScaffold.querySelector('code');
+      for (const childEl of codeEl.children) {
+        if (isCodeAnnotation(childEl)) {
+          childEl.remove();
+        }
+      }
+      return codeEl.innerText;
+    }
+    const clipboard = new window.ClipboardJS('.code-copy-button:not([data-in-quarto-modal])', {
+      text: getTextToCopy
+    });
+    clipboard.on('success', onCopySuccess);
+    if (window.document.getElementById('quarto-embedded-source-code-modal')) {
+      const clipboardModal = new window.ClipboardJS('.code-copy-button[data-in-quarto-modal]', {
+        text: getTextToCopy,
+        container: window.document.getElementById('quarto-embedded-source-code-modal')
+      });
+      clipboardModal.on('success', onCopySuccess);
+    }
+      var localhostRegex = new RegExp(/^(?:http|https):\/\/localhost\:?[0-9]*\//);
+      var mailtoRegex = new RegExp(/^mailto:/);
+        var filterRegex = new RegExp("https:\/\/tanakakao\.github\.io\/bo-al-book\/");
+      var isInternal = (href) => {
+          return filterRegex.test(href) || localhostRegex.test(href) || mailtoRegex.test(href);
+      }
+      // Inspect non-navigation links and adorn them if external
+      window.quartoDecorateExternalLinks = function (root) {
+     var links = (root || window.document).querySelectorAll('a[href]:not(.nav-link):not(.navbar-brand):not(.toc-action):not(.sidebar-link):not(.sidebar-item-toggle):not(.pagination-link):not(.no-external):not([aria-hidden]):not(.dropdown-item):not(.quarto-navigation-tool):not(.about-link)');
+      for (var i=0; i<links.length; i++) {
+        const link = links[i];
+        if (!isInternal(link.href)) {
+          // undo the damage that might have been done by quarto-nav.js in the case of
+          // links that we want to consider external
+          if (link.dataset.originalHref !== undefined) {
+            link.href = link.dataset.originalHref;
+          }
+          if (!link.classList.contains('no-external-icon')) {
+          }
+        }
+      }
+      };
+      window.quartoDecorateExternalLinks(window.document);
+    // Esc closes the popup (WCAG 1.4.13) and focus leaving both trigger and
+    // popup closes it (WCAG 2.4.11); tippy handles neither for interactive popups.
+    const hideOnEscAndFocusOut = {
+      name: 'hideOnEscAndFocusOut',
+      defaultValue: true,
+      fn(instance) {
+        const dismiss = () => {
+          // A show scheduled by the trigger delay would otherwise reopen it
+          instance.clearDelayTimeouts();
+          instance.hide();
+        };
+        const onKeyDown = (event) => {
+          if (event.key !== 'Escape') {
+            return;
+          }
+          // Keep Esc from also reaching page handlers (e.g. reveal.js overview),
+          // except an open reveal.js slide menu, which Esc should close too.
+          // The menu handles keys only when its keyboard option is on.
+          const menuHandlesEsc = window.Reveal?.getPlugin?.('menu')?.isOpen() &&
+            window.Reveal.getConfig().menu?.keyboard !== false;
+          if (!menuHandlesEsc) {
+            event.stopPropagation();
+          }
+          if (instance.popper.contains(window.document.activeElement)) {
+            // Disabled while refocusing so the focus trigger does not reopen it
+            instance.disable();
+            instance.reference.focus();
+            instance.enable();
+          }
+          dismiss();
+        };
+        const onFocusOut = (event) => {
+          const target = event.relatedTarget;
+          if (target && !instance.reference.contains(target) &&
+              !instance.popper.contains(target)) {
+            dismiss();
+          }
+        };
+        // On the trigger too: a click trigger (code-annotations: select) has no
+        // blur handling. Attached for the instance's lifetime so leaving the
+        // trigger also cancels a show still pending on the trigger delay.
+        instance.reference.addEventListener('focusout', onFocusOut);
+        return {
+          onShow() {
+            window.document.addEventListener('keydown', onKeyDown, true);
+            instance.popper.addEventListener('focusout', onFocusOut);
+          },
+          onHide() {
+            window.document.removeEventListener('keydown', onKeyDown, true);
+            instance.popper.removeEventListener('focusout', onFocusOut);
+          },
+          onDestroy() {
+            instance.reference.removeEventListener('focusout', onFocusOut);
+          },
+        };
+      },
+    };
+    function tippyHover(el, contentFn, onTriggerFn, onUntriggerFn) {
+      const config = {
+        allowHTML: true,
+        maxWidth: 500,
+        delay: 100,
+        arrow: false,
+        appendTo: function(el) {
+            return el.parentElement;
+        },
+        interactive: true,
+        interactiveBorder: 10,
+        theme: 'quarto',
+        placement: 'bottom-start',
+        plugins: [hideOnEscAndFocusOut],
+      };
+      if (contentFn) {
+        config.content = contentFn;
+      }
+      if (onTriggerFn) {
+        config.onTrigger = onTriggerFn;
+      }
+      if (onUntriggerFn) {
+        config.onUntrigger = onUntriggerFn;
+      }
+      window.tippy(el, config); 
+    }
+    const noterefs = window.document.querySelectorAll('a[role="doc-noteref"]');
+    for (var i=0; i<noterefs.length; i++) {
+      const ref = noterefs[i];
+      tippyHover(ref, function() {
+        // use id or data attribute instead here
+        let href = ref.getAttribute('data-footnote-href') || ref.getAttribute('href');
+        try { href = new URL(href).hash; } catch {}
+        const id = href.replace(/^#\/?/, "");
+        const note = window.document.getElementById(id);
+        if (note) {
+          return note.innerHTML;
+        } else {
+          return "";
+        }
+      });
+    }
+    const xrefs = window.document.querySelectorAll('a.quarto-xref');
+    const processXRef = (id, note) => {
+      // Strip column container classes
+      const stripColumnClz = (el) => {
+        el.classList.remove("page-full", "page-columns");
+        if (el.children) {
+          for (const child of el.children) {
+            stripColumnClz(child);
+          }
+        }
+      }
+      stripColumnClz(note)
+      if (id === null || id.startsWith('sec-')) {
+        // Special case sections, only their first couple elements
+        const container = document.createElement("div");
+        if (note.children && note.children.length > 2) {
+          container.appendChild(note.children[0].cloneNode(true));
+          for (let i = 1; i < note.children.length; i++) {
+            const child = note.children[i];
+            if (child.tagName === "P" && child.innerText === "") {
+              continue;
+            } else {
+              container.appendChild(child.cloneNode(true));
+              break;
+            }
+          }
+          if (window.Quarto?.typesetMath) {
+            window.Quarto.typesetMath(container);
+          }
+          return container.innerHTML
+        } else {
+          if (window.Quarto?.typesetMath) {
+            window.Quarto.typesetMath(note);
+          }
+          return note.innerHTML;
+        }
+      } else {
+        // Remove any anchor links if they are present
+        const anchorLink = note.querySelector('a.anchorjs-link');
+        if (anchorLink) {
+          anchorLink.remove();
+        }
+        if (window.Quarto?.typesetMath) {
+          window.Quarto.typesetMath(note);
+        }
+        if (note.classList.contains("callout")) {
+          return note.outerHTML;
+        } else {
+          return note.innerHTML;
+        }
+      }
+    }
+    for (var i=0; i<xrefs.length; i++) {
+      const xref = xrefs[i];
+      tippyHover(xref, undefined, function(instance) {
+        instance.disable();
+        let url = xref.getAttribute('href');
+        let hash = undefined; 
+        if (url.startsWith('#')) {
+          hash = url;
+        } else {
+          try { hash = new URL(url).hash; } catch {}
+        }
+        if (hash) {
+          const id = hash.replace(/^#\/?/, "");
+          const note = window.document.getElementById(id);
+          if (note !== null) {
+            try {
+              const html = processXRef(id, note.cloneNode(true));
+              instance.setContent(html);
+            } finally {
+              instance.enable();
+              instance.show();
+            }
+          } else {
+            // See if we can fetch this
+            fetch(url.split('#')[0])
+            .then(res => res.text())
+            .then(html => {
+              const parser = new DOMParser();
+              const htmlDoc = parser.parseFromString(html, "text/html");
+              const note = htmlDoc.getElementById(id);
+              if (note !== null) {
+                const html = processXRef(id, note);
+                instance.setContent(html);
+              } 
+            }).finally(() => {
+              instance.enable();
+              instance.show();
+            });
+          }
+        } else {
+          // See if we can fetch a full url (with no hash to target)
+          // This is a special case and we should probably do some content thinning / targeting
+          fetch(url)
+          .then(res => res.text())
+          .then(html => {
+            const parser = new DOMParser();
+            const htmlDoc = parser.parseFromString(html, "text/html");
+            const note = htmlDoc.querySelector('main.content');
+            if (note !== null) {
+              // This should only happen for chapter cross references
+              // (since there is no id in the URL)
+              // remove the first header
+              if (note.children.length > 0 && note.children[0].tagName === "HEADER") {
+                note.children[0].remove();
+              }
+              const html = processXRef(null, note);
+              instance.setContent(html);
+            } 
+          }).finally(() => {
+            instance.enable();
+            instance.show();
+          });
+        }
+      }, function(instance) {
+      });
+    }
+        let selectedAnnoteEl;
+        const selectorForAnnotation = ( cell, annotation) => {
+          let cellAttr = 'data-code-cell="' + cell + '"';
+          let lineAttr = 'data-code-annotation="' +  annotation + '"';
+          const selector = 'span[' + cellAttr + '][' + lineAttr + ']';
+          return selector;
+        }
+        const selectCodeLines = (annoteEl) => {
+          const doc = window.document;
+          const targetCell = annoteEl.getAttribute("data-target-cell");
+          const targetAnnotation = annoteEl.getAttribute("data-target-annotation");
+          const annoteSpan = window.document.querySelector(selectorForAnnotation(targetCell, targetAnnotation));
+          const lines = annoteSpan.getAttribute("data-code-lines").split(",");
+          const lineIds = lines.map((line) => {
+            return targetCell + "-" + line;
+          })
+          // Each band is positioned against its own containing block, which is
+          // not the offsetParent of the lines, so place it from client rects.
+          const placeBand = (band, firstEl, lastEl, codeBlock) => {
+            const container = band.offsetParent;
+            if (container === null) {
+              return;
+            }
+            const containerRect = container.getBoundingClientRect();
+            // Reveal.js scales slides with a transform, so convert client
+            // pixels back to the CSS pixels of the container.
+            const scale = containerRect.height / container.offsetHeight || 1;
+            const firstRect = firstEl.getBoundingClientRect();
+            const lastRect = lastEl.getBoundingClientRect();
+            const top = (firstRect.top - containerRect.top) / scale - container.clientTop + container.scrollTop;
+            const height = (lastRect.bottom - firstRect.top) / scale;
+            band.style.top = top - 2 + "px";
+            band.style.height = height + 4 + "px";
+            if (codeBlock) {
+              // Without the copy button wrapper, the containing block is wider
+              // than the code block, so span the code block explicitly.
+              const blockRect = codeBlock.getBoundingClientRect();
+              band.style.left = (blockRect.left - containerRect.left) / scale - container.clientLeft + container.scrollLeft + "px";
+              band.style.width = blockRect.width / scale + "px";
+            }
+          };
+          if (lineIds.length > 0) {
+            const el = window.document.getElementById(lineIds[0]);
+            const lastEl = window.document.getElementById(lineIds[lineIds.length - 1]);
+            const parent = el.parentElement.parentElement;
+            // cook up a div (if necessary) and position it
+            let div = window.document.getElementById("code-annotation-line-highlight");
+            if (div === null) {
+              div = window.document.createElement("div");
+              div.setAttribute("id", "code-annotation-line-highlight");
+              div.style.position = 'absolute';
+              parent.appendChild(div);
+            }
+            placeBand(div, el, lastEl, parent.closest("div.sourceCode") || parent);
+            let gutterDiv = window.document.getElementById("code-annotation-line-highlight-gutter");
+            if (gutterDiv === null) {
+              gutterDiv = window.document.createElement("div");
+              gutterDiv.setAttribute("id", "code-annotation-line-highlight-gutter");
+              gutterDiv.style.position = 'absolute';
+              const codeCell = window.document.getElementById(targetCell);
+              const gutter = codeCell.querySelector('.code-annotation-gutter');
+              gutter.appendChild(gutterDiv);
+            }
+            placeBand(gutterDiv, el, lastEl);
+            selectedAnnoteEl = annoteEl;
+          }
+        };
+        const unselectCodeLines = () => {
+          const elementsIds = ["code-annotation-line-highlight", "code-annotation-line-highlight-gutter"];
+          elementsIds.forEach((elId) => {
+            const div = window.document.getElementById(elId);
+            if (div) {
+              div.remove();
+            }
+          });
+          selectedAnnoteEl = undefined;
+        };
+          // Handle positioning of the toggle
+      window.addEventListener(
+        "resize",
+        throttle(() => {
+          elRect = undefined;
+          if (selectedAnnoteEl) {
+            selectCodeLines(selectedAnnoteEl);
+          }
+        }, 10)
+      );
+      function throttle(fn, ms) {
+      let throttle = false;
+      let timer;
+        return (...args) => {
+          if(!throttle) { // first call gets through
+              fn.apply(this, args);
+              throttle = true;
+          } else { // all the others get throttled
+              if(timer) clearTimeout(timer); // cancel #2
+              timer = setTimeout(() => {
+                fn.apply(this, args);
+                timer = throttle = false;
+              }, ms);
+          }
+        };
+      }
+        // Attach click handler to the DT
+        const annoteDls = window.document.querySelectorAll('dt[data-target-cell]');
+        for (const annoteDlNode of annoteDls) {
+          annoteDlNode.addEventListener('click', (event) => {
+            const clickedEl = event.target;
+            if (clickedEl !== selectedAnnoteEl) {
+              unselectCodeLines();
+              const activeEl = window.document.querySelector('dt[data-target-cell].code-annotation-active');
+              if (activeEl) {
+                activeEl.classList.remove('code-annotation-active');
+              }
+              selectCodeLines(clickedEl);
+              clickedEl.classList.add('code-annotation-active');
+            } else {
+              // Unselect the line
+              unselectCodeLines();
+              clickedEl.classList.remove('code-annotation-active');
+            }
+          });
+        }
+    const findCites = (el) => {
+      const parentEl = el.parentElement;
+      if (parentEl) {
+        const cites = parentEl.dataset.cites;
+        if (cites) {
+          return {
+            el,
+            cites: cites.split(' ')
+          };
+        } else {
+          return findCites(el.parentElement)
+        }
+      } else {
+        return undefined;
+      }
+    };
+    var bibliorefs = window.document.querySelectorAll('a[role="doc-biblioref"]');
+    for (var i=0; i<bibliorefs.length; i++) {
+      const ref = bibliorefs[i];
+      const citeInfo = findCites(ref);
+      if (citeInfo) {
+        tippyHover(citeInfo.el, function() {
+          var popup = window.document.createElement('div');
+          citeInfo.cites.forEach(function(cite) {
+            var citeDiv = window.document.createElement('div');
+            citeDiv.classList.add('hanging-indent');
+            citeDiv.classList.add('csl-entry');
+            var biblioDiv = window.document.getElementById('ref-' + cite);
+            if (biblioDiv) {
+              citeDiv.innerHTML = biblioDiv.innerHTML;
+            }
+            popup.appendChild(citeDiv);
+          });
+          return popup.innerHTML;
+        });
+      }
+    }
+  });
+  </script>
+  <script type="application/javascript">
+  window.quartoScrollableRegionsLabels = {"code":"スクロール可能なコード","output":"スクロール可能な出力"};
+  </script>
+<nav class="page-navigation" aria-label="ページ">
+  <div class="nav-page nav-page-previous">
+      <a href="../chapters/08-active-learning.html" class="pagination-link" aria-label="第8章　能動学習の基礎">
+        <i class="bi bi-arrow-left-short"></i> <span class="nav-page-text"><span class="chapter-title">第8章　能動学習の基礎</span></span>
+      </a>          
+  </div>
+  <div class="nav-page nav-page-next">
+      <a href="../chapters/10-practical-application.html" class="pagination-link" aria-label="第10章　実問題への適用">
+        <span class="nav-page-text"><span class="chapter-title">第10章　実問題への適用</span></span> <i class="bi bi-arrow-right-short"></i>
+      </a>
+  </div>
+</nav>
+</div> <!-- /content -->
+
+
+
+
+</body></html>

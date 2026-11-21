@@ -1,0 +1,1286 @@
+[
+  {
+    "objectID": "index.html",
+    "href": "index.html",
+    "title": "Pythonで学ぶベイズ最適化と能動学習",
+    "section": "",
+    "text": "はじめに\n新しい材料の強度を高めるために、次はどの条件で試験をするべきでしょうか。この本では、限られた回数で強度を調べる合成材料試験を例に、Pythonで候補を選ぶところから始めます。Pythonで関数と配列を使ったことがあれば、第1章から読み進められます。\n索引から用語を探せます。演習の解答と奥付・引用方法は巻末にあります。\nPDF版 · Notebookと合成CSVの一括ダウンロード · 引用データ\n実験の問いから始め、短いコードを動かして図と数式を読みます。各章のNotebookでは図の再生成まで実行できます。章末演習は「確認」「操作」「発展」の順で、解答は付録にあります。図と式の番号は章番号と章内の連番で示します。例えば図4.1は第4章の最初の図です。\n教材はPyTorch、GPyTorch、BoTorchとrobotorchanの公開APIを使用します。依存関係、データ生成、図の再現方法は、ソース一式のREADMEにあります。",
+    "crumbs": [
+      "はじめに"
+    ]
+  },
+  {
+    "objectID": "index.html#実験と記号の読み方",
+    "href": "index.html#実験と記号の読み方",
+    "title": "Pythonで学ぶベイズ最適化と能動学習",
+    "section": "実験と記号の読み方",
+    "text": "実験と記号の読み方\n各章のコードは、同じ章のNotebookか、ソース一式の notebooks/ を作業フォルダにして実行します。第1章で候補提案を一巡すると、その後は予測分布（第2〜4章）、獲得関数と反復（第5〜7章）、ラベルの選び方（第8〜9章）の順に計算を追えます。実験ログを持っている読者は第10章から始め、予測と実測の違いは第4章、履歴の更新は第6章に戻って確認できます。\n多くの例では、物理温度 \\(T\\) [°C] を \\(x=(T-140)/40\\) に変換します。第7章の添加比の例と第10章では、物理単位の入力を受け取るモデルも使います。コードを移植するときは、モデルに渡す範囲と装置に渡す単位を最初に確認してください。\n\n\n\n\n\n\n\n記号・用語\n読み方\n\n\n\n\n\\(x_i\\)、\\(X\\)、\\(\\mathcal D\\)\n\\(x_i\\) は一件の条件、\\(X\\) は条件を並べた表、\\(\\mathcal D\\) は観測済みのデータ。第7章のバッチ式では \\(X\\) を候補の組にも使う\n\n\n\\(n\\)、\\(d\\)、\\(q\\)\n観測した件数、入力の列数、一度に試す候補数。単一出力の学習用テンソルは train_x が \\((n,d)\\)、train_y が \\((n,1)\\)\n\n\n\\(f(x)\\)、\\(y_i\\)、\\(F_x\\)\n回帰では \\(f(x)\\) がノイズのない強度、\\(y_i\\) が測定値、\\(F_x\\) がモデルで不確かさを表した候補の潜在強度。第8〜9章の \\(F_x\\) は無次元の分類スコア\n\n\n\\(\\tau^2\\)、\\(\\sigma^2(x)\\)\n第4〜5章で、前者は測定ノイズの分散、後者はモデルが推定した潜在強度の事後分散。強度の分散は MPa²、標準偏差は MPa\n\n\n\\(b\\)、\\(\\hat x\\)\n\\(b\\) は改善を数える基準値、\\(\\hat x\\) は実験終了時に推薦する入力\n\n\n\n同じ材料を題材にしていても、比較条件は章によって変わります。第1・6章の合成試験は強度が決定論的です。第4・5章の主例では同じノイズ付き6点を共有します。第8・9章では強度を合否に変換し、ラベルを返します。第10章では保持時間も選びます。結果を並べるときは、観測の種類と予算が同じ比較かを確認します。",
+    "crumbs": [
+      "はじめに"
+    ]
+  },
+  {
+    "objectID": "chapters/01-bayesian-optimization.html",
+    "href": "chapters/01-bayesian-optimization.html",
+    "title": "第1章　ベイズ最適化とは何か",
+    "section": "",
+    "text": "1.1 高価な試験で、次にどの温度を選ぶか\n新しい材料の強度を高めるために、処理温度を変えて試片を作るとします。試片の準備から測定までに時間がかかり、試せる温度は数点です。この章では、まずPythonで次の測定点を一つ選び、その後で選び方と評価予算の関係を考えます。Pythonで配列と関数を使ったことがあれば読み始められます。\n仮想の材料試験で、処理温度 \\(T\\) は \\(140\\) ～ \\(180\\,^\\circ\\mathrm{C}\\) の範囲から1 °C刻みで選べます。強度はメガパスカル（MPa）で測ります。温度の数値を °C で表すとき、計算では \\(x=(T-140)/40\\) に変換します。この式で、\\(140\\,^\\circ\\mathrm C\\) は \\(x=0\\)、\\(180\\,^\\circ\\mathrm C\\) は \\(x=1\\) です。変換しても温度の順序と候補数は同じです。\n最初に \\(144\\)、\\(160\\)、\\(176\\,^\\circ\\mathrm{C}\\) の3点を測りました。あと6点を測れます。高い強度が得られた温度の近くを測れば、さらに強い条件が見つかるかもしれません。離れた未測定の温度にも、見落とした山があるかもしれません。今回の問いは、これまでの3件を使って、次の試験をどこで行うかです。",
+    "crumbs": [
+      "第I部 ベイズ最適化への導入",
+      "<span class='chapter-number'>1</span>  <span class='chapter-title'>第1章　ベイズ最適化とは何か</span>"
+    ]
+  },
+  {
+    "objectID": "chapters/01-bayesian-optimization.html#sec-bo-first-run",
+    "href": "chapters/01-bayesian-optimization.html#sec-bo-first-run",
+    "title": "第1章　ベイズ最適化とは何か",
+    "section": "1.2 Pythonで最初の候補を得る",
+    "text": "1.2 Pythonで最初の候補を得る\n第1章のNotebookで同じ計算を実行できます。まず初期点の強度を合成試験で取得し、ガウス過程（GP）に渡します。GPは未測定の温度でも、強度の予測値とその不確かさを与えるモデルです。\nimport torch\nfrom botorch.acquisition.analytic import LogExpectedImprovement\nfrom botorch.optim import optimize_acqf_discrete\nfrom experiment import DTYPE, fit_material_gp, material_strength, setup\n\nsetup()\npool = torch.linspace(0, 1, 41, dtype=DTYPE).unsqueeze(-1)\ninitial = torch.tensor([4, 20, 36])\ntrain_x = pool[initial]\ntrain_y = material_strength(train_x)\navailable = torch.ones(len(pool), dtype=torch.bool)\navailable[initial] = False\npool は41行1列です。1行が1つの温度で、1列が入力の種類を表します。material_strength が一回の試験を代替します。続くコードでは、既測定の点を除いた候補にスコアを付け、一番高い点を選びます。LogExpectedImprovement は、現在の最良値をどれだけ更新できそうかという基準に基づくスコアです。式は第5章で扱います。\ntrain_yvar = torch.full_like(train_y, 0.01)\nmodel = fit_material_gp(train_x, train_y, train_yvar)\nacquisition = LogExpectedImprovement(model, best_f=train_y.max())\ncandidate, _ = optimize_acqf_discrete(\n    acquisition, q=1, choices=pool[available],\n)\nobserved = material_strength(candidate)\nprint(140 + 40 * candidate.item(), observed.item())\nこの合成試験は、温度を固定すると同じ強度を返します。GP側では安定に学習するために小さな分散 \\(0.01\\,\\mathrm{MPa}^2\\) を観測モデルに指定しています。実際の測定誤差がある場合の扱いは第2章と第4章で説明します。q=1 は選ぶ候補が1点であることを表します。\nこの実行で最初に選んだのは 150 °C です。この温度での実行結果は 79.25 MPa でした。\n\n\n\n\n\n\n図 1.1: 上段は3件の初期値で学習した強度の予測。下段は未測定の候補だけのLogEI。橙色の縦線と丸印は、下段の最大スコアで選んだ次の温度を示す。\n\n\n\nまず下段の橙色の丸を見つけ、上段で同じ温度を読みます。上段の青線は強度の予測の中心、帯は予測の不確かさの大きさを示します。下段で選んだ温度を実測すると、得られた強度を学習データに追加できます。次回はその情報を使うため、スコアの曲線も変わります。",
+    "crumbs": [
+      "第I部 ベイズ最適化への導入",
+      "<span class='chapter-number'>1</span>  <span class='chapter-title'>第1章　ベイズ最適化とは何か</span>"
+    ]
+  },
+  {
+    "objectID": "chapters/01-bayesian-optimization.html#ix-section-1-3",
+    "href": "chapters/01-bayesian-optimization.html#ix-section-1-3",
+    "title": "第1章　ベイズ最適化とは何か",
+    "section": "1.3 ブラックボックス最適化と評価回数",
+    "text": "1.3 ブラックボックス最適化と評価回数\n温度ごとの潜在強度を \\(f(x)\\)、実験できる温度の集合を \\(\\mathcal X\\) とすると、目標は\n\\[\nx^\\star\\in\\mathop{\\mathrm{arg\\,max}}_{x\\in\\mathcal X} f(x)\n\\tag{1.1}\\]\nです。\\(\\mathrm{arg\\,max}\\) は、値が最大になる入力の集合を表します。最高値が同じ場所が複数あるなら、そのいずれも候補です。実験が終わった時点で、観測した試料と、次の実運用に使う温度の推薦も区別します。実試験に測定ノイズがあると、偶然大きく出た観測がそのまま真に最良の条件とは限りません。\n入力を指定して初めて応答が分かり、その応答の式や勾配を普段は直接使えないとき、応答をブラックボックスとして扱います。本を読む際には合成関数の実装を確認できますが、アルゴリズムは測定した点の値だけで候補を決めます。候補スコアを41点で計算しても、実際に選んで強度を取得するのは1点です。比較の予算には強度を取得した回数を数えます (Frazier 2018年; Garnett 2023年)。",
+    "crumbs": [
+      "第I部 ベイズ最適化への導入",
+      "<span class='chapter-number'>1</span>  <span class='chapter-title'>第1章　ベイズ最適化とは何か</span>"
+    ]
+  },
+  {
+    "objectID": "chapters/01-bayesian-optimization.html#ix-section-1-4",
+    "href": "chapters/01-bayesian-optimization.html#ix-section-1-4",
+    "title": "第1章　ベイズ最適化とは何か",
+    "section": "1.4 代理モデル、獲得関数、探索と活用",
+    "text": "1.4 代理モデル、獲得関数、探索と活用\n高価な実験の応答を近似する予測モデルを代理モデル（サロゲートモデル）と呼びます。予測の中心が高い温度を選ぶことは、現在得られた情報を活用する考え方です。観測が少なく予測の幅が広い温度を調べることは、未知の領域を探索する考え方です。ベイズ最適化では、どこを測る価値が高いかを獲得関数で数値化します。測定を終えた時点でどの温度を使うかは、測定候補を選ぶ判断とは別に行います (Garnett 2023年)。\n\n観測済みの入力と強度から、代理モデルを学習します。\n各候補を測る価値を獲得関数で計算します。\n実行可能な候補のうち、獲得関数が大きい温度を選びます。\nその点を1回測り、新しい観測を追加します。評価予算が残っていれば学習から繰り返します。\n\nこの教材では一入力・一目的の最大化を扱います。観測や測定範囲の制約、複数点を一度に試す場合は、候補の選び方や予算の数え方を調整します。",
+    "crumbs": [
+      "第I部 ベイズ最適化への導入",
+      "<span class='chapter-number'>1</span>  <span class='chapter-title'>第1章　ベイズ最適化とは何か</span>"
+    ]
+  },
+  {
+    "objectID": "chapters/01-bayesian-optimization.html#ix-section-1-5",
+    "href": "chapters/01-bayesian-optimization.html#ix-section-1-5",
+    "title": "第1章　ベイズ最適化とは何か",
+    "section": "1.5 同じ予算でランダム・格子・BOを比べる",
+    "text": "1.5 同じ予算でランダム・格子・BOを比べる\n三つの方法に同じ初期3点、同じ41候補、同じ追加6点の予算を与えます。追加点の選び方だけを変えます。格子の追加点は \\(140,148,\\ldots,180\\,^\\circ\\mathrm{C}\\) の6点を温度の昇順で評価します。ランダムは未測定の候補から重複なく引きます。BOは直前までの測定でモデルを更新してから、次の点を選びます。\n\n\n\n\n\n\n図 1.2: 初期3点から計9点までの、観測した中で最良の強度。破線は、探索が終わった後で合成関数の全41候補を評価して得た比較用の最大値。\n\n\n\nこの例では試験にノイズがないので、予算内に観測した最良値を全候補の最大と直接比較できます。最大から最良値を引いた差が小さいほど、予算内に良い条件まで到達したことを示します。\n\n\n\n\n\n\n\n\n\n\n方法\n累計評価回数\n最良観測値 [MPa]\n温度 [°C]\n最大値との差 [MPa]\n\n\n\n\nランダム\n9\n79.92\n157\n0.44\n\n\n固定格子\n9\n80.29\n156\n0.07\n\n\nベイズ最適化\n9\n80.22\n154\n0.14\n\n\n\n全41候補の最大は 80.36 MPa です。この実行で最良観測値が最も高かった方法は 固定格子 です。\n固定格子は温度範囲を均一に調べやすく、格子が粗い場合はその間にある強い点を拾えません。ランダムは同じ予算でもシードで結果が変わります。BOは測った値を次回に利用しますが、代理モデル・獲得関数の仮定や最初の3点が結果に影響します。図の差はこの合成関数・初期点・ランダムシード・格子の順番での例です。手法の性能を比べるときは、複数の問題と初期点、シードについて予算と評価方法を揃えて検討します。実機では測定コストのほか、候補計算にかかる時間も記録します。",
+    "crumbs": [
+      "第I部 ベイズ最適化への導入",
+      "<span class='chapter-number'>1</span>  <span class='chapter-title'>第1章　ベイズ最適化とは何か</span>"
+    ]
+  },
+  {
+    "objectID": "chapters/01-bayesian-optimization.html#使いどころと演習",
+    "href": "chapters/01-bayesian-optimization.html#使いどころと演習",
+    "title": "第1章　ベイズ最適化とは何か",
+    "section": "1.6 使いどころと演習",
+    "text": "1.6 使いどころと演習\n試行が安価で候補を網羅できるときには、全候補を調べれば最大値を直接確認できます。測定の条件変更や試片の準備に時間がかかるとき、少数の試験から予測を更新する価値が高くなります。探索範囲、測定回数、測定のばらつき、最後に推薦する条件を先に整理しておくと、比較の基準が明確になります。\n\n確認。 初期3点、追加6点の試験で評価予算はいくつですか。候補を41点から細かくしたとき、物理的な試験回数もそのまま増えますか。\n操作。 Notebookの n_extra を3に変え、6回目までの推移を比較しましょう。次にランダムのシードを変え、結果がどう動くか確かめましょう。\n発展。 同じ温度を何度か測ると強度がばらつく場合、最良観測値をどう読みますか。最良条件を推薦する前に追加で行う測定を説明しましょう。\n\n次章へ。 図の青い帯を読むには、予測を数値一つで表す場合と、分布で表す場合の違いが重要です。第2章では、観測を得ると分布がどう変わるかを、一つの未知量から学びます。\n\n\n\n\nFrazier, Peter I. 2018年. A Tutorial on Bayesian Optimization. https://arxiv.org/abs/1807.02811.\n\n\nGarnett, Roman. 2023年. Bayesian Optimization. Cambridge University Press. https://bayesoptbook.com/.",
+    "crumbs": [
+      "第I部 ベイズ最適化への導入",
+      "<span class='chapter-number'>1</span>  <span class='chapter-title'>第1章　ベイズ最適化とは何か</span>"
+    ]
+  },
+  {
+    "objectID": "chapters/02-probability.html",
+    "href": "chapters/02-probability.html",
+    "title": "第2章　確率・統計・ベイズ推論の基礎",
+    "section": "",
+    "text": "2.1 測定から未知の平均を推定する\n処理温度を固定して試片を測ると、引張強度にはばらつきが出ます。この章では、繰り返し測った結果を使って未知の平均強度を推定します。さらに、別々の温度での強度を共に考え、一方を知った後のもう一方の分布を計算します。平均・分散・共分散・条件付き確率の意味が分かると、第4章の予測式を読みやすくなります。\n同じ温度で4回測り、\\(71,73,72,74\\) MPaを得たとします。この小例では、1回の測定値は未知の平均強度 \\(\\theta\\) の周りで変動し、誤差の標準偏差は既知の3 MPaとします。測定前の \\(\\theta\\) は平均70 MPa、標準偏差5 MPaの正規分布で表すことにします。\n第2章のNotebookでは、最初に4件から事後分布の平均と標準偏差を計算します。1 / sd**2 は分散の逆数で、精度と呼びます。第2.5節でこの計算を導きます。\n色の付いた曲線は、測定結果から推定する未知の平均 \\(\\theta\\) に対する分布です。観測を追加すると、平均はデータの中心に近づき、幅が狭くなります。測定機器の精度を表す3 MPaは、この計算では最初から最後まで固定しています。",
+    "crumbs": [
+      "第I部 ベイズ最適化への導入",
+      "<span class='chapter-number'>2</span>  <span class='chapter-title'>第2章　確率・統計・ベイズ推論の基礎</span>"
+    ]
+  },
+  {
+    "objectID": "chapters/02-probability.html#sec-probability-first-run",
+    "href": "chapters/02-probability.html#sec-probability-first-run",
+    "title": "第2章　確率・統計・ベイズ推論の基礎",
+    "section": "",
+    "text": "import numpy as np\n\ny = np.array([71.0, 73.0, 72.0, 74.0])\nprior_mean, prior_sd = 70.0, 5.0\nnoise_sd = 3.0\nv = 1 / (1 / prior_sd**2 + len(y) / noise_sd**2)\nm = v * (prior_mean / prior_sd**2 + y.sum() / noise_sd**2)\nprint(m, np.sqrt(v))\n\n\n\n\n\n\n図 2.1: 未知の平均強度の事前分布と、観測1件または4件を使った事後分布。横軸上の短い線は4件の測定値。\n\n\n\n\n\n\n\n\n\n\n\n使用した観測数\n未知の平均強度の分布の平均 [MPa]\n同じ分布の標準偏差 [MPa]\n\n\n\n\n0\n70.000\n5.000\n\n\n1\n70.735\n2.572\n\n\n4\n72.294\n1.437",
+    "crumbs": [
+      "第I部 ベイズ最適化への導入",
+      "<span class='chapter-number'>2</span>  <span class='chapter-title'>第2章　確率・統計・ベイズ推論の基礎</span>"
+    ]
+  },
+  {
+    "objectID": "chapters/02-probability.html#ix-section-2-2",
+    "href": "chapters/02-probability.html#ix-section-2-2",
+    "title": "第2章　確率・統計・ベイズ推論の基礎",
+    "section": "2.2 確率変数・期待値・分散・共分散",
+    "text": "2.2 確率変数・期待値・分散・共分散\n試験の結果として得られる量を確率変数と呼び、大文字 \\(Y\\) で表します。実際に観測された数値を小文字 \\(y\\) で表します。連続な変数では、例えば \\(P(70\\leq Y\\leq 75)\\) のように、区間に入る確率を密度 \\(p_Y\\) の積分 \\(\\int_{70}^{75}p_Y(t)\\,dt\\) で求めます。密度の単位は元の量の逆数です。MPaで測った強度に対する密度の単位は \\(1/\\mathrm{MPa}\\) です。\n平均を \\(\\mu_Y=\\mathbb E[Y]\\) と書きます。これは分布に従う値の加重平均です。連続なら \\(\\mu_Y=\\int t\\,p_Y(t)\\,dt\\) です。平均からのばらつきは、分散 \\(\\mathrm{Var}(Y)=\\mathbb E[(Y-\\mu_Y)^2]\\) で表せます。分散の平方根が標準偏差で、元の測定値と単位が同じです。\n二つの変数 \\(U,V\\) の共分散は、平均からのずれを掛け合わせた期待値です。\n\\[\n\\mathrm{Cov}(U,V)=\\mathbb E[(U-\\mu_U)(V-\\mu_V)] .\n\\]\n共分散の符号は、平均から同じ向きにずれるか、反対の向きにずれるかの傾向を表します。標準偏差 \\(\\sigma_U,\\sigma_V\\) がともに正のとき、\\(\\rho=\\mathrm{Cov}(U,V)/(\\sigma_U\\sigma_V)\\) が相関係数です。分散と共分散は、まとめて次の行列で表せます。\n\\[\n\\Sigma=\n\\begin{bmatrix}\n\\sigma_U^2 & \\rho\\sigma_U\\sigma_V \\\\\n\\rho\\sigma_U\\sigma_V & \\sigma_V^2\n\\end{bmatrix}.\n\\]\n独立で二次モーメントが有限なら、共分散はゼロです。逆向きの結論には追加の仮定が要ります。例えば同時正規分布では、共分散ゼロから独立を導けます。この性質を第2.5節と第4章で使います (Rasmussen と Williams 2006年, 付録A.2; Murphy 2022年)。",
+    "crumbs": [
+      "第I部 ベイズ最適化への導入",
+      "<span class='chapter-number'>2</span>  <span class='chapter-title'>第2章　確率・統計・ベイズ推論の基礎</span>"
+    ]
+  },
+  {
+    "objectID": "chapters/02-probability.html#正規分布と多変量正規分布",
+    "href": "chapters/02-probability.html#正規分布と多変量正規分布",
+    "title": "第2章　確率・統計・ベイズ推論の基礎",
+    "section": "2.3 正規分布と多変量正規分布",
+    "text": "2.3 正規分布と多変量正規分布\n一つの量の正規分布は \\(Y\\sim\\mathcal N(\\mu,\\sigma^2)\\) と書きます。\\(\\sigma&gt;0\\) のとき、密度は\n\\[\np_Y(t)=\\frac{1}{\\sqrt{2\\pi}\\sigma}\n       \\exp\\!\\left(-\\frac{(t-\\mu)^2}{2\\sigma^2}\\right)\n\\]\nです。\\(Z=(Y-\\mu)/\\sigma\\) により、平均0、分散1の標準正規分布に変換できます。標準正規分布の累積分布関数を \\(\\Phi\\) とすると、\\(\\Phi(z)=P(Z\\le z)\\) です。例えば \\(z=1.96\\) は累積確率0.975付近にあり、平均の左右それぞれに標準偏差の約1.96倍を取る区間に、分布の約95%が入ります。この分位点は第4章の帯に、\\(\\Phi\\) は第5章の改善確率に使います。\n\\(U,V\\) を二つ並べた確率ベクトルが二変量正規分布に従う場合、平均ベクトルと上の共分散行列で同時分布が決まります。共分散が非ゼロの場合は、一方の値を知ることで他方の分布も変わり得ます。二つの周辺分布は、それぞれの平均と対角成分で決まります。同時分布の情報を使うときは、対角以外の共分散も必要です。",
+    "crumbs": [
+      "第I部 ベイズ最適化への導入",
+      "<span class='chapter-number'>2</span>  <span class='chapter-title'>第2章　確率・統計・ベイズ推論の基礎</span>"
+    ]
+  },
+  {
+    "objectID": "chapters/02-probability.html#ix-section-2-4",
+    "href": "chapters/02-probability.html#ix-section-2-4",
+    "title": "第2章　確率・統計・ベイズ推論の基礎",
+    "section": "2.4 条件付き確率とベイズの定理",
+    "text": "2.4 条件付き確率とベイズの定理\n事象 \\(B\\) が起きたという条件の下での \\(A\\) の確率を \\(P(A\\mid B)\\) と書きます。\\(P(B)&gt;0\\) のとき \\(P(A\\mid B)=P(A\\cap B)/P(B)\\) です。\\(P(A)&gt;0\\) も満たせば、同じ同時確率を二通りに展開して\n\\[\nP(A\\mid B)=\\frac{P(B\\mid A)P(A)}{P(B)}\n\\tag{2.1}\\]\nを得ます。例えば100個のうち20個が目標強度を満たすとします。簡易判定は、達成品の90%、未達品の10%を陽性とします。陽性は達成品18個と未達品8個の計26個です。陽性が出た品が達成品である確率は \\(18/26\\approx0.692\\) です。判定精度だけでなく、判定前にどれだけ達成品があるかが効きます。\n未知量 \\(\\theta\\) が連続で、データ \\(\\mathbf y\\) を観測した場合は、確率に対応する密度を使います。\n\\[\np(\\theta\\mid\\mathbf y)=\n\\frac{p(\\mathbf y\\mid\\theta)p(\\theta)}\n     {\\int p(\\mathbf y\\mid t)p(t)\\,dt} .\n\\]\n\\(p(\\theta)\\) を事前分布、観測値 \\(\\mathbf y\\) を固定して \\(\\theta\\) の関数として見た \\(p(\\mathbf y\\mid\\theta)\\) を尤度、更新結果 \\(p(\\theta\\mid\\mathbf y)\\) を事後分布と呼びます。分母が有限かつ正であるとき、この分母で割ると事後密度の面積が1になります。未知量の分布と、新しい測定値の予測分布を作る場合には、それぞれについて何に条件付けているかを明示します (Murphy 2022年)。",
+    "crumbs": [
+      "第I部 ベイズ最適化への導入",
+      "<span class='chapter-number'>2</span>  <span class='chapter-title'>第2章　確率・統計・ベイズ推論の基礎</span>"
+    ]
+  },
+  {
+    "objectID": "chapters/02-probability.html#ix-section-2-5",
+    "href": "chapters/02-probability.html#ix-section-2-5",
+    "title": "第2章　確率・統計・ベイズ推論の基礎",
+    "section": "2.5 正規分布で二つの更新を計算する",
+    "text": "2.5 正規分布で二つの更新を計算する\n\n同じ温度で測定を追加する\n事前を \\(\\theta\\sim\\mathcal N(m_0,v_0)\\) とします。\\(v_0,\\tau^2&gt;0\\) とし、\\(\\theta\\) が与えられた下で \\(Y_i\\) は互いに独立に \\(\\mathcal N(\\theta,\\tau^2)\\) に従うとします。\\(n\\) 件の観測値を \\((y_1,\\ldots,y_n)\\) とすると、事後密度は \\(\\theta\\) に依存しない定数を除いて\n\\[\np(\\theta\\mid\\mathbf y)\\ \\propto\\\n\\exp\\!\\left[-\\frac12\\left\\{\n  \\frac{(\\theta-m_0)^2}{v_0}\n  +\\sum_{i=1}^n\\frac{(y_i-\\theta)^2}{\\tau^2}\n\\right\\}\\right].\n\\]\n\\(\\theta^2\\) の係数を \\(A=1/v_0+n/\\tau^2\\)、\\(\\theta\\) の係数を \\(-2B\\)、\\(B=m_0/v_0+\\sum_i y_i/\\tau^2\\) とおきます。\\(A\\theta^2-2B\\theta=A(\\theta-B/A)^2-B^2/A\\) です。指数の中が正規分布の形になり、次の平均 \\(m_n\\) と分散 \\(v_n\\) が得られます。\n\\[\nv_n=\\frac{1}{1/v_0+n/\\tau^2}, \\qquad\nm_n=v_n\\left(\\frac{m_0}{v_0}+\\frac{\\sum_{i=1}^n y_i}{\\tau^2}\\right).\n\\tag{2.2}\\]\n精度 \\(1/v_n\\) は、事前の精度と各観測が持ち込む精度の和です。\\(n&gt;0\\) なら事後平均は、事前平均と標本平均を精度で混ぜた値です。データが増えると分散は小さくなります。同じ件数でも、測定誤差が大きいと1件あたりの精度が下がります。このように事前も事後も正規分布になる関係を共役と呼びます。\n同じ温度でもう一回測る場合は \\(Y_{\\mathrm{new}}=\\theta+\\varepsilon_{\\mathrm{new}}\\) とします。新しい正規誤差 \\(\\varepsilon_{\\mathrm{new}}\\sim\\mathcal N(0,\\tau^2)\\) がこれまでの観測と \\(\\theta\\) から独立なら、新しい測定値の予測分布は \\(\\mathcal N(m_n,v_n+\\tau^2)\\) です。例えば冒頭の4件では、未知の平均と新しい測定値の分布は同じ平均を持ちます。\n未知の平均の事後標準偏差は 1.437 MPa、新しい測定値の予測標準偏差は 3.326 MPa です。次の測定の誤差を加えるため、予測分布の方が広くなります。\n第4章では同じ区別を、温度ごとの潜在強度と新しい測定値について行います。\n\n\n別の温度の潜在強度を予測する\n潜在強度 \\(U,V\\) が二変量正規分布に従い、\\(U\\) の分散を \\(\\sigma_U^2&gt;0\\)、\\(V\\) の分散を \\(\\sigma_V^2\\)、共分散を \\(c\\) とします。\\(U=u\\) と分かったときの \\(V\\) を考えます。残差 \\(R=V-\\mu_V-(c/\\sigma_U^2)(U-\\mu_U)\\) を作ると、\\(\\mathrm{Cov}(R,U)=c-(c/\\sigma_U^2)\\sigma_U^2=0\\) です。\\(R,U\\) は同時正規なので独立です。\\(R\\) の平均は0、分散は \\(\\sigma_V^2-c^2/\\sigma_U^2\\) です。したがって\n\\[\nV\\mid U=u\\sim\n\\mathcal N\\!\\left(\n\\mu_V+\\frac{c}{\\sigma_U^2}(u-\\mu_U),\\\n\\sigma_V^2-\\frac{c^2}{\\sigma_U^2}\n\\right).\n\\tag{2.3}\\]\n共分散 \\(c\\) が正なら、\\(U\\) が平均より高いという情報で \\(V\\) の予測平均も上がります。分散から引く項 \\(c^2/\\sigma_U^2\\) は非負で、情報によって予測の幅が減ります。可逆な共分散行列を持つ連続な場合には、同時密度を \\(U\\) の周辺密度で割って条件付き密度を求めても同じ結果になります (Rasmussen と Williams 2006年, 付録A.2)。\n\n\n\n\n\n\n図 2.2: 左は二つの温度での潜在強度の同時分布からの標本。縦線は U = 76 MPa。右は V の周辺分布と、その U の値で条件付けた分布。\n\n\n\n右図では、\\(V\\) の平均が75から 78.50 MPa、標準偏差が5から 3.57 MPa に変わりました。条件付き密度の式を、同時密度を周辺密度で割る計算と照合しています。\nこの小例では \\(U\\) の値を正確に知ったとしています。実験で \\(U\\) をノイズ付きで測った場合は、条件に使う観測の分散が変わります。第4章は、この条件付けを複数の測定と複数の予測位置へ広げます。",
+    "crumbs": [
+      "第I部 ベイズ最適化への導入",
+      "<span class='chapter-number'>2</span>  <span class='chapter-title'>第2章　確率・統計・ベイズ推論の基礎</span>"
+    ]
+  },
+  {
+    "objectID": "chapters/02-probability.html#適用条件と演習",
+    "href": "chapters/02-probability.html#適用条件と演習",
+    "title": "第2章　確率・統計・ベイズ推論の基礎",
+    "section": "2.6 適用条件と演習",
+    "text": "2.6 適用条件と演習\n繰り返し測定の例は、誤差の独立性と既知の測定分散を仮定しています。装置の温度がゆっくり変化し、測定誤差が連続して同じ方向に寄るときは、独立として計算した事後分布の幅が狭くなりすぎることがあります。二温度の例の相関は、二つの強度についての同時分布を表します。温度条件を変える介入の効果を相関だけから推定することはできません。\n\n確認。 観測が \\(y_1=71\\) の1件であるとき、式 2.2 から事後平均と標準偏差を求めましょう。\n操作。 Notebookで noise_sd を3から6に変え、観測4件の事後平均と標準偏差が変わる理由を説明しましょう。\n発展。 二温度の相関を \\(0\\)、\\(-0.7\\) に変えます。同じ \\(U=76\\) の情報に対し、\\(V\\) の平均と分散はどうなりますか。\n\n次章へ。 いくつもの温度で同時に予測するには、任意の二つの温度の共分散を計算するルールが必要です。第3章では、そのルールをカーネルで定めます。\n\n\n\n\nMurphy, Kevin P. 2022年. Probabilistic Machine Learning: An Introduction. MIT Press. https://probml.github.io/pml-book/book1.html.\n\n\nRasmussen, Carl Edward, と Christopher K. I. Williams. 2006年. Gaussian Processes for Machine Learning. MIT Press. https://doi.org/10.7551/mitpress/3206.001.0001.",
+    "crumbs": [
+      "第I部 ベイズ最適化への導入",
+      "<span class='chapter-number'>2</span>  <span class='chapter-title'>第2章　確率・統計・ベイズ推論の基礎</span>"
+    ]
+  },
+  {
+    "objectID": "chapters/03-gp-basics.html",
+    "href": "chapters/03-gp-basics.html",
+    "title": "第3章　ガウス過程の基礎",
+    "section": "",
+    "text": "3.1 少数点の関数値を一緒に発生させる\nまだ測定していない複数の温度で、材料の強度は一緒にどう変わるでしょうか。第2章の二変量正規分布を出発点に、任意の有限個の温度での強度をまとめて扱うガウス過程を学びます。カーネルから共分散を作り、測定前の関数を何本かサンプルし、長さ尺度やカーネルを変えたときの違いを調べます。\n正規化温度 \\(x=0,0.25,0.75\\) での潜在値を一緒に発生させます。まず共分散行列を作ってから、三つの値を持つ正規分布を指定します。次の小例は無次元の検算です。RBFKernel は二つの入力の距離から共分散を計算します。lengthscale はその距離を測る尺度です。\n第3章のNotebookで、行列とサンプルを確かめられます。\n入力は3行1列で、共分散行列は \\(3\\times 3\\) です。サンプルの三つの値は、一つの関数をこの三つの温度で見た組です。例えば \\(x=0\\) と \\(0.25\\) の共分散は約0.882、\\(x=0\\) と \\(0.75\\) の共分散は約0.325です。第2章と同じく対角は各点の分散です。この例ではすべて1です。非対角の違いが、サンプルした値が一緒に動く程度に現れます。\n図の各線は、サンプルした有限個の点を見やすく結んだものです。左と中央を比べると、中央では同じ温度差でも値が離れやすく、短い間隔で山や谷が現れます。左と右では近い温度どうしの変わり方に注目します。三つとも点ごとの平均と分散は同じで、図の違いは主に点と点の共分散に由来します。",
+    "crumbs": [
+      "第II部 ガウス過程回帰",
+      "<span class='chapter-number'>3</span>  <span class='chapter-title'>第3章　ガウス過程の基礎</span>"
+    ]
+  },
+  {
+    "objectID": "chapters/03-gp-basics.html#少数点の関数値を一緒に発生させる",
+    "href": "chapters/03-gp-basics.html#少数点の関数値を一緒に発生させる",
+    "title": "第3章　ガウス過程の基礎",
+    "section": "",
+    "text": "import torch\nfrom gpytorch.kernels import RBFKernel\nfrom experiment import DTYPE, setup\n\nsetup()\nx = torch.tensor([[0.0], [0.25], [0.75]], dtype=DTYPE)\nkernel = RBFKernel().to(dtype=DTYPE)\nkernel.lengthscale = 0.5\nwith torch.no_grad():\n    covariance = kernel(x).to_dense()\n\nprior = torch.distributions.MultivariateNormal(\n    torch.zeros(3, dtype=DTYPE), covariance_matrix=covariance,\n)\nprint(covariance)\nprint(prior.sample())\n\n\n\n\n\n\n\n図 3.1: いずれも平均70 MPaと各点の標準偏差12 MPaを使い、121点で事前分布から得た各3本のサンプル。左と中央はRBFの長さ尺度を変更。左と右は長さ尺度を揃えてカーネルの種類を変更。",
+    "crumbs": [
+      "第II部 ガウス過程回帰",
+      "<span class='chapter-number'>3</span>  <span class='chapter-title'>第3章　ガウス過程の基礎</span>"
+    ]
+  },
+  {
+    "objectID": "chapters/03-gp-basics.html#ix-section-3-2",
+    "href": "chapters/03-gp-basics.html#ix-section-3-2",
+    "title": "第3章　ガウス過程の基礎",
+    "section": "3.2 有限次元分布とガウス過程の定義",
+    "text": "3.2 有限次元分布とガウス過程の定義\n測定前の未知関数を \\(f\\) とします。任意の有限入力集合 \\(X=(x_1,\\ldots,x_n)\\) での関数値 \\(\\mathbf f_X=(f(x_1),\\ldots,f(x_n))^{\\mathsf T}\\) が同時正規分布に従うとき、\\(f\\) をガウス過程（GP）と呼びます。平均関数を \\(m(x)\\)、共分散関数を \\(k(x,x')\\) として、\n\\[\n\\mathbf f_X\\sim\\mathcal N(\\mathbf m_X,K_{XX}),\n\\qquad\n(\\mathbf m_X)_i=m(x_i),\\quad (K_{XX})_{ij}=k(x_i,x_j)\n\\tag{3.1}\\]\nと書きます。\\(K_{XX}\\) が特異な場合も、線形結合として定義される退化正規分布を含みます。例えば同じ温度を入力の列に二度入れれば、潜在関数値は同じ確率変数です。\n入力点を三つから四つへ増やした場合、四変量正規分布から追加点を除いた周辺は、元の三点の平均・共分散を使った分布に一致します。この整合性により、点の取り方を変えても同じGPを扱えます。実装では、予測と描画に必要な有限集合を選び、その集合で行列を作ります (Rasmussen と Williams 2006年, sec. 2.2)。",
+    "crumbs": [
+      "第II部 ガウス過程回帰",
+      "<span class='chapter-number'>3</span>  <span class='chapter-title'>第3章　ガウス過程の基礎</span>"
+    ]
+  },
+  {
+    "objectID": "chapters/03-gp-basics.html#ix-section-3-3",
+    "href": "chapters/03-gp-basics.html#ix-section-3-3",
+    "title": "第3章　ガウス過程の基礎",
+    "section": "3.3 平均関数と半正定値カーネル",
+    "text": "3.3 平均関数と半正定値カーネル\n平均関数 \\(m(x)\\) は、測定前に考えている強度の中心です。上の図はどの温度でも70 MPaを中心にしました。共分散関数 \\(k\\) はカーネルとも呼ばれ、二つの入力で関数値がどれだけ一緒に動くかを指定します。\\(k(x,x)\\) はその一点での分散で、二点の標準偏差が正なら、\\(k(x,x^\\prime)\\) をその積で割ると相関が得られます。\n共分散行列は対称で半正定値です。どの実ベクトル \\(\\mathbf a=(a_1,\\ldots,a_n)^{\\mathsf T}\\) に対しても、線形結合の分散は\n\\[\n\\mathrm{Var}\\!\\left(\\sum_i a_i f(x_i)\\right)\n   =\\mathbf a^{\\mathsf T}K_{XX}\\mathbf a\\ \\ge 0\n\\tag{3.2}\\]\nです。したがって、使うカーネルは、任意の有限入力集合から作る行列に対してこの条件を満たす必要があります。例えば、両点の分散を1とし、共分散を1.2と置くと、\\(\\mathbf a=(1,-1)^{\\mathsf T}\\) の分散が \\(2-2(1.2)=-0.4\\) となり、この組は共分散行列にできません (Rasmussen と Williams 2006年, sec. 4.1)。\nNotebookはCholesky分解でサンプルを得るため、密な入力集合の対角に微小な値を足しています。この教材では補正量は \\(10^{-8}\\,\\mathrm{MPa}^2\\) です。これは数値安定性のためのjitterで、第4章でデータの測定誤差を表す分散とは役割が異なります。",
+    "crumbs": [
+      "第II部 ガウス過程回帰",
+      "<span class='chapter-number'>3</span>  <span class='chapter-title'>第3章　ガウス過程の基礎</span>"
+    ]
+  },
+  {
+    "objectID": "chapters/03-gp-basics.html#ix-section-3-4",
+    "href": "chapters/03-gp-basics.html#ix-section-3-4",
+    "title": "第3章　ガウス過程の基礎",
+    "section": "3.4 RBFとMatérn",
+    "text": "3.4 RBFとMatérn\n一次元の正規化入力で距離を \\(r=|x-x'|\\) とします。RBFカーネルとMatérn 3/2カーネルは、信号分散 \\(s_f^2&gt;0\\) と長さ尺度 \\(\\ell&gt;0\\) を使って、次のように書けます。\n\\[\n\\begin{aligned}\nk_{\\mathrm{RBF}}(x,x')\n&= s_f^2\\exp\\!\\left(-\\frac{r^2}{2\\ell^2}\\right),\\\\[2pt]\nk_{\\mathrm{Mat\\acute ern}\\,3/2}(x,x')\n&= s_f^2\\left(1+\\frac{\\sqrt{3}\\,r}{\\ell}\\right)\n      \\exp\\!\\left(-\\frac{\\sqrt{3}\\,r}{\\ell}\\right).\n\\end{aligned}\n\\tag{3.3}\\]\nどちらも \\(r=0\\) で \\(s_f^2\\) になります。RBFは滑らかな変化を表す事前分布を与え、Matérn 3/2は近い点どうしでも変化が比較的粗い分布を表せます。同じ \\(\\ell\\) を指定しても、距離に対する共分散の形は揃いません。RBFの例では \\(r=\\ell\\) の共分散は \\(s_f^2 e^{-1/2}\\) です。図を読むときはサンプル3本の特徴と、カーネルの式が与える傾向を合わせて見ます (Rasmussen と Williams 2006年, sec. 4.2)。",
+    "crumbs": [
+      "第II部 ガウス過程回帰",
+      "<span class='chapter-number'>3</span>  <span class='chapter-title'>第3章　ガウス過程の基礎</span>"
+    ]
+  },
+  {
+    "objectID": "chapters/03-gp-basics.html#ix-section-3-5",
+    "href": "chapters/03-gp-basics.html#ix-section-3-5",
+    "title": "第3章　ガウス過程の基礎",
+    "section": "3.5 長さ尺度、振幅と入力の単位",
+    "text": "3.5 長さ尺度、振幅と入力の単位\n\\(\\ell\\) を小さくすると、同じ距離 \\(r\\) でも \\(r/\\ell\\) が大きくなり、共分散が小さくなります。例えばRBFで \\(\\ell=0.20\\) とした場合、ここでの温度変換では \\(8\\,^\\circ\\mathrm C\\) が一つの長さ尺度に当たります。温度を °C のまま使うと数値の長さ尺度も40倍になります。入力を正規化する際は、範囲や単位を記録します。\n\\(s_f\\) は各点の潜在強度の事前標準偏差です。第3.1節の図は一つの値 \\(s_f=12\\) MPaに固定して、\\(\\ell\\) とカーネルだけを変えました。振幅だけ変えるなら曲線の縦方向の偏差が変わります。二つの温度の変化幅も、共分散から予想できます。各点の分散が \\(s_f^2\\) なら\n\\[\n\\mathrm{Var}\\{f(x)-f(x')\\} = 2\\{s_f^2-k(x,x')\\}.\n\\]\n例えば \\(r=0.20\\)、\\(s_f=12\\) MPaでRBFを使うと、\\(\\ell=0.20\\) のとき二温度の差の標準偏差は約10.6 MPa、\\(\\ell=0.07\\) のとき約16.8 MPaです。同じ点ごとの不確かさでも、どの程度一緒に動くかで、差の不確かさが変わります。測定後にデータと整合する \\(\\ell\\) や \\(s_f\\) を求める方法は、第4章で扱います。",
+    "crumbs": [
+      "第II部 ガウス過程回帰",
+      "<span class='chapter-number'>3</span>  <span class='chapter-title'>第3章　ガウス過程の基礎</span>"
+    ]
+  },
+  {
+    "objectID": "chapters/03-gp-basics.html#sec-gp-covariance-blocks",
+    "href": "chapters/03-gp-basics.html#sec-gp-covariance-blocks",
+    "title": "第3章　ガウス過程の基礎",
+    "section": "3.6 第4章で使う共分散行列を作る",
+    "text": "3.6 第4章で使う共分散行列を作る\n次は、観測位置を \\(X=(0,1)\\)、予測位置を \\(X_*=(0.25,0.75)\\) とし、4点の順を \\((0,1,0.25,0.75)\\) とします。信号分散1、長さ尺度0.5のRBFで共分散を計算します。\n\n\n\n\n\n\n図 3.2: 黒い境界線で観測位置2点と予測位置2点を区切った、ノイズを足す前の事前共分散行列。値は無次元。\n\n\n\n左上が \\(K_{XX}\\)、右上が \\(K_{X*}\\)、左下が \\(K_{*X}\\)、右下が \\(K_{**}\\) です。例えば \\(x=0\\) と \\(x_*=0.25\\) の共分散は右上ブロックで読めます。距離が近いので約0.882です。第4章では観測位置に測定誤差を加えます。独立で同じ分散の誤差なら、左上の対角だけに観測分散を足します。\nNotebookで作った4行4列の行列を、第4章の二点の検算に使う事前共分散と照合しました。この実行での最大絶対差は 0 です。\nこの章の事前サンプルは、観測前に高い確率を置く関数の形を調べる手段です。学習済みモデルの当てはまりを調べる場合は、観測後の予測や保留データでの誤差を確認します。入力の単位やカーネルの仮定が変わると、離れた温度での推論も変わります。\n\n確認。 信号分散1、長さ尺度0.5のRBFで、\\(x=0\\) と \\(x'=0.5\\) の共分散を求めましょう。\n操作。 NotebookのRBFの長さ尺度0.20を0.40に変え、同じ距離に対する共分散と事前サンプルを比べましょう。\n発展。 \\(X=(0,1)\\) における観測ノイズの分散を0.1とします。図のどの行・列の対角に0.1を足せばよいでしょうか。\n\n次章へ。 第4章では、この四つのブロックを第2章の条件付き正規分布の考え方と組み合わせ、観測後の平均と区間を求めます。\n\n\n\n\nRasmussen, Carl Edward, と Christopher K. I. Williams. 2006年. Gaussian Processes for Machine Learning. MIT Press. https://doi.org/10.7551/mitpress/3206.001.0001.",
+    "crumbs": [
+      "第II部 ガウス過程回帰",
+      "<span class='chapter-number'>3</span>  <span class='chapter-title'>第3章　ガウス過程の基礎</span>"
+    ]
+  },
+  {
+    "objectID": "chapters/04-gp-prediction.html",
+    "href": "chapters/04-gp-prediction.html",
+    "title": "第4章　ガウス過程による予測",
+    "section": "",
+    "text": "4.1 Pythonで予測を描く\nこの章では、測っていない位置の予測値と、その不確かさがどこから生まれるかを学びます。観測点と予測点の共分散を使って事後平均・共分散を導き、潜在関数と一回の将来観測の区間を描き分けます。最後に、観測点数・ノイズ・カーネルを変えて予測を比較します。\n仮想の材料試験で、処理温度 \\(T\\) を \\(140\\)–\\(180\\,^\\circ\\mathrm{C}\\) の間で変え、引張強度を測ります。この例では温度を \\(x=(T-140\\,^\\circ\\mathrm{C})/(40\\,^\\circ\\mathrm{C})\\) と変換します。\\(x=0.5\\) は \\(160\\,^\\circ\\mathrm{C}\\) です。強度の単位にはメガパスカル（MPa）を使います。合成データには標準偏差 \\(2\\,\\mathrm{MPa}\\) の独立な測定ノイズを加えています。\n第4章のNotebookで先頭から実行できます。この節では、6件の測定結果をモデルに渡し、学習し、未測定の温度で予測します。grid はグラフを描くための入力です。学習に使うのは train_x と train_y の組です。\ntrain_Yvar には分散を渡します。観測ノイズの標準偏差が \\(2\\,\\mathrm{MPa}\\) なら、入力値は \\(4\\,\\mathrm{MPa}^2\\) です。このモデルでは既知の観測分散を使い、カーネルなどのハイパーパラメータを fit() で推定します。\n図 4.1 の黒い縦線は \\(x=0.50\\)（\\(160\\,^\\circ\\mathrm{C}\\)）です。まず縦線と青い中心線が交わる所を見ます。ここが、測定ノイズを加える前の強度 \\(f(x)\\) の事後平均です。次に、その位置で二つの帯の上下端を比べます。\nこの温度での事後平均は、どちらも 75.56 MPa です。\n青い帯は「この温度での潜在強度」、橙の帯は「この温度で取り直したときの1回の測定値」についての区間です。第4.4節では、この二つの分散の差が測定ノイズの分散 \\(4\\,\\mathrm{MPa}^2\\) になる理由を導きます。各帯は温度ごとに計算した区間です。例えば \\(x=0.50\\) と \\(x=0.51\\) の未知の強度を同時に考えるときは、その二点の依存関係も使います。次節では、そのための共分散を含めた分布に進みます。",
+    "crumbs": [
+      "第II部 ガウス過程回帰",
+      "<span class='chapter-number'>4</span>  <span class='chapter-title'>第4章　ガウス過程による予測</span>"
+    ]
+  },
+  {
+    "objectID": "chapters/04-gp-prediction.html#sec-gp-first-run",
+    "href": "chapters/04-gp-prediction.html#sec-gp-first-run",
+    "title": "第4章　ガウス過程による予測",
+    "section": "",
+    "text": "コード\nサイズ\n表すもの\n\n\n\n\ntrain_x\n\\((6,1)\\)\n測定した6条件の正規化温度\n\n\ntrain_y\n\\((6,1)\\)\n各条件で実際に得た強度\n\n\ntrain_yvar\n\\((6,1)\\)\n各観測に指定した既知のノイズ分散 \\(4\\,\\mathrm{MPa}^2\\)\n\n\ngrid\n\\((301,1)\\)\n予測・作図用の温度。追加の実測は行わない\n\n\n\nimport torch\nfrom robotorchan.models import SingleTaskGP\nfrom experiment import DTYPE, observations, setup\n\nsetup()\ntrain_x, train_y, train_yvar = observations()\nmodel = SingleTaskGP(train_x, train_y, train_Yvar=train_yvar)\nmodel.fit()\nmodel.eval()\n\ngrid = torch.linspace(0, 1, 301, dtype=DTYPE).unsqueeze(-1)\nwith torch.no_grad():\n    latent = model.posterior(grid)\n    measurement = model.posterior(grid, observation_noise=True)\n    print(latent.mean[150, 0].item())  # x = 0.50 の事後平均 [MPa]\n\n\n\n\n\n\n\n図 4.1: 6点の観測から得た事後平均と点ごとの約95%区間。青は潜在関数を、橙は次の1回の測定値を対象とする。黒の縦線は表で読み取る x = 0.50。緑の破線は合成データを作るときに指定した潜在真値。\n\n\n\n\n\n\n\n\n予測する量\n標準偏差 [MPa]\n点ごとの約95%区間 [MPa]\n\n\n\n\n潜在強度\n2.00\n71.63 ～ 79.49\n\n\n新しい1回の測定値\n2.83\n70.01 ～ 81.11",
+    "crumbs": [
+      "第II部 ガウス過程回帰",
+      "<span class='chapter-number'>4</span>  <span class='chapter-title'>第4章　ガウス過程による予測</span>"
+    ]
+  },
+  {
+    "objectID": "chapters/04-gp-prediction.html#ix-section-4-2",
+    "href": "chapters/04-gp-prediction.html#ix-section-4-2",
+    "title": "第4章　ガウス過程による予測",
+    "section": "4.2 観測モデルと同時正規分布",
+    "text": "4.2 観測モデルと同時正規分布\n第2章の二変量正規分布では、一つの量を知ったときの残りの量を予測しました。第3章のカーネル行列では、そのための共分散を複数の入力位置で作りました。ここからは、条件側に測定ノイズを含めて同じ考え方を使います。\n独立な観測誤差を仮定し、観測 \\(i=1,\\ldots,n\\) を\n\\[\ny_i=f(x_i)+\\varepsilon_i,\\qquad\n\\varepsilon_i\\sim\\mathcal{N}(0,\\tau^2)\n\\]\nと書きます。\\(x_i\\) は入力、\\(f(x_i)\\) は測定誤差を加える前の潜在強度、\\(y_i\\) は観測強度です。\\(\\varepsilon_i\\) は互いに独立で \\(f\\) からも独立、\\(\\tau^2\\) は観測分散です。この節では等分散とします。既知の分散が入力ごとに異なる場合は、以下の \\(\\tau^2 I_n\\) をそれらの分散を並べた対角行列に置き換えられます。\nガウス過程（Gaussian process、GP）\\(f\\sim\\mathcal{GP}(m,k)\\) は、任意の有限個の入力での関数値が同時正規分布に従うという仮定です。\\(m(x)\\) は事前平均、\\(k(x,x')\\) は位置 \\(x\\) と \\(x'\\) の関数値の事前共分散です。ここでは有限集合上での計算だけを使います (Rasmussen と Williams 2006年, sec. 2.2)。\n観測入力を \\(X=(x_1,\\ldots,x_n)\\)、予測入力を \\(X_*=(x_{*1},\\ldots,x_{*r})\\) とし、\\(I_n\\) を \\(n\\) 次の単位行列とします。\n\n\n\n\n\n\n\n\n記号\n定義\n形\n\n\n\n\n\\(\\mathbf y,\\mathbf f_*\\)\n観測値 \\(y_i\\) と、予測位置での潜在値 \\(f(x_{*j})\\) を並べた列ベクトル\n\\(n\\times 1,\\ r\\times 1\\)\n\n\n\\(\\mathbf m_X,\\mathbf m_*\\)\n\\(m\\) を観測位置、予測位置で評価した列ベクトル\n\\(n\\times 1,\\ r\\times 1\\)\n\n\n\\(K_{XX}\\)\n要素 \\((i,j)\\) が \\(k(x_i,x_j)\\) の観測位置間カーネル行列\n\\(n\\times n\\)\n\n\n\\(K_{*X}\\)、\\(K_{X*}\\)\n予測と観測の間の共分散、\\(K_{X*}=K_{*X}^{\\mathsf T}\\)\n\\(r\\times n,\\ n\\times r\\)\n\n\n\\(K_{**}\\)\n要素 \\((i,j)\\) が \\(k(x_{*i},x_{*j})\\) の予測位置間カーネル行列\n\\(r\\times r\\)\n\n\n\\(A\\)\n\\(K_{XX}+\\tau^2 I_n\\)。観測強度の周辺共分散\n\\(n\\times n\\)\n\n\n\n観測によって知りたいのは \\(\\mathbf f_*\\) です。まだ観測していない段階で \\(\\mathbf y\\) と \\(\\mathbf f_*\\) を一緒に並べると、独立ノイズの和と多変量正規分布の性質から\n\\[\n\\begin{bmatrix}\\mathbf y\\\\ \\mathbf f_*\\end{bmatrix}\n\\sim\n\\mathcal{N}\\!\\left(\n\\begin{bmatrix}\\mathbf m_X\\\\ \\mathbf m_*\\end{bmatrix},\n\\begin{bmatrix}\nA & K_{X*}\\\\\nK_{*X} & K_{**}\n\\end{bmatrix}\n\\right).\n\\tag{4.1}\\]\nノイズは \\(\\mathbf y\\) 側にだけ加わるため、左上のブロックに \\(\\tau^2 I_n\\) が入ります。潜在値と測定ノイズは独立なので、非対角ブロックは変わりません。",
+    "crumbs": [
+      "第II部 ガウス過程回帰",
+      "<span class='chapter-number'>4</span>  <span class='chapter-title'>第4章　ガウス過程による予測</span>"
+    ]
+  },
+  {
+    "objectID": "chapters/04-gp-prediction.html#ix-section-4-3",
+    "href": "chapters/04-gp-prediction.html#ix-section-4-3",
+    "title": "第4章　ガウス過程による予測",
+    "section": "4.3 条件付き正規分布から事後分布を導く",
+    "text": "4.3 条件付き正規分布から事後分布を導く\n\\(A\\) が正定値で逆行列が存在するとします。\\(K_{XX}\\) が半正定値で \\(\\tau^2&gt;0\\) ならこの条件を満たします。観測との相関を取り除くために、中心化した潜在値から、観測の線形結合を引きます。\n\\[\n\\mathbf u=\\mathbf f_*-\\mathbf m_*\n-K_{*X}A^{-1}(\\mathbf y-\\mathbf m_X).\n\\]\nこの \\(\\mathbf u\\) は平均ゼロで、観測との交差共分散は\n\\[\n\\mathrm{Cov}(\\mathbf u,\\mathbf y)\n=K_{*X}-K_{*X}A^{-1}A=0\n\\]\nとなります。同時正規なベクトルでは、交差共分散がゼロなら独立です。したがって、\\(\\mathbf u\\) は \\(\\mathbf y\\) を見た後も平均ゼロです。\\(L=K_{*X}A^{-1}\\) と書くと、残差の共分散は\n\\[\n\\mathrm{Cov}(\\mathbf u)=K_{**}-L K_{X*}-K_{*X}L^{\\mathsf T}\n+L A L^{\\mathsf T}=K_{**}-K_{*X}A^{-1}K_{X*}.\n\\]\n\\(\\mathbf u\\) の定義を \\(\\mathbf f_*\\) について解き、既知になった \\(\\mathbf y\\) を代入すると\n\\[\n\\begin{aligned}\n\\boldsymbol{\\mu}_* &= \\mathbf m_*+K_{*X}A^{-1}(\\mathbf y-\\mathbf m_X),\\\\\n\\Sigma_* &= K_{**}-K_{*X}A^{-1}K_{X*},\\\\\n\\mathbf f_* \\mid X,\\mathbf y,X_* &\\sim \\mathcal N(\\boldsymbol{\\mu}_*,\\Sigma_*).\n\\end{aligned}\n\\tag{4.2}\\]\n事後平均は、観測が事前平均からどれだけずれたかを、共分散と観測精度で重み付けして補正します。事後共分散は、観測で説明できた共分散を事前の共分散から引いたものです。ハイパーパラメータを固定しているため、\\(\\Sigma_*\\) は観測位置とノイズ分散に依存し、実際の観測値 \\(\\mathbf y\\) には依存しません。\\(\\mathbf y\\) を使ってハイパーパラメータを推定する実行例では、推定値を通じて影響します。\n\n二つの点を紙の上で追う\n単位のない検算例を使用します。\\(X=(0,1)\\)、\\(\\mathbf y=(1,-0.5)^{\\mathsf T}\\)、\\(X_*=(0.25,0.75)\\) とし、零平均と既知の観測分散 \\(\\tau^2=0.1\\) を指定します。RBFカーネルは信号分散 \\(1\\)、長さ尺度 \\(\\ell=0.5\\) とします。\n\\[\nk(x,x')=\\exp\\!\\left(-\\frac{(x-x')^2}{2\\ell^2}\\right),\\qquad\nA=\\begin{bmatrix}1.1&e^{-2}\\\\e^{-2}&1.1\\end{bmatrix}.\n\\]\n\\(K_{X*}\\) の対角成分は \\(e^{-1/8}\\)、非対角成分は \\(e^{-9/8}\\)、\\(K_{**}\\) の非対角成分は \\(e^{-1/2}\\) です。この二点の場合は \\(a=1.1\\)、\\(c=e^{-2}\\) と置き、逆行列を紙の上で確かめられます。\n\\[\nA^{-1}=\\frac{1}{a^2-c^2}\n\\begin{bmatrix}a&-c\\\\-c&a\\end{bmatrix}.\n\\]\n最初の予測点の平均は、\\([e^{-1/8},\\,e^{-9/8}]\\) に \\(A^{-1}(1,-0.5)^{\\mathsf T}\\) を掛けて得られます。二点目は共分散ベクトルの成分を入れ替えます。式 4.2 に同じ行列を入れれば共分散も求まります。\\(\\Sigma_*\\) の対角は各点の分散、非対角は二点の共分散です。\n事後平均は \\((0.6780, -0.1894)^{\\mathsf T}\\)、事後共分散の対角成分はともに 0.2489、非対角成分はともに 0.1780 でした。非対角成分には二つの未知点の依存関係が残ります。倍精度で手計算の式と公開APIを比較した最大絶対差は、この実行で平均 0、共分散 1.1e-16 でした。\nNotebookではPyTorchの torch.linalg.cholesky で \\(A=CC^{\\mathsf T}\\) と分解し、torch.cholesky_solve で \\(A Z=B\\) を解きます。平均の計算では \\(B=\\mathbf y-\\mathbf m_X\\)、共分散の計算では \\(B=K_{X*}\\) です。この手順では逆行列を明示的に作りません。右辺ごとに三角行列の連立方程式に帰着します。api.mean が \\(\\boldsymbol{\\mu}_*\\)、api.variance が \\(\\Sigma_*\\) の対角、api.distribution.covariance_matrix が \\(\\Sigma_*\\) 全体に対応します。この対応を確かめてから標準偏差へ変換すると、図の帯と式の関係を追いやすくなります。密な場合、\\(n\\) 点でのCholesky分解には概ね \\(O(n^3)\\) の演算と \\(O(n^2)\\) の行列記憶が必要です (Rasmussen と Williams 2006年, sec. 2.2)。",
+    "crumbs": [
+      "第II部 ガウス過程回帰",
+      "<span class='chapter-number'>4</span>  <span class='chapter-title'>第4章　ガウス過程による予測</span>"
+    ]
+  },
+  {
+    "objectID": "chapters/04-gp-prediction.html#sec-gp-observation-interval",
+    "href": "chapters/04-gp-prediction.html#sec-gp-observation-interval",
+    "title": "第4章　ガウス過程による予測",
+    "section": "4.4 将来観測の予測区間",
+    "text": "4.4 将来観測の予測区間\n予測位置 \\(x_*\\) の潜在値の周辺事後分散を \\(\\sigma_*^2\\) とし、その位置で今後一度測る値を \\(y_{\\mathrm{new}}=f(x_*)+\\varepsilon_{\\mathrm{new}}\\) とします。独立な平均ゼロ・分散 \\(\\tau_{\\mathrm{new}}^2\\) の正規ノイズを加える場合、\n\\[\nf(x_*)\\mid \\mathbf y\\sim\\mathcal N(\\mu_*,\\sigma_*^2),\\qquad\ny_{\\mathrm{new}}\\mid \\mathbf y\\sim\\mathcal N(\\mu_*,\\sigma_*^2+\\tau_{\\mathrm{new}}^2)\n\\tag{4.3}\\]\nです。ここでは \\(X,X_*\\) とハイパーパラメータを固定しているため、条件の表示を省きました。各区間はその分布の平均に対しておおむね「\\(\\pm 1.96\\) × 標準偏差」です。\\(1.96\\) は標準正規分布の累積確率 \\(0.975\\) の分位点の近似です。分散は足せますが、標準偏差の加算にはなりません。\nこの章のコードでは model.posterior(grid) が潜在関数、model.posterior(grid, observation_noise=True) が観測ノイズを含む事後分布を返します。今回のように指定した既知分散が一定なら、新しい位置でも同じ分散になります。測定精度が条件によって変わる場合は、新規入力に対応した分散をモデル化するか、選んだモデルの公開APIで明示できるかを確認します。出力を標準化したモデルへ予測分散を明示的に渡す場合は、入力する分散の尺度も確認します。",
+    "crumbs": [
+      "第II部 ガウス過程回帰",
+      "<span class='chapter-number'>4</span>  <span class='chapter-title'>第4章　ガウス過程による予測</span>"
+    ]
+  },
+  {
+    "objectID": "chapters/04-gp-prediction.html#ix-section-4-5",
+    "href": "chapters/04-gp-prediction.html#ix-section-4-5",
+    "title": "第4章　ガウス過程による予測",
+    "section": "4.5 周辺尤度でハイパーパラメータを選ぶ",
+    "text": "4.5 周辺尤度でハイパーパラメータを選ぶ\nカーネルの長さ尺度、信号分散、平均、観測ノイズなどの設定値をまとめて \\(\\theta\\) と書きます。「周辺」尤度は、潜在関数値 \\(\\mathbf f_X\\) を積分した結果です。ガウス観測では 式 4.1 の \\(\\mathbf y\\) だけを取り出しても得られます。\\(\\mathbf r_\\theta=\\mathbf y-\\mathbf m_{X,\\theta}\\)、\\(A_\\theta=K_{XX,\\theta}+\\tau_\\theta^2 I_n\\) と置くと\n\\[\n\\log p(\\mathbf y\\mid X,\\theta)\n=-\\frac12\\mathbf r_\\theta^{\\mathsf T}A_\\theta^{-1}\\mathbf r_\\theta\n-\\frac12\\log |A_\\theta|-\\frac{n}{2}\\log(2\\pi).\n\\tag{4.4}\\]\n第1項は観測と平均のずれを共分散で測ったもの、第2項は正規分布の正規化から生じる項、第3項は \\(\\theta\\) を動かしたときに一定です。\\(A_\\theta=CC^{\\mathsf T}\\) なら \\(\\log|A_\\theta|=2\\sum_{i=1}^{n}\\log C_{ii}\\) と計算できます。ノイズを推定するなら \\(\\tau_\\theta^2\\) も \\(\\theta\\) の一部です。既知の分散を渡す場合は、その値を固定します (Rasmussen と Williams 2006年, sec. 2.3および§5.4)。\n教材の SingleTaskGP.fit() はBoTorchの公開学習機能に周辺尤度を渡します。モデルの目的関数には設定されたパラメータ事前分布の項も入り得ます。式 4.4 はガウス観測のデータ項です。二点の照合では \\(\\theta\\) を人が指定して固定し、冒頭の実行ではデータから推定しました。後者の帯は推定した \\(\\widehat\\theta\\) を条件として計算したものです。\\(\\theta\\) の不確かさまで含めるには \\(p(\\theta\\mid X,\\mathbf y)\\) にわたる予測分布の積分が必要です。",
+    "crumbs": [
+      "第II部 ガウス過程回帰",
+      "<span class='chapter-number'>4</span>  <span class='chapter-title'>第4章　ガウス過程による予測</span>"
+    ]
+  },
+  {
+    "objectID": "chapters/04-gp-prediction.html#ix-section-4-6",
+    "href": "chapters/04-gp-prediction.html#ix-section-4-6",
+    "title": "第4章　ガウス過程による予測",
+    "section": "4.6 観測とモデルの仮定を変えてみる",
+    "text": "4.6 観測とモデルの仮定を変えてみる\n次の二つの図では、事前平均を \\(70\\,\\mathrm{MPa}\\)、信号標準偏差を \\(12\\,\\mathrm{MPa}\\)、長さ尺度を正規化温度で \\(0.20\\) に固定します。学習を繰り返すと複数のパラメータが同時に変わるため、ここでは各変更の影響を追えるように設定値を固定しています。\n\n\n\n\n\n\n図 4.2: RBF、観測ノイズの標準偏差2 MPa。左の3点に観測を追加すると、右では追加した点の周辺を中心に潜在関数の区間が狭くなる。両図で縦軸の尺度を揃えた。\n\n\n\n同じ事前仮定と既知ノイズの下で観測を加えると、条件付き分散は各位置で増えません。条件付けをもう一度行うと、追加観測との交差共分散に由来する半正定値の項が引かれるためです。新しい観測と相関の弱い位置では変化も小さくなります。推定した長さ尺度を新しいデータで学習し直した場合は、各位置の帯が単調に狭くなるとは限りません。\n\n\n\n\n\n\n図 4.3: 同じ観測6点で仮定だけを変更した比較。中央は左からノイズ標準偏差を2 MPaから6 MPaへ変更。右は左と同じノイズでカーネルをMatérn 3/2に変更。帯は潜在関数の点ごとの約95%信用区間。\n\n\n\n中央は同じ強度を観測したまま、測定の精度を低く見積もっています。\\(A\\) の対角に入る分散が大きいため、観測から事前予測を補正する効果が弱まります。右は近傍の依存関係の形を変えた例です。RBFとMatérnは同じ長さ尺度を設定しても同じ共分散関数にはなりません。図のこの比較は指定した設定での形の違いを示しています (Rasmussen と Williams 2006年, sec. 4.2)。",
+    "crumbs": [
+      "第II部 ガウス過程回帰",
+      "<span class='chapter-number'>4</span>  <span class='chapter-title'>第4章　ガウス過程による予測</span>"
+    ]
+  },
+  {
+    "objectID": "chapters/04-gp-prediction.html#ix-section-4-7",
+    "href": "chapters/04-gp-prediction.html#ix-section-4-7",
+    "title": "第4章　ガウス過程による予測",
+    "section": "4.7 適用条件とよくある失敗",
+    "text": "4.7 適用条件とよくある失敗\n\n同じ入力が繰り返される場合。 独立ノイズの分散が正なら、観測共分散の対角項が特異性を避ける助けになります。厳密な無雑音モデルで同じ入力を重複させると行列が特異になり得ます。計算用のjitterは分解を安定させる対角補正で、測定分散とは役割が異なります。\n入出力の単位が変わる場合。 強度を \\(y'=(y-a)/s\\) に標準化すると、分散は \\(s^2\\) で割ります。この章では公開 posterior が返す強度尺度で図を作り、事後平均、分散、観測値を揃えています。\nモデルと実験が合わない場合。 観測のない温度帯で狭い帯が出ても、採用したカーネルを条件にした結果です。急激な相変化や測定機器の偏りがある場合は、反復や保留データで残差と区間の被覆率を調べます。\n観測値の説明と候補の選択。 事後平均や区間は次の意思決定に使う材料です。測定すべき温度は、最高強度を狙うか、別の温度帯の予測を改善したいかで変わります。",
+    "crumbs": [
+      "第II部 ガウス過程回帰",
+      "<span class='chapter-number'>4</span>  <span class='chapter-title'>第4章　ガウス過程による予測</span>"
+    ]
+  },
+  {
+    "objectID": "chapters/04-gp-prediction.html#章末演習",
+    "href": "chapters/04-gp-prediction.html#章末演習",
+    "title": "第4章　ガウス過程による予測",
+    "section": "章末演習",
+    "text": "章末演習\n\n確認。 ある温度で潜在強度の事後標準偏差が \\(3\\,\\mathrm{MPa}\\)、次の測定のノイズ標準偏差が \\(2\\,\\mathrm{MPa}\\) です。次の測定値の標準偏差と約95%予測区間の半幅を求めてください。\n操作。 二点の検算で \\(\\tau^2\\) を \\(0.1\\) から \\(0.5\\) に変えます。どこを書き換えると検算が成立しますか。予測平均と分散の変化を説明してください。\n操作。 同じ6観測を使い、固定したMatérn 3/2の長さ尺度を \\(0.10\\) と \\(0.35\\) に変えてください。観測の少ない温度帯の区間を比べ、変化の理由を説明してください。\n発展。 標準偏差6 MPaでデータを再生成してください。「観測値を固定してノイズの仮定を変える」図との違いを説明してください。",
+    "crumbs": [
+      "第II部 ガウス過程回帰",
+      "<span class='chapter-number'>4</span>  <span class='chapter-title'>第4章　ガウス過程による予測</span>"
+    ]
+  },
+  {
+    "objectID": "chapters/04-gp-prediction.html#まとめと次章",
+    "href": "chapters/04-gp-prediction.html#まとめと次章",
+    "title": "第4章　ガウス過程による予測",
+    "section": "まとめと次章",
+    "text": "まとめと次章\nGP回帰では、共分散を手掛かりに観測と未知点を結び、観測で説明された成分を事前の不確かさから差し引きます。第5章の候補提案では同じGPの潜在事後平均 \\(\\mu\\) と標準偏差 \\(\\sigma\\) を使い、強度を改善する見込みを候補ごとに評価します。回帰と周辺尤度の詳しい出典は (Rasmussen と Williams 2006年)、BoTorchとの接続は (Balandat ほか 2020年; robotorchan contributors 2026年) を参照してください。\n\n\n\n\nBalandat, Maximilian, Brian Karrer, Daniel R. Jiang, ほか. 2020年. 「BoTorch: A Framework for Efficient Monte-Carlo Bayesian Optimization」. Advances in Neural Information Processing Systems 33: 21524–38. https://proceedings.neurips.cc/paper/2020/hash/f5b1b89d98b7286673128a5fb112cb9a-Abstract.html.\n\n\nRasmussen, Carl Edward, と Christopher K. I. Williams. 2006年. Gaussian Processes for Machine Learning. MIT Press. https://doi.org/10.7551/mitpress/3206.001.0001.\n\n\nrobotorchan contributors. 2026年. robotorchan: Bayesian Optimization and Active Learning with BoTorch. https://github.com/tanakakao/robotorchan/tree/b1bb77087cd117d83ed21a226a6fce39ccd5b497.",
+    "crumbs": [
+      "第II部 ガウス過程回帰",
+      "<span class='chapter-number'>4</span>  <span class='chapter-title'>第4章　ガウス過程による予測</span>"
+    ]
+  },
+  {
+    "objectID": "chapters/05-acquisition.html",
+    "href": "chapters/05-acquisition.html",
+    "title": "第5章　獲得関数の理論",
+    "section": "",
+    "text": "5.1 同じ事後で候補を提案する\nこの章では、次に一回だけ測れるとき、何を根拠に温度を選ぶかを考えます。前章のGPから得た同じ予測分布で、改善確率（PI）、期待改善量（EI）、上側信頼限界（UCB）を比較します。EIは期待値の定義から導き、計算機で値がゼロに丸まる領域をLogEIで調べます。\n仮想材料の強度を最大化します。使える入力は 第4章 と同じ正規化温度 \\(x\\in[0,1]\\) です。獲得関数 \\(a(x)\\) は、現在の情報を使って、温度 \\(x\\) を次に測る価値を数値にしたものです。\n6点の観測データを \\(\\mathcal D=\\{(x_i,y_i)\\}_{i=1}^6\\)、候補温度での潜在強度を \\(F_x=f(x)\\) とします。GPによる単点事後分布は \\(F_x\\mid\\mathcal D\\sim\\mathcal N(\\mu(x),\\sigma^2(x))\\) です。\\(\\mu(x)\\) と \\(\\sigma(x)\\) は 第4章の予測区間 で青い帯に使った平均と標準偏差です。今回の設定では、例えば次の値を両章で共有しています。\n正規化温度 \\(x=0.50\\)（160 °C）の潜在強度は、事後平均 75.56 MPa、標準偏差 2.00 MPa です。この二つの値を出発点にすると、同じ温度について予測した強度を次の測定候補の評価に使えます。\n改善の基準値を \\(b\\) と書きます。この例では、観測最大値を固定した \\(b\\) として使います。測定ノイズの影響で観測最大値と測定済み温度の潜在強度の最大値には差が出ることがあります。第5.6節で、この差が候補選びに与える影響を扱います。\n第5章のNotebookでは、予測分布を渡し、公開の獲得関数で候補を提案します。\n次に、3つの基準それぞれで測定候補を1点求めます。EIの候補計算には対数スコアのLogEIを使い、図の縦軸は元のEI [MPa] で表示します。\nこのコードが返すのは、獲得関数を大きくする次の測定候補です。探索中に評価するのはGPが予測した分布と獲得関数で、実測は候補が決まった後に行います。optimize_acqf の出力から候補を受け取り、温度の数値を °C で求めるときは \\(140+40x\\) を使います。\n閾値はこの実行で約 83.063 MPa です。\nこの実行では3つとも同じ強度の山を選びました。基準によって判断が分かれる場合は、第5.3節の二候補で確かめます。\nグリッド入力の形は (401, 1, 1) です。先頭の401は比較する候補組の数、二番目の1が同時に選ぶ点数 \\(q\\)、最後の1が入力の列数 \\(d\\) です。一般に、\\(B\\) 組の候補を一度に採点するテンソルは \\((B,q,d)\\) です。APIが返す候補の形はこの例では (1, 1) です。\\(q=1\\) は一つの温度を提案する設定です。候補の微小な差を読むときは、図のグリッド間隔と連続ソルバーの違いにも注意します。",
+    "crumbs": [
+      "第III部 ベイズ最適化の基礎",
+      "<span class='chapter-number'>5</span>  <span class='chapter-title'>第5章　獲得関数の理論</span>"
+    ]
+  },
+  {
+    "objectID": "chapters/05-acquisition.html#sec-acq-first-run",
+    "href": "chapters/05-acquisition.html#sec-acq-first-run",
+    "title": "第5章　獲得関数の理論",
+    "section": "",
+    "text": "import torch\nfrom botorch.acquisition.analytic import (\n    LogExpectedImprovement, ProbabilityOfImprovement, UpperConfidenceBound,\n)\nfrom robotorchan.optim import optimize_acqf\nfrom experiment import DTYPE, fit_material_gp, observations, setup\n\nsetup()\ntrain_x, train_y, train_yvar = observations()\nmodel = fit_material_gp(train_x, train_y, train_yvar)\nbest_f = train_y.max()\nbounds = torch.tensor([[0.0], [1.0]], dtype=DTYPE)\n\nacquisitions = {\n    \"PI\": ProbabilityOfImprovement(model, best_f=best_f),\n    \"LogEI\": LogExpectedImprovement(model, best_f=best_f),\n    \"UCB\": UpperConfidenceBound(model, beta=4.0),\n}\n\nfor name, acquisition in acquisitions.items():\n    candidate, _ = optimize_acqf(\n        acquisition, bounds, q=1, num_restarts=8,\n        raw_samples=128, options={\"seed\": 2026},\n    )\n    print(name, candidate.item())\n\n\n\n\n\n\n\n図 5.1: 同じ潜在事後から得た3つのスコア。破線は0.0025間隔の描画グリッド上での最大、丸印は連続最適化で得た候補。丸と破線が近い場合は重なって見える。各パネルの縦軸は意味と単位が異なる。\n\n\n\n\n\n\n\n獲得関数\nグリッド最大 \\(x\\)\n連続最適化の \\(x\\)\n温度 [°C]\n\n\n\n\nPI\n0.2975\n0.2977\n151.91\n\n\nEI\n0.3025\n0.3017\n152.07\n\n\nUCB\n0.3075\n0.3074\n152.30",
+    "crumbs": [
+      "第III部 ベイズ最適化の基礎",
+      "<span class='chapter-number'>5</span>  <span class='chapter-title'>第5章　獲得関数の理論</span>"
+    ]
+  },
+  {
+    "objectID": "chapters/05-acquisition.html#ix-section-5-2",
+    "href": "chapters/05-acquisition.html#ix-section-5-2",
+    "title": "第5章　獲得関数の理論",
+    "section": "5.2 改善したかどうかを数えるPI",
+    "text": "5.2 改善したかどうかを数えるPI\n標準正規分布の密度を \\(\\phi(t)=(2\\pi)^{-1/2}\\exp(-t^2/2)\\)、累積分布関数を \\(\\Phi(t)=\\int_{-\\infty}^{t}\\phi(v)\\,dv\\) とします。固定した候補 \\(x\\) で \\(\\sigma(x)&gt;0\\) なら、以下では \\(\\mu=\\mu(x)\\)、\\(\\sigma=\\sigma(x)\\)、\\(z=(\\mu-b)/\\sigma\\) と略記します。PIは「潜在値が閾値を上回る」確率です。\n\\[\n\\begin{aligned}\n\\mathrm{PI}(x)&=P(F_x&gt;b\\mid\\mathcal D)\\\\\n             &=P\\!\\left(\\frac{F_x-\\mu}{\\sigma}&gt;\\frac{b-\\mu}{\\sigma}\\right)\\\\\n             &=1-\\Phi(-z)=\\Phi(z).\n\\end{aligned}\n\\tag{5.1}\\]\n第4章から引き継いだ \\(x=0.50\\) の値と、この実験の基準値 \\(b=83.063\\) MPa を使います。丸め前の数値で \\(z\\approx -3.746\\)、\\(\\mathrm{PI}=0.000090\\)（約 0.009%）です。標準正規分布の累積確率とBoTorchの計算を同じ入力で照合しています。\nPIが数えるのは、潜在強度が基準を超える確率です。図 5.2 では、縦線の右側にある色付きの面積として読めます。たとえば、\\(\\mu&gt;b\\) の候補の \\(\\sigma\\) を小さくすると \\(z\\) は大きくなり、PIは1に近づきます。逆に \\(\\mu&lt;b\\) の候補では、同じ \\(\\mu\\) なら \\(\\sigma\\) が大きい方がPIは高くなります。\\(\\sigma=0\\) の場合、\\(F_x\\) は定数 \\(\\mu\\) になるので、厳密不等号を使うPIは \\(\\mu&gt;b\\) のとき1、その他は0です。特に \\(\\mu=b\\) を保ったまま正の \\(\\sigma\\) をゼロへ近づけると \\(\\Phi(0)=0.5\\) であり、点質量での確率とは挙動が異なります。",
+    "crumbs": [
+      "第III部 ベイズ最適化の基礎",
+      "<span class='chapter-number'>5</span>  <span class='chapter-title'>第5章　獲得関数の理論</span>"
+    ]
+  },
+  {
+    "objectID": "chapters/05-acquisition.html#ix-section-5-3",
+    "href": "chapters/05-acquisition.html#ix-section-5-3",
+    "title": "第5章　獲得関数の理論",
+    "section": "5.3 期待値からEIを導く",
+    "text": "5.3 期待値からEIを導く\n期待改善量は、改善したときの大きさも数えます。\\((u)_+=\\max(u,0)\\) として、\\(F_x\\) の改善量を \\((F_x-b)_+\\) と置きます。\\(\\sigma&gt;0\\) のとき、\\(F_x=\\mu+\\sigma Z\\)、\\(Z\\sim\\mathcal N(0,1)\\) と書けます。改善量が正になる領域は \\(Z&gt;-z\\) です。\n\\[\n\\begin{aligned}\n\\mathrm{EI}(x)\n&=\\mathbb E[(F_x-b)_+\\mid \\mathcal D]\\\\\n&=\\int_{-z}^{\\infty}(\\mu-b+\\sigma t)\\phi(t)\\,dt\\\\\n&=(\\mu-b)\\int_{-z}^{\\infty}\\phi(t)\\,dt\n    +\\sigma\\int_{-z}^{\\infty}t\\phi(t)\\,dt\\\\\n&=(\\mu-b)\\Phi(z)+\\sigma\\phi(z).\n\\end{aligned}\n\\tag{5.2}\\]\n最後の行は、\\(\\int_{-z}^{\\infty}\\phi(t)\\,dt=\\Phi(z)\\) と、\\(\\phi'(t)=-t\\phi(t)\\) により \\(\\int_{-z}^{\\infty}t\\phi(t)\\,dt=\\phi(-z)=\\phi(z)\\) になることを使いました。\\(\\sigma=0\\) では定義から \\(\\mathrm{EI}(x)=(\\mu-b)_+\\) です。固定 \\(\\mu,b\\) で正の \\(\\sigma\\) をゼロへ近づけても同じ値に収束します。ここでは最大化を採用しており、最小化では改善量を \\((b-F_x)_+\\) と定義します (Jones ほか 1998年)。\nEIの単位は元の強度と同じ MPa です。たとえば \\(\\mu=b\\) ならPIは \\(1/2\\) で、EIは \\(\\sigma/\\sqrt{2\\pi}\\) です。改善の確率が同じでも、改善した場合の幅が大きい候補のEIが高くなります。逆に \\(\\mu&lt;b\\) のとき第1項は負になります。2項で非負の期待改善量を表すので、個々の項を独立した報酬として足し合わせるという読み方は避けます。この点は数値精度にも関係します。\n\n二候補の順位が入れ替わる場合\nここでは二つの温度で得られたと仮定する潜在強度の周辺分布を比べます。改善の基準値は \\(b=80\\) MPa です。Aは平均が高く予測が集中しています。Bは平均が低く、予測のばらつきが大きい候補です。二候補の平均と標準偏差は、判断の違いを見やすくするために指定しました。\n\n\n\n\n\n\n図 5.2: 潜在強度の確率密度と改善の基準値。色付きで示した右裾全体の面積がPI。EIはこの範囲の各強度に、基準を超えた量を掛けて積分する。二つのパネルで横軸と縦軸の尺度を揃えた。\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n候補\n平均 [MPa]\n標準偏差 [MPa]\nPI\nEI [MPa]\n改善した場合の平均改善量 [MPa]\n\n\n\n\nA\n81.5\n1.0\n0.933\n1.529\n1.639\n\n\nB\n79.0\n6.0\n0.434\n1.927\n4.442\n\n\n\nEIを「改善確率 \\(\\times\\) 改善した場合の平均改善量」と考えると、二候補の違いを説明できます。\\(P(F_x&gt;b\\mid\\mathcal D)&gt;0\\) のとき、期待値を改善の有無で分けると、改善しない場合の項がゼロになるためです。Aは基準を超えやすく、Bは基準を超えた場合の伸びが大きい候補です。Notebookでは、色付き部分の面積を正規分布の右裾確率で計算し、EIは超過量を重みにした数値積分で求めます。\n\n\n数値積分およびBoTorchとの照合\nNotebookでは、\\(-5\\le z\\le 5\\) の描画点を選び、式 5.2 の閉形式、SciPyの積分、BoTorchの ExpectedImprovement を比較します。さらに、BoTorchの ProbabilityOfImprovement と \\(\\Phi(z)\\)、安定な領域で \\(\\log(\\mathrm{EI})\\) と LogExpectedImprovement を照合します。実験の許容誤差と実測差は教材の検証記録にあります。実際の候補選択は公開最適化APIで行います。検算時は閾値も入力と同じ倍精度のテンソルで渡し、丸めによる閾値の差を避けています。",
+    "crumbs": [
+      "第III部 ベイズ最適化の基礎",
+      "<span class='chapter-number'>5</span>  <span class='chapter-title'>第5章　獲得関数の理論</span>"
+    ]
+  },
+  {
+    "objectID": "chapters/05-acquisition.html#ix-section-5-4",
+    "href": "chapters/05-acquisition.html#ix-section-5-4",
+    "title": "第5章　獲得関数の理論",
+    "section": "5.4 UCBで探索の重みを変える",
+    "text": "5.4 UCBで探索の重みを変える\nこの章で使うUCBは、平均に標準偏差の重み付きの値を足します。\n\\[\n\\mathrm{UCB}_\\beta(x)=\\mu(x)+\\sqrt{\\beta}\\,\\sigma(x),\\qquad \\beta\\ge 0.\n\\tag{5.3}\\]\n\\(\\beta\\) は無次元です。\\(\\beta=0\\) なら事後平均の最大を選び、値を大きくすると標準偏差が大きい場所も有力になります。正の標準偏差を持つ単点正規分布では、UCBは分位点 \\(\\Phi(\\sqrt{\\beta})\\) に対応します。\\(\\beta=4\\) の \\(\\sqrt{\\beta}=2\\) は片側で約97.7%に相当します。同時の確率保証や、未知関数が必ずUCBより下にあることをこの解釈から導くことはできません。原著GP-UCBの理論では、\\(\\beta\\) の設定や問題の仮定が後悔の評価に関わります (Srinivas ほか 2010年)。\n\n\n\n\n\n\n図 5.3: UCBの係数を変えた感度比較。各色の点は対応する係数で連続最適化した候補。この例で候補は同じ強度の山の周辺を少しずつ移動した。\n\n\n\n曲線上の点が左から右へ単調に移動する必要はありません。\\(\\beta\\) は温度を直接動かす値ではなく、平均と標準偏差に異なる重みをかける値です。候補が飛んだときは、平均と標準偏差の曲線を見直すと解釈できます。",
+    "crumbs": [
+      "第III部 ベイズ最適化の基礎",
+      "<span class='chapter-number'>5</span>  <span class='chapter-title'>第5章　獲得関数の理論</span>"
+    ]
+  },
+  {
+    "objectID": "chapters/05-acquisition.html#ix-section-5-5",
+    "href": "chapters/05-acquisition.html#ix-section-5-5",
+    "title": "第5章　獲得関数の理論",
+    "section": "5.5 LogEIで浮動小数点の影響を調べる",
+    "text": "5.5 LogEIで浮動小数点の影響を調べる\nEIが数学的に正でも、低い改善確率の下では浮動小数点でゼロに丸まることがあります。式 5.2 の2項が打ち消し合う領域もあります。最適化では値だけでなく勾配が小さくなると候補の探索が難しくなります。解析型LogEIは、EIを求めてから対数を取るコードとは計算順と式の組み立てを変え、対数領域で安定に計算します (Ament ほか 2023年, sec. 4.1)。\n正のEIに対し、対数は単調増加なので、厳密な値でEIを最大にする入力と解析型LogEIを最大にする入力は一致します。本章では強度の数値単位を MPa に固定して対数スコアを比較します。厳密なゼロのEIの対数は \\(-\\infty\\) です。極端な例でLogEIが有限になるのは、正規モデルでは理論上は正の量が、生の浮動小数点計算でゼロになる場合です。\n\n\n\n\n\n\n図 5.4: 入力を x = 0.50 に固定して閾値を上げた数値診断。橙の帯では、生のEIがこの実行で0となるため対数を描けない。青は直接計算したLogEI。軸は z と対数スコアで、候補順位の図とは異なる。\n\n\n\nこの実験は入力と事後分布を固定し、閾値だけを変えて \\(z\\in[-50,-1]\\) を作りました。ゼロになる境界はdtypeや実装に依存します。図は数値安定性を示す実験であり、特定のベイズ最適化手法が他より優れることを測った比較ではありません。",
+    "crumbs": [
+      "第III部 ベイズ最適化の基礎",
+      "<span class='chapter-number'>5</span>  <span class='chapter-title'>第5章　獲得関数の理論</span>"
+    ]
+  },
+  {
+    "objectID": "chapters/05-acquisition.html#ix-section-5-6",
+    "href": "chapters/05-acquisition.html#ix-section-5-6",
+    "title": "第5章　獲得関数の理論",
+    "section": "5.6 ノイズ、バッチ、最適化の限界",
+    "text": "5.6 ノイズ、バッチ、最適化の限界\n\n\n\n\n\n\n\n条件\n確認すること\n\n\n\n\n測定ノイズが強い\n観測最大値はノイズで大きくなり得ます。既に測った点の潜在値にも不確かさがあるなら、潜在の基準値を統合して評価する noisy EI 系を検討します。既観測点を渡す設計が必要です。\n\n\n一度に \\(q&gt;1\\) 点測る\n候補集合で得る最大改善を評価する場合、複数点の事後共分散が効きます。単点スコアの順位だけでは似た点を重複して選びやすくなります。モンテカルロ系のLogEIには滑らかな近似を使うものがあり、解析型単点LogEIと同じ議論をそのまま適用できません。\n\n\n制約や複数の局所解がある\n正しい式でスコアを計算した後も実行可能な候補を探索する必要があります。再スタート数、変数範囲、座標、返る候補とスコアを点検します。\n\n\n最後に選ぶ条件を知りたい\n次に測る候補と、実験を終えた後に推薦する条件は別の判断です。後者では利用目的に合わせ、たとえば事後平均を最大にする条件を別途検討します。\n\n\n\n\n実装で最初に決めること\n目的を最大化し、次に選ぶ点数と、改善の基準に使える情報を決めます。章内の比較では、同じ事後分布を使ったうえで評価基準を変えました。後続の実行では、次のように使い分けます。\n\n\n\n\n\n\n\n問題設定\n本書で使う入口\n\n\n\n\n1点を評価し、比較用の基準 \\(b\\) を固定する\n解析型LogEI。最適化のたびに採用した \\(b\\) と尺度を記録する。第6章は、決定論的な試験の最良観測値で \\(b\\) を更新する\n\n\n複数点を測定前にまとめて提案し、\\(b\\) を固定する\nqLogEI。第7章で \\(q=2\\) の同時最適化と逐次貪欲法を扱う\n\n\n既測定点の潜在値に測定ノイズ由来の不確かさがある\nqLogNEI。第7章で既観測入力を比較の基準集合として渡す\n\n\n\n最小化では改善の向きと \\(b\\) の定義も反転します。本書の材料試験は、最後まで強度の最大化で統一します。",
+    "crumbs": [
+      "第III部 ベイズ最適化の基礎",
+      "<span class='chapter-number'>5</span>  <span class='chapter-title'>第5章　獲得関数の理論</span>"
+    ]
+  },
+  {
+    "objectID": "chapters/05-acquisition.html#章末演習",
+    "href": "chapters/05-acquisition.html#章末演習",
+    "title": "第5章　獲得関数の理論",
+    "section": "5.7 章末演習",
+    "text": "5.7 章末演習\n\n確認。 \\(b=80\\) MPa、候補Aは \\((\\mu,\\sigma)=(81,0.5)\\)、候補Bは \\((79,4)\\) とします。PI、EI、\\(\\beta=4\\) のUCBを計算し、順位の違いを説明してください。\n操作。 UCBで \\(\\beta=0,1,4,25\\) を試し、候補位置を記録してください。候補が動いたときに平均と標準偏差がどう変わるか、前章の図と照らし合わせてください。\n操作。 問題1の二候補について \\(b=78\\) と \\(b=82\\) に変え、PIとEIそれぞれでAとBの順位を調べてください。数値上の同点と数学的な同点の違いも考えてください。\n発展。 観測ノイズを大きくしたとき「現在最良の観測を超えること」と「最良の潜在強度を見つけること」が乖離する状況を説明してください。",
+    "crumbs": [
+      "第III部 ベイズ最適化の基礎",
+      "<span class='chapter-number'>5</span>  <span class='chapter-title'>第5章　獲得関数の理論</span>"
+    ]
+  },
+  {
+    "objectID": "chapters/05-acquisition.html#まとめと次のステップ",
+    "href": "chapters/05-acquisition.html#まとめと次のステップ",
+    "title": "第5章　獲得関数の理論",
+    "section": "まとめと次のステップ",
+    "text": "まとめと次のステップ\nPIは改善する確率、EIは改善の期待量、UCBは平均と不確かさを係数で組み合わせたスコアです。今の実験で目的とする価値と分布を揃えて候補を評価します。第6章では、候補を測定してデータを更新し、残りの予算で次の候補を選びます。第7章では、測定ノイズやバッチの場合の基準を扱います。\n\n\n\n\nAment, Sebastian, Samuel Daulton, David Eriksson, Maximilian Balandat, と Eytan Bakshy. 2023年. 「Unexpected Improvements to Expected Improvement for Bayesian Optimization」. Advances in Neural Information Processing Systems 36. https://doi.org/10.52202/075280-0904.\n\n\nJones, Donald R., Matthias Schonlau, と William J. Welch. 1998年. 「Efficient Global Optimization of Expensive Black-Box Functions」. Journal of Global Optimization 13: 455–92. https://doi.org/10.1023/A:1008306431147.\n\n\nSrinivas, Niranjan, Andreas Krause, Sham M. Kakade, と Matthias Seeger. 2010年. 「Gaussian Process Optimization in the Bandit Setting: No Regret and Experimental Design」. Proceedings of the 27th International Conference on Machine Learning, 1015–22. https://arxiv.org/abs/0912.3995.",
+    "crumbs": [
+      "第III部 ベイズ最適化の基礎",
+      "<span class='chapter-number'>5</span>  <span class='chapter-title'>第5章　獲得関数の理論</span>"
+    ]
+  },
+  {
+    "objectID": "chapters/06-bo-execution.html",
+    "href": "chapters/06-bo-execution.html",
+    "title": "第6章　ベイズ最適化の実行",
+    "section": "",
+    "text": "6.1 初期実験計画と評価予算\n第5章では、現在のデータから次に測る点を一つ選びました。実際の最適化では、その点を測ってデータを更新し、残りの予算で同じ操作を繰り返します。この章では、測定の回数と試行の状態を管理しながら、最初の実験から最終推薦までを実行します。\n仮想材料の強度を最大化します。第1章の合成関数を使い、今回は温度を \\(140\\) ～ \\(180\\,^\\circ\\mathrm C\\) の連続範囲から選べるとします。コードは正規化した \\(x\\in[0,1]\\) を使い、測定のときに °C へ換算します。測定は決定論的です。GPは既定のモデルで観測分散を推定します。\n評価予算は初期4回と追加4回の計8回です。最初の4点はSobol点列から選びます。Sobol点列は領域に点を広げることを狙った低食い違い点列です。ここではスクランブルを使い、シードを固定して再現できます。4点は \\(2^2\\) なので draw_base2(2) を使います (PyTorch Contributors 2025年; Garnett 2023年)。\n第6章のNotebookで、初期点を作り、学習・提案・測定を1回行います。material_strength が実験を代替する関数です。実機では、この1行に相当する箇所で装置に条件を渡し、結果が返るのを待ちます。\n初期の入力と観測値はそれぞれ \\((4,1)\\) です。bounds の1行目は下限、2行目は上限です。次のコードが返す suggestion は \\((1,1)\\) で、1候補・1変数を表します。\nこの実行の初期温度は 151.78、164.55、176.38、149.79 °C でした。最初の追加候補は 140.00 °C で、その1回の測定で 74.00 MPa を得ました。\nraw_samples=64 と num_restarts=6 は候補を計算するソルバーの設定です。装置で試片を測るのは、採用した候補を評価する段階です。GPを学習するたびにも装置は使いません。",
+    "crumbs": [
+      "第III部 ベイズ最適化の基礎",
+      "<span class='chapter-number'>6</span>  <span class='chapter-title'>第6章　ベイズ最適化の実行</span>"
+    ]
+  },
+  {
+    "objectID": "chapters/06-bo-execution.html#sec-bo-initial-design",
+    "href": "chapters/06-bo-execution.html#sec-bo-initial-design",
+    "title": "第6章　ベイズ最適化の実行",
+    "section": "",
+    "text": "import torch\nfrom botorch.acquisition.analytic import LogExpectedImprovement\nfrom robotorchan.models import SingleTaskGP\nfrom robotorchan.optim import optimize_acqf\nfrom torch.quasirandom import SobolEngine\nfrom experiment import DTYPE, SEED, material_strength, setup\n\nsetup()\ntorch.set_default_dtype(DTYPE)\nbounds = torch.tensor([[0.0], [1.0]])\nsolver = dict(num_restarts=6, raw_samples=64, options={\"seed\": SEED})\nx_initial = SobolEngine(1, scramble=True, seed=SEED).draw_base2(2)\ny_initial = material_strength(x_initial)\n\nmodel = SingleTaskGP(x_initial, y_initial)\nmodel.fit()\nacquisition = LogExpectedImprovement(model, best_f=y_initial.max())\nsuggestion, _ = optimize_acqf(acquisition, bounds, q=1, **solver)\nmeasured = material_strength(suggestion)\nprint(140 + 40 * suggestion.item(), measured.item())",
+    "crumbs": [
+      "第III部 ベイズ最適化の基礎",
+      "<span class='chapter-number'>6</span>  <span class='chapter-title'>第6章　ベイズ最適化の実行</span>"
+    ]
+  },
+  {
+    "objectID": "chapters/06-bo-execution.html#sec-bo-manual-loop",
+    "href": "chapters/06-bo-execution.html#sec-bo-manual-loop",
+    "title": "第6章　ベイズ最適化の実行",
+    "section": "6.2 提案・測定・登録を繰り返す",
+    "text": "6.2 提案・測定・登録を繰り返す\n観測済みデータを \\(\\mathcal D_n=((x_1,y_1),\\ldots,(x_n,y_n))\\) とします。候補を測れたら、\\(\\mathcal D_n\\) の末尾に \\((x_{n+1},y_{n+1})\\) を追加して \\(\\mathcal D_{n+1}\\) を作ります。配列の行を追加するため、同じ温度を再測定する場合も履歴を保持できます。更新後はモデルを作り直して学習し、獲得関数の基準値も更新します (Frazier 2018年; BoTorch Contributors, 日付なし)。\ntrain_x = torch.cat((x_initial, suggestion))\ntrain_y = torch.cat((y_initial, measured))\nfor _ in range(3):  # 追加4回のうち1回は上で実行済み\n    gp = SingleTaskGP(train_x, train_y)\n    gp.fit()\n    value = LogExpectedImprovement(gp, best_f=train_y.max())\n    point, _ = optimize_acqf(value, bounds, q=1, **solver)\n    response = material_strength(point)\n    train_x = torch.cat((train_x, point))\n    train_y = torch.cat((train_y, response))\n以下の順でログを追うと、動作を切り分けやすくなります。\n\n\n\n\n\n\n\n何を記録するか\n確認すること\n\n\n\n\n現在の入力と観測値\n行数が一致し、目的値の単位がMPaで揃う\n\n\n提案した入力\n温度範囲内にあり、実行する条件として渡せる\n\n\n測定結果\n該当する提案に結び付き、欠測や失敗を識別できる\n\n\n累計の評価数と最良観測値\n初期の測定もカウントし、現在の予算残を判断できる",
+    "crumbs": [
+      "第III部 ベイズ最適化の基礎",
+      "<span class='chapter-number'>6</span>  <span class='chapter-title'>第6章　ベイズ最適化の実行</span>"
+    ]
+  },
+  {
+    "objectID": "chapters/06-bo-execution.html#ix-section-6-3",
+    "href": "chapters/06-bo-execution.html#ix-section-6-3",
+    "title": "第6章　ベイズ最適化の実行",
+    "section": "6.3 どの結果を最後に使うか",
+    "text": "6.3 どの結果を最後に使うか\n最大化で測定済みの最良観測値を \\(b_n=\\max_{i\\le n}y_i\\) とすると、新しい測定値を追加したときの更新は \\(b_{n+1}=\\max(b_n,y_{n+1})\\) です。経過図で横軸を累計評価回数、縦軸を \\(b_n\\) とすれば、どの回で記録を更新したかが分かります。\n一方、実験が終わったときに実運用へ渡す温度は、最終推薦として定義します。この例では最後の全データでGPを学習し、事後平均の最大点を推薦します。その温度でのモデルの平均値と、測定済みの最良観測値は、出どころが異なります。推薦を確認測定する場合は、予算に別の1回を加えます。\n\n\n\n\n\n\n図 6.1: 上は手動ループ（線）とStudy（丸印）の最良観測値。薄青は初期4件。下は手動ループの終了時に学習したGPの事後平均で、最良観測と最終推薦の位置を示す。\n\n\n\n\n\n\n量\n温度 [°C]\n値 [MPa]\n\n\n\n\n手動ループの最良観測\n152.28\n79.76\n\n\n手動ループの終了時に作った推薦\n151.88\n79.71（事後平均）\n\n\n\n初期と追加を含め、手動もStudyも実測は 8回 です。Studyの最良観測値は 79.76 MPa でした。下段の推薦は最後のGPから計算した温度です。",
+    "crumbs": [
+      "第III部 ベイズ最適化の基礎",
+      "<span class='chapter-number'>6</span>  <span class='chapter-title'>第6章　ベイズ最適化の実行</span>"
+    ]
+  },
+  {
+    "objectID": "chapters/06-bo-execution.html#sec-study-ask-tell",
+    "href": "chapters/06-bo-execution.html#sec-study-ask-tell",
+    "title": "第6章　ベイズ最適化の実行",
+    "section": "6.4 StudyでAsk-and-Tellを実行する",
+    "text": "6.4 StudyでAsk-and-Tellを実行する\n手動ループでは、配列の行と測定の順序を自分で管理しました。robotorchanの Study は試行（Trial）に番号・候補・状態・測定結果を紐付けます。ask() を呼ぶと候補が返り、その試行は RUNNING になります。tell() に実際の観測値を渡すと COMPLETE になります。次の提案には完了した観測が使われます (robotorchan contributors 2026年)。\nfrom robotorchan.study import create_study\n\nstudy = create_study(\n    search_space={\"x\": (0.0, 1.0)},\n    direction=\"maximize\",\n    model=SingleTaskGP,\n    acquisition=LogExpectedImprovement,\n    n_initial_trials=4,\n    seed=SEED,\n    optimizer_kwargs=solver,\n)\nacquisition=LogExpectedImprovement は手動版と揃えるために明示しました。参照版のStudyの既定値は qLogExpectedImprovement です。seed と候補最適化のオプションを揃え、初期設計を照合します。\nfor _ in range(8):\n    trial = study.ask()\n    x = torch.tensor([[trial.params[\"x\"]]], dtype=DTYPE)\n    y = material_strength(x).item()\n    study.tell(trial, y)\n\nprint(study.best_params, study.best_value)\ntrial.params[\"x\"] は正規化温度です。実機で測るときには \\(140+40x\\) を °C の数値として渡します。提案を出した時点ではまだ測定値がないので、結果が返ってから tell() を呼びます。実機で再現するときは、試行番号・温度・結果・欠測理由を装置の記録と照合します。参照版の Study はメモリ上に状態を保持するため、プロセスをまたいで使う場合は運用側で試行ログを管理します。",
+    "crumbs": [
+      "第III部 ベイズ最適化の基礎",
+      "<span class='chapter-number'>6</span>  <span class='chapter-title'>第6章　ベイズ最適化の実行</span>"
+    ]
+  },
+  {
+    "objectID": "chapters/06-bo-execution.html#停止条件と失敗の扱い",
+    "href": "chapters/06-bo-execution.html#停止条件と失敗の扱い",
+    "title": "第6章　ベイズ最適化の実行",
+    "section": "6.5 停止条件と失敗の扱い",
+    "text": "6.5 停止条件と失敗の扱い\nこの章は8回で止めます。実験費用に上限がある場合は、次の試行に先立って残予算を確認します。他には、許容する強度に達した、確認測定を含む時間上限に達した、一定回数以上にわたり改善が小さい、といった停止条件があります。改善による停止は、測定のばらつきや未探索領域も考慮して決めます。小さな変化が続いたことだけで最適性を保証することはできません。\n装置のタイムアウトは、試行を完了する値が得られなかった例です。外部実験なら tell(trial, state=TrialState.FAIL) とし、測定値を登録しません。目的関数をPythonから直接呼べる場合は study.optimize(objective, n_trials=4, catch=(TimeoutError,)) が逐次実行します。Notebookではタイムアウトを1回起こし、4試行のうち学習に使える観測が3件になることを確かめます。この例では失敗も実験枠を使うため、試行予算に含めます。装置停止を必要とするエラーは、継続を指定する例外と分けます。",
+    "crumbs": [
+      "第III部 ベイズ最適化の基礎",
+      "<span class='chapter-number'>6</span>  <span class='chapter-title'>第6章　ベイズ最適化の実行</span>"
+    ]
+  },
+  {
+    "objectID": "chapters/06-bo-execution.html#演習と次章",
+    "href": "chapters/06-bo-execution.html#演習と次章",
+    "title": "第6章　ベイズ最適化の実行",
+    "section": "6.6 演習と次章",
+    "text": "6.6 演習と次章\n\n確認。 初期4点と追加4点で、GPを学習し獲得関数を計算する操作は、何回の装置測定を追加しますか。最終推薦の確認測定も数えてください。\n操作。 Notebookの失敗例で fail_number を0に変更し、状態の並びと学習に登録された件数を確認してください。\n発展。 一定回数にわたり改善が小さいときに止める運用を設計してください。何回分の履歴を見るか、改善幅の単位、失敗試行の扱いを決めてください。\n\n第7章では、同じ予算内でも、データの尺度・測定ノイズ・ソルバーの初期点が候補に与える影響を調べます。\n\n\n\n\nBoTorch Contributors. 日付なし. Optimization. https://botorch.org/docs/optimization.\n\n\nFrazier, Peter I. 2018年. A Tutorial on Bayesian Optimization. https://arxiv.org/abs/1807.02811.\n\n\nGarnett, Roman. 2023年. Bayesian Optimization. Cambridge University Press. https://bayesoptbook.com/.\n\n\nPyTorch Contributors. 2025年. SobolEngine. https://docs.pytorch.org/docs/2.9/generated/torch.quasirandom.SobolEngine.html.\n\n\nrobotorchan contributors. 2026年. robotorchan: Bayesian Optimization and Active Learning with BoTorch. https://github.com/tanakakao/robotorchan/tree/b1bb77087cd117d83ed21a226a6fce39ccd5b497.",
+    "crumbs": [
+      "第III部 ベイズ最適化の基礎",
+      "<span class='chapter-number'>6</span>  <span class='chapter-title'>第6章　ベイズ最適化の実行</span>"
+    ]
+  },
+  {
+    "objectID": "chapters/07-practical-bo.html",
+    "href": "chapters/07-practical-bo.html",
+    "title": "第7章　ベイズ最適化の実践上の課題",
+    "section": "",
+    "text": "7.1 入力の正規化と出力の標準化\n反復のコードが動いたら、測定のたびに良い条件へ近づくでしょうか。候補の良し悪しには、データの尺度、測定のばらつき、代理モデルの仮定、獲得関数を最大化する数値計算が関わります。本章では材料試験を使い、何を固定して何を変えたかを確かめながら、四つの実験を読みます。\n現場の入力列には異なる単位が混在します。温度 \\(T\\) は140〜180 °C、添加比 \\(r\\) は0〜0.01とします。正規化は、各列に指定した物理的な探索範囲を \\([0,1]\\) に写します。温度と添加比を \\(x_T=(T-140)/40\\) と \\(x_r=r/0.01\\) にすると、それぞれの長さ尺度は範囲に対する距離の比として解釈できます。探索範囲を実験途中の最小値・最大値に随時置き換えるなら、履歴と座標変換の関係も管理する必要があります。\n第7章のNotebookでは、物理単位の入力をそのまま渡し、BoTorchの Normalize に内部変換を任せます。テンソルは温度・添加比の列順を揃えます。次の抜粋を試すには、Notebookを開き、冒頭の8点の学習データを作るセルまで実行します。train_var は強度の観測分散で、単位は \\(\\mathrm{MPa}^2\\) です。\n標準化は出力の中心と尺度を調整します。学習データの平均 \\(m_y\\) と正の標準偏差 \\(s_y\\) を使い、\\(y'=(y-m_y)/s_y\\) と変換すると、分散は \\(s_y^2\\) で割ります。BoTorchの Standardize を使うこのモデルでは、posterior が返す強度を元のMPa尺度で読みます。獲得関数の best_f に観測最大値を渡す場合も、posteriorと同じ尺度にします (BoTorch Contributors, 日付なし-a)。\nNotebookでは、温度と添加比の合成試験に8点の初期設計を使います。初期設計のシードを4通り変え、各回でデータ・モデル・出力標準化・256の検証点を揃えて、入力の正規化だけを変えます。平均予測と基準値の平方誤差の平均に平方根を取ったRMSEを計算します。\nRMSEの中央値は、物理座標のモデルで 7.82 MPa、入力を正規化したモデルで 4.36 MPa でした。この合成試験では4回の比較中4回で正規化後の誤差が小さくなりました。\nこの差には、採用したGPのカーネル・長さ尺度の事前設定と入力尺度の組み合わせが関わります。温度の尺度で全列を割る操作や、測定器に入力する値を二重に変換する操作は避けます。最初に候補の列順、元の単位、入力変換後の範囲、返却される座標を確認します。",
+    "crumbs": [
+      "第III部 ベイズ最適化の基礎",
+      "<span class='chapter-number'>7</span>  <span class='chapter-title'>第7章　ベイズ最適化の実践上の課題</span>"
+    ]
+  },
+  {
+    "objectID": "chapters/07-practical-bo.html#sec-bo-scaling",
+    "href": "chapters/07-practical-bo.html#sec-bo-scaling",
+    "title": "第7章　ベイズ最適化の実践上の課題",
+    "section": "",
+    "text": "from botorch.models.transforms.input import Normalize\nfrom botorch.models.transforms.outcome import Standardize\nfrom robotorchan.models import SingleTaskGP\n\ngp = SingleTaskGP(\n    train_x, train_y, train_Yvar=train_var,\n    input_transform=Normalize(d=2, bounds=bounds_2d),\n    outcome_transform=Standardize(m=1),\n)\ngp.fit()\n\n\n\n\n\n\n\n\n図 7.1: 4通りの初期設計に対する、物理座標のまま学習した場合と入力を正規化した場合のRMSE。各線は同じ設計と同じ256検証点の組を結ぶ。",
+    "crumbs": [
+      "第III部 ベイズ最適化の基礎",
+      "<span class='chapter-number'>7</span>  <span class='chapter-title'>第7章　ベイズ最適化の実践上の課題</span>"
+    ]
+  },
+  {
+    "objectID": "chapters/07-practical-bo.html#sec-bo-noise",
+    "href": "chapters/07-practical-bo.html#sec-bo-noise",
+    "title": "第7章　ベイズ最適化の実践上の課題",
+    "section": "7.2 観測ノイズと、測定済みの最良値",
+    "text": "7.2 観測ノイズと、測定済みの最良値\n同じ温度で測っても結果が変わるとき、観測は \\(y_i=f(x_i)+\\varepsilon_i\\) です。候補選びに観測の最大を使うと、正の誤差が乗った点を次の基準にすることがあります。第4章の区間の違いと同じく、次の測定値、潜在強度、推薦する条件を区別します。\nノイズ下の期待改善を考える一つの方法は、測定済み入力の潜在値も事後分布で扱うことです。既測定の入力集合を \\(B\\)、新しい候補の集合を \\(X\\)、\\(F_B,F_X\\) を対応する潜在値ベクトルとします。概念上の改善は、同時事後分布から一組の潜在値をサンプルするごとに\n\\[\nI(F_B,F_X)=\\max\\!\\left(0,\\ \\max F_X-\\max F_B\\right)\n\\]\nです。その期待値がnoisy EIの考え方です。実行例の qLogNoisyExpectedImprovement は、既観測入力を X_baseline に渡し、同時サンプリングと対数領域の近似で計算します。初期観測の誤差が大きいときの比較対象として使います (Letham ほか 2019年; Ament ほか 2023年)。\n三つの条件を同じ1次元合成試験で比べます。各seed・各条件で初期4点と追加4点です。既測定点を除いた残りの候補から1点を選びます。ノイズありの二条件では、同一seed・同一温度に同じ誤差を割り当て、モデルにも同じ既知の観測分散 \\(4\\,\\mathrm{MPa}^2\\) を渡します。ノイズなしの設定では測定は決定論的で、モデルの計算用に第1章と同じ小さな分散 \\(0.01\\,\\mathrm{MPa}^2\\) を指定します。\n\n\n\n\n\n\n\n\n比較\n変えるもの\n共通のもの\n\n\n\n\nノイズなしLogEI／ノイズありLogEI\n測定ノイズとモデルに渡す測定分散\n潜在目的関数、初期点、評価予算、獲得関数\n\n\nノイズありLogEI／ノイズありqLogNEI\n改善の基準とその計算法\n温度ごとの誤差、初期点、評価予算、観測モデル\n\n\n\n\n\n\n\n\n\n図 7.2: 左は測定した点の潜在真値の最良推移。細線は個別seed、太線は4seedの中央値。右は事後平均で選んだ測定済み推薦点の真値と、41候補の最大との差。横線は中央値。\n\n\n\n\n\n\n条件\n最良観測値の中央値 [MPa]\n推薦点と最大値の差の中央値 [MPa]\n\n\n\n\nノイズなし・LogEI\n80.36\n0.00\n\n\nノイズあり・LogEI\n81.89\n1.02\n\n\nノイズあり・qLogNEI\n82.13\n1.02\n\n\n\nノイズありでは最良観測値が高く出ても、推薦点と真の最大との間に差が残りました。右列で0は最大値の温度を推薦できたことを示します。\n潜在真値は合成実験の評価にだけ使っています。実データでは、推薦候補の再測定や、別に用意した検証データが必要です。4seedの結果にはばらつきがあります。実験を比較するときは、seedごとの値と測定予算を一緒に示し、複数の問題でも同じ傾向が出るかを調べます。",
+    "crumbs": [
+      "第III部 ベイズ最適化の基礎",
+      "<span class='chapter-number'>7</span>  <span class='chapter-title'>第7章　ベイズ最適化の実践上の課題</span>"
+    ]
+  },
+  {
+    "objectID": "chapters/07-practical-bo.html#gpの仮定と訓練データだけでは見えない誤差",
+    "href": "chapters/07-practical-bo.html#gpの仮定と訓練データだけでは見えない誤差",
+    "title": "第7章　ベイズ最適化の実践上の課題",
+    "section": "7.3 GPの仮定と、訓練データだけでは見えない誤差",
+    "text": "7.3 GPの仮定と、訓練データだけでは見えない誤差\n測定点の近くで予測が合っていても、未知領域の予測が良いとは限りません。例えば、実際には特定温度を境に相変化が起きる材料を、全領域で同じ滑らかさのカーネルで表すと、境界をまたいで過度に平均化することがあります。長さ尺度が極端に短くなると、測った点の近くだけに合わせ、温度の少しの差で予測が大きく変わる場合があります。\nモデルの診断では、学習に使わなかった温度や反復測定で、誤差と区間を確かめます。観測値に対しては、潜在区間に測定ノイズを加えた予測区間を使います。温度域ごとの残差、測定機器の違い、見かけの外れ値を記録すると、どの仮定を変えるべきか判断しやすくなります。比較する前処理や獲得関数を決めるデータと、最終性能を報告するデータの役割も分けます。",
+    "crumbs": [
+      "第III部 ベイズ最適化の基礎",
+      "<span class='chapter-number'>7</span>  <span class='chapter-title'>第7章　ベイズ最適化の実践上の課題</span>"
+    ]
+  },
+  {
+    "objectID": "chapters/07-practical-bo.html#sec-bo-solver",
+    "href": "chapters/07-practical-bo.html#sec-bo-solver",
+    "title": "第7章　ベイズ最適化の実践上の課題",
+    "section": "7.4 局所解と初期点を診断する",
+    "text": "7.4 局所解と初期点を診断する\n獲得関数はモデルの上で評価する数値関数です。連続最適化では、高い山が複数あると、初期点によって異なる山に到達することがあります。獲得関数が平坦に見える場所や、入力範囲の境界で止まったときには、戻り値の座標だけでなく、候補でのスコア、終了条件、初期点に使ったスコアを見ます。\n\n\n\n\n\n\n図 7.3: 同じ解析LogEIを、初期点1個と5個で連続最適化した診断。縦の点線は与えた初期点、丸は各設定でソルバーが返した点。\n\n\n\n初期点1個では \\(x=0.000\\)（LogEI -4.42）、5個では \\(x=0.302\\)（LogEI -0.25）を得ました。501点の診断グリッドでは \\(x=0.302\\) 付近の値が最も高くなりました。\n初期点を増やすと候補計算は重くなります。測定が高価な場合にはその計算を費やす価値がありますが、目的関数がすぐ評価できる場合は候補計算時間も比較に入れます。1次元では描画グリッドが診断に使えます。高次元では、初期点の分布、複数の再スタート、制約を満たす候補のスコアを記録して再現します (BoTorch Contributors, 日付なし-b)。",
+    "crumbs": [
+      "第III部 ベイズ最適化の基礎",
+      "<span class='chapter-number'>7</span>  <span class='chapter-title'>第7章　ベイズ最適化の実践上の課題</span>"
+    ]
+  },
+  {
+    "objectID": "chapters/07-practical-bo.html#sec-bo-batch",
+    "href": "chapters/07-practical-bo.html#sec-bo-batch",
+    "title": "第7章　ベイズ最適化の実践上の課題",
+    "section": "7.5 バッチ評価と同時事後分布",
+    "text": "7.5 バッチ評価と同時事後分布\n2台の装置で同時に測れるなら、次の2点を一度に提案できます。\\(q=2\\) の獲得関数に与える候補は \\((2,d)\\) です。\\(d=1\\) のこの例で、1組をモデルに評価させるテンソルは \\((1,2,1)\\) とします。既知の改善基準 \\(b\\) に対するバッチEIは、同時事後分布の関数値 \\(F_1,F_2\\) を使い、\\(\\mathbb E[(\\max(F_1,F_2)-b)_+]\\) で定義できます。二つの温度が近いと予測が似て、一方の測定から得られる知見ともう一方が重なることがあります。\n同時最適化では、\\(q\\) 点をまとめた組を一つの変数として最適化します。逐次貪欲法では最初の候補を選び、その点を保留点として次を選びます。この間に物理的な測定結果は取り込みません。測定してから次の点を選ぶ逐次実験とは、候補を決める時点で利用できる情報が異なります。実行例は qLogExpectedImprovement を使い、optimize_acqf の sequential を切り替えます (Ament ほか 2023年; BoTorch Contributors, 日付なし-b)。\n\n\n\n\n\n\n図 7.4: 第4〜5章と同じGPで、2点の組をqLogEIで評価した図。丸は同時最適化、×は逐次貪欲法。組内の温度は昇順に表示した。同じ温度を2点に使う対角は診断図の評価から外した。高い領域を読みやすくするため、色目盛の下限未満は同じ色で示した。\n\n\n\n\n\n\n方式\n候補の正規化温度\n2点を同じqLogEIで再評価\n\n\n\n\n同時\n0.227、0.320\n-0.060\n\n\n逐次貪欲\n0.209、0.302\n-0.084\n\n\n\nこの図は2点の獲得値を診断するものです。比較した値には、128個の準モンテカルロサンプルを使う近似の影響が含まれます。測定を実行するなら各組は2回分の評価予算を使います。装置が2台でも準備と検査が直列なら、経過時間は半分とは限りません。実験のログには評価済み点数、提案時間、装置で測定している時間、試料準備などの待ち時間を分けて残します。",
+    "crumbs": [
+      "第III部 ベイズ最適化の基礎",
+      "<span class='chapter-number'>7</span>  <span class='chapter-title'>第7章　ベイズ最適化の実践上の課題</span>"
+    ]
+  },
+  {
+    "objectID": "chapters/07-practical-bo.html#再現性と演習",
+    "href": "chapters/07-practical-bo.html#再現性と演習",
+    "title": "第7章　ベイズ最適化の実践上の課題",
+    "section": "7.6 再現性と演習",
+    "text": "7.6 再現性と演習\n探索範囲、初期点、測定ノイズ、乱数シード、予算、失敗を記録すると、候補を選んだ理由を追えます。第8章では、同じ材料で合否を予測するために測定点を選びます。\n\n確認。 第7.1節の比較で固定した条件を挙げ、入力を物理座標から正規化する式を書いてください。\n操作。 Notebookで2つのノイズあり条件の測定標準偏差を2から4 MPaに変え、同じseedに対して、観測最大値と推薦点の最大値との差を比べてください。\n発展。 2台の装置で同時に測れるときと片方が先に終わるときについて、評価回数と経過時間を比較する方法を考えてください。次の候補をいつ決めるかも明記してください。\n\n\n\n\n\nAment, Sebastian, Samuel Daulton, David Eriksson, Maximilian Balandat, と Eytan Bakshy. 2023年. 「Unexpected Improvements to Expected Improvement for Bayesian Optimization」. Advances in Neural Information Processing Systems 36. https://doi.org/10.52202/075280-0904.\n\n\nBoTorch Contributors. 日付なし-a. Getting Started. https://botorch.org/docs/getting_started.\n\n\nBoTorch Contributors. 日付なし-b. Optimization. https://botorch.org/docs/optimization.\n\n\nLetham, Benjamin, Brian Karrer, Guilherme Ottoni, と Eytan Bakshy. 2019年. 「Constrained Bayesian Optimization with Noisy Experiments」. Bayesian Analysis 14 (2): 495–519. https://doi.org/10.1214/18-BA1110.",
+    "crumbs": [
+      "第III部 ベイズ最適化の基礎",
+      "<span class='chapter-number'>7</span>  <span class='chapter-title'>第7章　ベイズ最適化の実践上の課題</span>"
+    ]
+  },
+  {
+    "objectID": "chapters/08-active-learning.html",
+    "href": "chapters/08-active-learning.html",
+    "title": "第8章　能動学習の基礎",
+    "section": "",
+    "text": "8.1 どの温度の合否を調べるか\n学習目標　目的に合った観測の選び方を定め、予測エントロピーとBALDを計算する。ラベル予算を揃えて学習曲線を比較し、選択法が失敗したときに調べる条件を説明する。\n第6章では、強度を高くできる温度を探しました。ここでは、140〜180 °Cの範囲で製造する試験片について、次の試験片が74 MPa以上になる確率を予測します。破壊試験に時間がかかり、現場から返るデータは「合格」か「不合格」だけだとします。両方の問題は候補を選び、測定し、モデルを更新するという手順を共有します。候補の価値を測るには、最終的に知りたい量を先に定めます (Settles 2009年; Frazier 2018年)。\n能動学習（active learning, AL）は、どのデータのラベルを取得するかを学習側から選ぶ枠組みです。ラベルを返す人・測定装置・シミュレーターをオラクルと呼びます。ここでは温度の一覧を先に用意し、試せる候補の中から選ぶプールベースを使います。入力自体を連続範囲などで設計して問い合わせる方式はクエリ合成です。製造条件を連続に設定できる場合にも、装置の分解能、運用範囲、候補の実現可能性を選択に反映します (Settles 2009年)。\n合成試験では、第1章からの潜在強度を \\(g(x)\\) [MPa]、正規化温度を \\(x=(T-140)/40\\) とします。物理温度 \\(T\\) の単位は °C です。独立な測定のばらつき \\(\\epsilon\\sim\\mathcal N(0,2^2)\\) [MPa] を加え、\\(g(x)+\\epsilon\\ge74\\) MPa なら \\(Y=1\\) とします。正規分布の対称性から、真の合格確率は \\(r(x)=\\Phi((g(x)-74)/2)\\) です。\\(\\Phi\\) は標準正規の累積分布関数です。Notebookは各候補の独立な一様乱数 \\(u\\) を保持し、問い合わせがあると \\(u&lt;r(x)\\) の結果を返します。この方法は同じBernoulli分布に従います。シミュレーターが内部で使う \\(r(x)\\) は学習器の入力に含めません。",
+    "crumbs": [
+      "第IV部 能動学習と分類",
+      "<span class='chapter-number'>8</span>  <span class='chapter-title'>第8章　能動学習の基礎</span>"
+    ]
+  },
+  {
+    "objectID": "chapters/08-active-learning.html#ix-section-8-1",
+    "href": "chapters/08-active-learning.html#ix-section-8-1",
+    "title": "第8章　能動学習の基礎",
+    "section": "",
+    "text": "設定\n何を返してもらうか\n選択後に達成したいこと\n\n\n\n\n強度を最大化するBO\n実数の強度 [MPa]\n高い強度を生む条件を推薦する\n\n\n回帰のAL\n実数の強度 [MPa]\n対象温度の強度予測を改善する\n\n\n分類のAL\n合否 \\(y\\in\\{0,1\\}\\)\n対象温度の合格確率や判定を改善する",
+    "crumbs": [
+      "第IV部 能動学習と分類",
+      "<span class='chapter-number'>8</span>  <span class='chapter-title'>第8章　能動学習の基礎</span>"
+    ]
+  },
+  {
+    "objectID": "chapters/08-active-learning.html#ix-section-8-2",
+    "href": "chapters/08-active-learning.html#ix-section-8-2",
+    "title": "第8章　能動学習の基礎",
+    "section": "8.2 実行する　77件の未測定候補から1件を選ぶ",
+    "text": "8.2 実行する　77件の未測定候補から1件を選ぶ\n第8章のNotebook と同じフォルダで実行します。合否の確率モデルには次章で導くGP分類器を使います。まず初期4件で学習し、2種類の獲得関数で未測定候補を評価します。最初は「温度を入れると合格の予測確率が得られる」と捉え、候補の順位を比べましょう。確率の計算と潜在スコアの関係は第9章で扱います。\nimport torch\nfrom robotorchan.acquisition import BALD, PredictiveEntropy\nfrom classification_experiment import fit_classifier, reveal_labels, uniforms\nfrom experiment import DTYPE, SEED, setup\n\nsetup()\ntorch.set_default_dtype(DTYPE)\npool = torch.linspace(0, 1, 81, dtype=DTYPE).unsqueeze(-1)\ninitial = torch.tensor([0, 20, 52, 76])\nremaining = torch.where(~torch.isin(torch.arange(len(pool)), initial))[0]\ndraws = uniforms(pool, SEED)\nmodel = fit_classifier(\n    pool[initial], reveal_labels(pool[initial], draws[initial]), seed=SEED\n)\nwith torch.no_grad():\n    candidates = pool[remaining].unsqueeze(-2)\n    entropy = PredictiveEntropy(model)(candidates)\n    information = BALD(model)(candidates)\nnext_index = remaining[information.argmax()]\nnew_x = pool[next_index].reshape(1, 1)\nnew_label = reveal_labels(new_x, draws[next_index].reshape(1, 1))\ntrain_x = torch.cat((pool[initial], new_x))\ntrain_y = torch.cat((model.raw_train_Y, new_label))\n81件のうち未測定は77件です。テンソル \\((77,1,1)\\) の各軸は、独立に比較する選択肢数、1回に選ぶ候補数 \\(q=1\\)、入力の次元数 \\(d=1\\) です。argmax が返す位置は77件の配列内のものです。remaining で元の候補番号に戻してラベルを取り、訓練データへ追加します。\n初期温度は 140、150、166、178 °C、順に 1、1、0、1 が返りました。予測エントロピーは 165.5 °C、BALDは 160.5 °C を選びました。この回ではBALDの候補だけを測り、ラベル 1 を得ました。\n\n\n\n\n\n\n図 8.1: 初期4件で学習した直後の獲得スコア。丸は予測エントロピー最大、菱形はBALD最大、下の縦線は初期に測定した温度。曲線は未測定候補のスコアを線で結んだ。",
+    "crumbs": [
+      "第IV部 能動学習と分類",
+      "<span class='chapter-number'>8</span>  <span class='chapter-title'>第8章　能動学習の基礎</span>"
+    ]
+  },
+  {
+    "objectID": "chapters/08-active-learning.html#ix-section-8-3",
+    "href": "chapters/08-active-learning.html#ix-section-8-3",
+    "title": "第8章　能動学習の基礎",
+    "section": "8.3 予測エントロピーでラベルの曖昧さを測る",
+    "text": "8.3 予測エントロピーでラベルの曖昧さを測る\n現在の観測集合を \\(\\mathcal D\\)、候補 \\(x\\) で今後得るラベルを \\(Y_x\\) とします。合格の予測確率を \\(\\bar p_x=\\Pr(Y_x=1\\mid x,\\mathcal D)\\) と書きます。ラベルのエントロピーは、起きた事象の驚き \\(-\\log\\Pr(Y_x=y\\mid x,\\mathcal D)\\) の期待値です。二値の場合、次の関数 \\(h\\) で表せます。\n\\[\nH(Y_x\\mid x,\\mathcal D)\n=h(\\bar p_x),\\qquad\nh(p)=-p\\log p-(1-p)\\log(1-p).\n\\tag{8.1}\\]\n自然対数を使うので、単位はnatです。端点の \\(0\\log 0\\) は連続極限の0とします。\\(0&lt;p&lt;1\\) で \\(h'(p)=\\log((1-p)/p)\\)、\\(h''(p)=-1/[p(1-p)]&lt;0\\) なので、\\(p=0.5\\) で最大の \\(\\log 2\\) になります。不確実性サンプリングは、予測の曖昧な候補を優先する方策です。二値で \\(|\\bar p_x-0.5|\\) が小さい順に選ぶと、エントロピーが大きい順と一致します。多クラスでは上位2クラスの確率差とエントロピーの順位は一般に異なります (Settles 2009年)。",
+    "crumbs": [
+      "第IV部 能動学習と分類",
+      "<span class='chapter-number'>8</span>  <span class='chapter-title'>第8章　能動学習の基礎</span>"
+    ]
+  },
+  {
+    "objectID": "chapters/08-active-learning.html#ix-section-8-4",
+    "href": "chapters/08-active-learning.html#ix-section-8-4",
+    "title": "第8章　能動学習の基礎",
+    "section": "8.4 BALDで潜在スコアについての情報を測る",
+    "text": "8.4 BALDで潜在スコアについての情報を測る\nモデルには候補 \\(x\\) の潜在スコア \\(F_x\\) の事後分布があります。\\(P_x=\\Pr(Y_x=1\\mid F_x,x)\\) は、\\(F_x\\) の値とともに変わる確率です。この分布の平均が \\(\\bar p_x=\\mathbb E[P_x\\mid x,\\mathcal D]\\) です。モデルは \\(x,F_x\\) が与えられると、次のラベルの分布が定まると仮定します。\nBALD（Bayesian Active Learning by Disagreement）は、ラベル \\(Y_x\\) と潜在スコア \\(F_x\\) の条件付き相互情報量です。事後分布を \\(p(f\\mid x,\\mathcal D)\\) と略し、ラベルの条件付き確率を \\(p(y\\mid f,x)\\) と書きます。ラベルを知る前後で \\(F_x\\) の分布がどれだけ変わるかを測ります。Bayesの定理により、比 \\(p(f\\mid y,x,\\mathcal D)/p(f\\mid x,\\mathcal D)\\) は \\(p(y\\mid f,x)/p(y\\mid x,\\mathcal D)\\) に等しくなります。その対数の期待値を2つに分けると次の式を得ます (Houlsby ほか 2011年)。\n\\[\n\\begin{aligned}\nI(Y_x;F_x\\mid x,\\mathcal D)\n&=\\mathbb E_{F_x,Y_x\\mid x,\\mathcal D}\n   \\!\\left[\\log\\frac{p(Y_x\\mid F_x,x)}{p(Y_x\\mid x,\\mathcal D)}\\right]\\\\\n&=h(\\bar p_x)-\\mathbb E_{F_x\\mid x,\\mathcal D}[h(P_x)].\n\\end{aligned}\n\\tag{8.2}\\]\n\\(h\\) は凹関数なので、Jensenの不等式から右辺は0以上です。予測エントロピーから、\\(F_x\\) が分かっても残るラベルの曖昧さの平均を引いています。Notebookの二点例では、同じ \\(\\bar p_x=0.5\\) から次の違いが出ます。\n\n\n\n候補\n\\(P_x\\) の分布\n予測エントロピー [nat]\nBALD [nat]\n\n\n\n\nA\n常に0.5\n0.693\n0.000\n\n\nB\n0.1と0.9が等確率\n0.693\n0.368\n\n\n\nAでは次の試験片が合格か不合格かは予測しにくく、観測しても \\(P_x\\) の分布は変わりません。Bでは一つの合格ラベルを得れば、\\(P_x=0.9\\) の事後重みが0.5から0.9に増えます。実験で用いる二値Probit GPは連続な潜在分布を持ちます。ここでの二点分布は、二つの獲得基準の違いを手計算で確かめる例です。実装では学習済みの近似潜在事後を使い、条件付きエントロピーの積分を数値求積します。",
+    "crumbs": [
+      "第IV部 能動学習と分類",
+      "<span class='chapter-number'>8</span>  <span class='chapter-title'>第8章　能動学習の基礎</span>"
+    ]
+  },
+  {
+    "objectID": "chapters/08-active-learning.html#ix-section-8-5",
+    "href": "chapters/08-active-learning.html#ix-section-8-5",
+    "title": "第8章　能動学習の基礎",
+    "section": "8.5 回帰での不確実性と対象範囲",
+    "text": "8.5 回帰での不確実性と対象範囲\n実数の強度を予測する場合、潜在分散が大きい温度を選ぶ方法があります。第4章のデータと有限候補を使ったNotebookでは、qPosteriorVariance を \\(q=1\\) で評価します。\n潜在分散が最大の候補は 140.0 °C、事後平均が最大の候補は 152.0 °C でした。\n回帰GPのカーネルとノイズ分散を固定します。現在の潜在事後分散を \\(s^2(z)\\)、候補 \\(x\\) と評価したい場所 \\(z\\) の事後共分散を \\(c(z,x)\\) とします。\\(x\\) に標準偏差 \\(\\sigma_n\\) の独立なガウス測定誤差を持つ観測を1件加え、\\(s^2(x)+\\sigma_n^2&gt;0\\) とします。第4章の条件付き正規分布の式から、\\(z\\) の事後分散は\n\\[\ns_{\\mathrm{new}}^2(z)=s^2(z)-\\frac{c(z,x)^2}{s^2(x)+\\sigma_n^2}\n\\]\nになります。分散の減少は、候補の分散に加えて、候補と予測したい場所との共分散に依存します。分類でも、予測が必要な入力の分布を定めると、候補自身の情報量と利用先での情報量を区別できます。例えばEPIGは、候補のラベルと対象入力での将来ラベルの相互情報量を、その対象入力の分布で平均します (Bickford Smith ほか 2023年)。",
+    "crumbs": [
+      "第IV部 能動学習と分類",
+      "<span class='chapter-number'>8</span>  <span class='chapter-title'>第8章　能動学習の基礎</span>"
+    ]
+  },
+  {
+    "objectID": "chapters/08-active-learning.html#ix-section-8-6",
+    "href": "chapters/08-active-learning.html#ix-section-8-6",
+    "title": "第8章　能動学習の基礎",
+    "section": "8.6 同じ予算で学習効率を比較する",
+    "text": "8.6 同じ予算で学習効率を比較する\n5通りのシードで、ランダム、予測エントロピー、BALDに共通の初期4件を与えます。1件選ぶたびに学習し直し、合計10件で停止します。同じシード・同じ候補温度では、どの方策でも同じ合否が返ります。ランダム方策は残った候補から一様に1件選びます。各方法は同じ誘導点配置、事前カーネルの初期値、60エポックのCPU学習を使います。選択に必要なスコア計算の量は方策ごとに異なります。\n訓練や候補選択に使わない80点を、隣り合う候補の間に置きます。各点を等重みで評価し、対象分布を約140〜180 °Cで一様とします。予測確率 \\(p\\) と次のラベル \\(Y\\) の差の二乗 \\((p-Y)^2\\) を、ここでは二値のBrier損失と呼びます。両クラスの二乗誤差を合計する流儀では、この値の2倍になります (Brier 1950年)。合格の真の確率 \\(r\\) が分かるので、その温度での期待値は\n\\[\nr(1-p)^2+(1-r)p^2=(p-r)^2+r(1-r)\n\\]\nです。右辺の第二項は、予測が真の確率と一致しても残ります。ここではラベルを評価用に再抽選する代わりに、その期待値の80点平均を測ります。実データで \\(r\\) が分からない場合は、独立に取得したラベルを使います。第9章でその例を実行します。\n\n\n\n\n\n\n図 8.2: 等しいラベル予算による比較。細線は各シード、太線は各ラベル数での5シードの中央値。縦軸の期待Brier損失は小さいほど良い。\n\n\n\n\n\n\n方策\n初期4件の中央値\n最終10件の中央値\n\n\n\n\nランダム\n0.2399\n0.1931\n\n\n予測エントロピー\n0.2399\n0.1463\n\n\nBALD\n0.2399\n0.1468\n\n\n\n中央値の線は、予算ごとに5本の値を集計したものです。選択法を比べるときは、予算の途中、最終予算、各シードでの差、実験費用を合わせて見ます。この実験は一つの合成材料、一つの対象温度分布、固定の初期位置が前提です。モデルが観測していない不良領域を高い確信で合格と予測するなら、曖昧さだけで選ぶとその領域を見落とす可能性があります。最初に温度域を広く測る、ランダム方策を基準に比較する、運用時の温度分布や希少不良を意識して評価用データを用意する、といった設計が効きます。",
+    "crumbs": [
+      "第IV部 能動学習と分類",
+      "<span class='chapter-number'>8</span>  <span class='chapter-title'>第8章　能動学習の基礎</span>"
+    ]
+  },
+  {
+    "objectID": "chapters/08-active-learning.html#演習とまとめ",
+    "href": "chapters/08-active-learning.html#演習とまとめ",
+    "title": "第8章　能動学習の基礎",
+    "section": "8.7 演習とまとめ",
+    "text": "8.7 演習とまとめ\n\n確認。 \\(P_x\\) が常に0.5の候補と、0.2または0.8を等確率に取る候補の予測エントロピーとBALDを求めてください。\n操作。 学習・候補選択のコードを変えずに、評価対象を165 °C以上に絞って学習曲線を描いてください。同じ試行でも、対象分布を変えると評価が変わるのはなぜですか。\n発展。 上の回帰の分散更新式で、\\(c(z,x)=0\\) の場合と、同じ \\(s^2(x)\\) を持つ二候補で \\(|c(z,x)|\\) が異なる場合を比べてください。対象温度の平均分散を減らす候補はどう選べますか。\n\n能動学習では、どこを予測したいか、どの測定を選べるか、どの損失を下げたいかを決めます。予測エントロピーは次のラベルの曖昧さ、BALDはそのラベルで減らせる潜在スコアの不確実性を評価します。第9章では、これらの計算の出発点になる二値GP分類器を構成します。能動学習の設定と獲得基準はSettlesのサーベイ、BALDの導出はHoulsbyらを参照してください (Settles 2009年; Houlsby ほか 2011年)。\n\n\n\n\nBickford Smith, Freddie, Andreas Kirsch, Sebastian Farquhar, Yarin Gal, Adam Foster, と Tom Rainforth. 2023年. 「Prediction-Oriented Bayesian Active Learning」. Proceedings of the 26th International Conference on Artificial Intelligence and Statistics, Proceedings of Machine Learning Research, vol. 206: 7331–48. https://proceedings.mlr.press/v206/bickfordsmith23a.html.\n\n\nBrier, Glenn W. 1950年. 「Verification of Forecasts Expressed in Terms of Probability」. Monthly Weather Review 78 (1): 1–3. https://doi.org/10.1175/1520-0493%281950%29078%3C0001%3AVOFEIT%3E2.0.CO%3B2.\n\n\nFrazier, Peter I. 2018年. A Tutorial on Bayesian Optimization. https://arxiv.org/abs/1807.02811.\n\n\nHoulsby, Neil, Ferenc Huszár, Zoubin Ghahramani, と Máté Lengyel. 2011年. Bayesian Active Learning for Classification and Preference Learning. https://arxiv.org/abs/1112.5745.\n\n\nSettles, Burr. 2009年. Active Learning Literature Survey. Computer Sciences Technical Report No. 1648. University of Wisconsin–Madison. https://burrsettles.com/pub/settles.activelearning.pdf.",
+    "crumbs": [
+      "第IV部 能動学習と分類",
+      "<span class='chapter-number'>8</span>  <span class='chapter-title'>第8章　能動学習の基礎</span>"
+    ]
+  },
+  {
+    "objectID": "chapters/09-gp-classification.html",
+    "href": "chapters/09-gp-classification.html",
+    "title": "第9章　ガウス過程による分類",
+    "section": "",
+    "text": "9.1 8件の合否から確率を予測する\n学習目標　Bernoulli尤度で合否を表し、潜在事後から合格確率とその信用区間を求める。変分下界が何を近似するかを説明し、別に取得したラベルで予測を評価する。\n第4章では、温度から強度 [MPa] を予測しました。第8章と同じ合成試験を使い、この章では温度ごとの0・1ラベルから次の合格確率を学習します。合否しか保存されていない8件を初期データとし、観測した温度の間で合格確率を予測します。真の強度 \\(g(x)\\) [MPa] はラベルの生成に使い、GP分類器には温度と合否のみを渡します。\n第9章のNotebook と同じフォルダで実行します。predict_proba は最後の軸に \\(\\Pr(Y=0)\\) と \\(\\Pr(Y=1)\\) をこの順で返します。\n最初の評価点 140.12 °C での予測合格確率は 0.468 でした。\n図の上段は無次元の潜在スコア、下段はそのスコアから得る合格確率です。合格確率の青線は、「新しい試験片1個の合否」を繰り返し予測するときの合格の確率です。青い帯は合格確率そのものについての不確実性を表します。例えば帯が狭く、予測が0.5付近なら、「合否は五分五分だとかなり分かっている」という読み方になります。",
+    "crumbs": [
+      "第IV部 能動学習と分類",
+      "<span class='chapter-number'>9</span>  <span class='chapter-title'>第9章　ガウス過程による分類</span>"
+    ]
+  },
+  {
+    "objectID": "chapters/09-gp-classification.html#ix-section-9-1",
+    "href": "chapters/09-gp-classification.html#ix-section-9-1",
+    "title": "第9章　ガウス過程による分類",
+    "section": "",
+    "text": "import torch\nfrom gpytorch.kernels import MaternKernel, ScaleKernel\nfrom robotorchan.models.classification import BinarySingleTaskGPClassifier\nfrom classification_experiment import reveal_labels, uniforms\nfrom experiment import DTYPE, SEED, setup\n\nsetup()\ntorch.set_default_dtype(DTYPE)\npool = torch.linspace(0, 1, 81, dtype=DTYPE).unsqueeze(-1)\nindices = torch.tensor([0, 12, 26, 40, 50, 64, 74, 80])\ntrain_x = pool[indices]\ndraws = uniforms(pool, SEED + 9)\ntrain_y = reveal_labels(train_x, draws[indices])\ntorch.manual_seed(SEED + 9)\nkernel = ScaleKernel(MaternKernel(nu=2.5))\nkernel.base_kernel.lengthscale = 0.18\ninducing = torch.linspace(0, 1, 9, dtype=DTYPE).unsqueeze(-1)\nmodel = BinarySingleTaskGPClassifier(\n    train_x, train_y, covar_module=kernel, inducing_points=inducing,\n    learn_inducing_points=False,\n)\nmodel.fit(epochs=120, lr=0.03)\ntest_x = (torch.arange(120, dtype=DTYPE) + 0.37).unsqueeze(-1) / 120\nwith torch.no_grad():\n    p = model.predict_proba(test_x)[..., 1]\n    labels = model.predict_class(test_x, threshold=0.5)\n\n\n\n\n\n\n\n\n図 9.1: 8件で学習した変分GP分類器。上段は潜在スコア、下段は合格確率。帯は点ごとの95%信用区間、点は観測ラベル、破線は合成試験の真の合格確率。",
+    "crumbs": [
+      "第IV部 能動学習と分類",
+      "<span class='chapter-number'>9</span>  <span class='chapter-title'>第9章　ガウス過程による分類</span>"
+    ]
+  },
+  {
+    "objectID": "chapters/09-gp-classification.html#ix-section-9-2",
+    "href": "chapters/09-gp-classification.html#ix-section-9-2",
+    "title": "第9章　ガウス過程による分類",
+    "section": "9.2 潜在関数とBernoulli尤度",
+    "text": "9.2 潜在関数とBernoulli尤度\n入力 \\(x_i\\) のラベル \\(y_i\\) は0または1です。潜在関数 \\(f\\) に第3章と同じGP事前 \\(\\mathcal{GP}(m_0,k_\\theta)\\) を置き、\\(f_i=f(x_i)\\) とします。\\(m_0\\) は事前平均関数、\\(k_\\theta\\) はハイパーパラメータ \\(\\theta\\) を持つカーネルです。ここでの \\(f_i\\) は無次元の分類スコアです。関数 \\(s:\\mathbb R\\to(0,1)\\) がスコアを確率に変換します。\\(s\\) は逆リンク関数です。各観測のラベルは潜在スコアを与えると条件付きで独立と仮定し、1件のBernoulli尤度は\n\\[\np(y_i\\mid f_i)=s(f_i)^{y_i}\\{1-s(f_i)\\}^{1-y_i}\n\\]\nです。例えば \\(y_i=1\\) なら \\(s(f_i)\\)、\\(y_i=0\\) なら \\(1-s(f_i)\\) が尤度になります。条件付き独立は、\\(f\\) を積分した後のラベル同士の独立を意味しません。近い温度のスコアはGPのカーネルを通じて相関します (Rasmussen と Williams 2006年, 第3章)。\n\n\n\nリンク（確率からスコアへ）\n逆リンク \\(s(t)\\)\nスコア \\(t=2\\) での確率\n\n\n\n\nProbit \\(\\Phi^{-1}\\)\n\\(\\Phi(t)\\)\n約0.977\n\n\nLogit \\(p\\mapsto \\log(p/(1-p))\\)\n\\(1/(1+\\exp(-t))\\)\n約0.881\n\n\n\n表の同じ \\(t\\) は同一の潜在尺度で逆リンクの形を比べるための値です。学習した各モデルでは潜在関数の尺度も推定されます。教材の公開API robotorchan.models.classification.BinarySingleTaskGPClassifier は、GPyTorchの BernoulliLikelihood を使用し、逆リンクはProbitです (robotorchan contributors 2026年; GPyTorch contributors, 日付なし-a)。",
+    "crumbs": [
+      "第IV部 能動学習と分類",
+      "<span class='chapter-number'>9</span>  <span class='chapter-title'>第9章　ガウス過程による分類</span>"
+    ]
+  },
+  {
+    "objectID": "chapters/09-gp-classification.html#ix-section-9-3",
+    "href": "chapters/09-gp-classification.html#ix-section-9-3",
+    "title": "第9章　ガウス過程による分類",
+    "section": "9.3 この事後分布を近似する理由",
+    "text": "9.3 この事後分布を近似する理由\n\\(n\\) 件の入力 \\(X=(x_1,\\dots,x_n)\\)、ラベル \\(\\mathbf y=(y_1,\\dots,y_n)^\\mathsf T\\)、潜在値 \\(\\mathbf f=(f_1,\\dots,f_n)^\\mathsf T\\) を考えます。ここではGPのハイパーパラメータをいったん固定します。Bayesの定理は\n\\[\np(\\mathbf f\\mid X,\\mathbf y)\n=\\frac{p(\\mathbf f\\mid X)\\prod_{i=1}^n p(y_i\\mid f_i)}\n       {p(\\mathbf y\\mid X)}\n\\]\nです。分母は分子を \\(\\mathbf f\\) について積分した周辺尤度です。第4章のガウス回帰では、事前と尤度の対数が \\(\\mathbf f\\) の二次式なので、積を正規分布として平方完成できました。ここでは、例えば合格の寄与が \\(\\log\\Phi(f_i)\\) となり、\\(f_i\\) の二次式ではありません。事後は一般に非ガウスで、正規分布の条件付き公式だけでは得られません。Laplace近似、期待値伝播、変分推論、モンテカルロ法などが候補になります (Rasmussen と Williams 2006年, 第3章)。\n\n変分下界を作る\n変分推論では計算しやすい分布の族を決め、その中で事後を近似する分布を探します。補助の入力 \\(Z=(z_1,\\dots,z_M)\\) における潜在値 \\(\\mathbf u=f(Z)\\) を誘導変数と呼びます。\\(M\\) は誘導点数です。訓練入力の事前と同じGPから、結合事前を \\(p(\\mathbf f,\\mathbf u)=p(\\mathbf f\\mid\\mathbf u)p(\\mathbf u)\\) と分解します。式では固定した \\(X,Z,\\theta\\) を省略します。\n近似分布を \\(Q(\\mathbf f,\\mathbf u)=p(\\mathbf f\\mid\\mathbf u)Q(\\mathbf u)\\) と置き、\\(Q(\\mathbf u)\\) を学習可能な多変量正規分布とします。事前分布 \\(p(\\mathbf u)\\) の共分散が正定値で、以下の期待値とKLが有限とします。\\(\\mathrm{KL}(Q\\|P)=\\mathbb E_Q[\\log(Q/P)]\\) は、分布 \\(Q\\) と \\(P\\) のずれを測る非負の量です。Bayesの定理で真の結合事後を代入すると、周辺対数尤度は\n\\[\n\\begin{aligned}\n\\log p(\\mathbf y)\n  &=\\mathcal L+\\mathrm{KL}\\bigl(Q(\\mathbf f,\\mathbf u)\\|\n                            p(\\mathbf f,\\mathbf u\\mid\\mathbf y)\\bigr),\\\\\n\\mathcal L\n  &=\\sum_{i=1}^n\\mathbb E_{Q(f_i)}[\\log p(y_i\\mid f_i)]\n    -\\mathrm{KL}\\bigl(Q(\\mathbf u)\\|p(\\mathbf u)\\bigr).\n\\end{aligned}\n\\tag{9.1}\\]\n第一式は、KLの定義に \\(p(\\mathbf f,\\mathbf u\\mid\\mathbf y)=p(\\mathbf y,\\mathbf f,\\mathbf u)/p(\\mathbf y)\\) を入れ、\\(\\log p(\\mathbf y)\\) を期待値の外に出して得ます。残る \\(\\mathbb E_Q[\\log p(\\mathbf y,\\mathbf f,\\mathbf u)-\\log Q(\\mathbf f,\\mathbf u)]\\) が \\(\\mathcal L\\) です。第二式では、尤度がラベルごとに積に分かれることと、\\(Q/p\\) の比から \\(p(\\mathbf f\\mid\\mathbf u)\\) が消えることを使いました。\\(\\mathcal L\\) は対数周辺尤度の下界なので、ELBO（evidence lower bound）と呼びます。第一項は既知ラベルへの適合、第二項は誘導変数の近似分布が事前から離れることへの罰則です。同じモデルのもとでは、下界を上げるほど制約した分布族での事後へのKLが小さくなります。ハイパーパラメータも同時に変える場合は、近似とモデルの両方が更新されます (Hensman ほか 2015年; GPyTorch contributors, 日付なし-b)。\nこの教材では誘導入力を \\([0,1]\\) の等間隔9点に固定します。Matérn 5/2カーネルの長さ尺度の初期値を0.18として、カーネルのパラメータと変分分布をAdamで学習します。小例の初回学習は全8件を使って120エポックです。fit(epochs=120, lr=0.03) が、make_mll で構築した公開API VariationalELBO を使います。期待対数尤度は数値求積で評価します。誘導点の配置や数、学習率、最適化の停止位置で結果は変わります。誘導点の数が訓練数より少ないことは、この定式化を使う必須条件ではありません。",
+    "crumbs": [
+      "第IV部 能動学習と分類",
+      "<span class='chapter-number'>9</span>  <span class='chapter-title'>第9章　ガウス過程による分類</span>"
+    ]
+  },
+  {
+    "objectID": "chapters/09-gp-classification.html#ix-section-9-4",
+    "href": "chapters/09-gp-classification.html#ix-section-9-4",
+    "title": "第9章　ガウス過程による分類",
+    "section": "9.4 近似潜在事後から合格確率を計算する",
+    "text": "9.4 近似潜在事後から合格確率を計算する\n新しい温度 \\(x\\) のスコア \\(F_x\\) の近似事後を \\(\\mathcal N(m_x,s_x^2)\\) とします。これは、誘導変数の正規分布とGPの条件付き正規分布から得る周辺分布です。第4章ではガウス観測から事後を直接求めました。この章では、変分学習で得た近似事後を出発点にします。次のラベルの合格確率 \\(\\bar p_x\\) は、\\(P_x=\\Phi(F_x)\\) の事後平均です。\\(F_x\\) と独立な標準正規変数 \\(V\\) を用意すると、\n\\[\n\\begin{aligned}\n\\bar p_x&=\\mathbb E[\\Phi(F_x)]\n         =\\Pr(V\\le F_x)=\\Pr(F_x-V\\ge 0)\\\\\n        &=\\Phi\\!\\left(\\frac{m_x}{\\sqrt{1+s_x^2}}\\right).\n\\end{aligned}\n\\tag{9.2}\\]\n最後の等式で \\(F_x-V\\sim\\mathcal N(m_x,1+s_x^2)\\) を使いました。この式は与えた近似正規分布に対して解析的に正確です。近似の対象は真の潜在事後です。\\(\\Phi(m_x)\\) だけを使うと潜在側の分散が式から消えます。例えば \\(m_x=1\\) で \\(s_x^2=0\\) なら約0.841、\\(s_x^2=3\\) なら約0.691です。Logitの逆リンクに替える場合、一般には数値求積やモンテカルロ積分を用います (Rasmussen と Williams 2006年, 第3章; GPyTorch contributors, 日付なし-a)。\n\\(z_{.975}=\\Phi^{-1}(0.975)\\) とします。\\(\\Phi\\) は単調増加なので、\\(P_x\\) の点ごとの等裾95%信用区間の端点は \\(\\Phi(m_x-z_{.975}s_x)\\) と \\(\\Phi(m_x+z_{.975}s_x)\\) です。帯が複数温度にまたがっても、全曲線が同時に帯へ入る確率を95%と解釈することはできません。\\(Y_x\\) の取り得る値は0か1で、帯をその予測範囲として読みません。predict_proba で平均確率を、probability_posterior と credible_interval で確率の区間を求めます。\n241点で predict_proba とProbitの解析式を照合した最大絶対差は 1.11e-16 でした。48点Gauss–Hermite求積と公開APIの差は最大 3.33e-16 でした。",
+    "crumbs": [
+      "第IV部 能動学習と分類",
+      "<span class='chapter-number'>9</span>  <span class='chapter-title'>第9章　ガウス過程による分類</span>"
+    ]
+  },
+  {
+    "objectID": "chapters/09-gp-classification.html#ix-section-9-5",
+    "href": "chapters/09-gp-classification.html#ix-section-9-5",
+    "title": "第9章　ガウス過程による分類",
+    "section": "9.5 ラベルの揺れと、確率についての不確実性",
+    "text": "9.5 ラベルの揺れと、確率についての不確実性\n\\(F_x\\) を取得済みデータで条件付け、次のラベルは \\(F_x\\) が与えられればBernoulli\\((P_x)\\) とします。全分散の法則は\n\\[\n\\bar p_x(1-\\bar p_x)\n=\\mathbb E[P_x(1-P_x)]+\\mathrm{Var}(P_x)\n\\tag{9.3}\\]\nです。左辺は次の1ラベルの予測分散です。右の第1項は確率が分かっても残るラベルの揺れ、第2項は合格確率についての事後不確実性です。第8章の予測エントロピーとBALDは、同じ二つの側面を情報の尺度で区別します。分散の分解と相互情報量は別の量です。図は上段に分散、下段にnatで測る獲得スコアを示します。\n\n\n\n\n\n\n図 9.2: 上段はBernoulli予測分散とその2成分。下段の丸と菱形は、それぞれ予測エントロピーとBALDで選ぶ候補。線は未測定候補のスコアを結んだ。\n\n\n\n予測エントロピーが選んだのは 162.5 °C、BALDが選んだのは 149.5 °C でした。BALDの候補でラベル 1 を記録し、9件で学習し直しました。",
+    "crumbs": [
+      "第IV部 能動学習と分類",
+      "<span class='chapter-number'>9</span>  <span class='chapter-title'>第9章　ガウス過程による分類</span>"
+    ]
+  },
+  {
+    "objectID": "chapters/09-gp-classification.html#ix-section-9-6",
+    "href": "chapters/09-gp-classification.html#ix-section-9-6",
+    "title": "第9章　ガウス過程による分類",
+    "section": "9.6 合否判定と確率予測を別々に評価する",
+    "text": "9.6 合否判定と確率予測を別々に評価する\n確率を判定に変えるとき、\\(\\bar p_x\\ge0.5\\) は二つの誤りを同じ費用とした場合の閾値です。誤って合格とする費用を \\(c_{\\mathrm{FP}}&gt;0\\)、誤って不合格とする費用を \\(c_{\\mathrm{FN}}&gt;0\\)、正しい判定の費用を0とします。合格と判定するときの期待費用は \\((1-\\bar p_x)c_{\\mathrm{FP}}\\)、不合格と判定するときは \\(\\bar p_xc_{\\mathrm{FN}}\\) です。前者が後者以下になる条件から、合格判定の閾値は \\(c_{\\mathrm{FP}}/(c_{\\mathrm{FP}}+c_{\\mathrm{FN}})\\) になります。これは試験片の強度を合否に変える74 MPaの規格値とは役割が異なります。\n独立な評価点 \\(x_j\\) とそのラベル \\(y_j\\) に対し、合格確率の予測を \\(p_j\\) とします。誤分類率は閾値に依存します。Brier損失と対数損失は確率を直接評価します。\n\n\n\n指標\n1件の損失\n\n\n\n\n誤分類率に用いる損失\n予測ラベルと \\(y_j\\) が異なれば1、一致すれば0\n\n\nBrier損失\n\\((p_j-y_j)^2\\)\n\n\n対数損失\n\\(-y_j\\log p_j-(1-y_j)\\log(1-p_j)\\)\n\n\n\n評価点で各損失を平均します。Notebookの対数損失は、浮動小数点で \\(\\log 0\\) を評価しないよう、確率を \\([10^{-12},1-10^{-12}]\\) に丸め込みます。評価温度120点は候補グリッドと重ならず、ラベルも別の乱数で発生させます。BALDの候補を1件測り、同じ設定で再学習しても、個々の評価指標の改善は保証されません。\n\n\n\n訓練データ\nBrier損失\n対数損失 [nat/件]\n誤分類率（閾値0.5）\n\n\n\n\n初期8件\n0.2004\n0.5931\n10.8%\n\n\nBALDで1件追加\n0.1575\n0.5014\n10.8%\n\n\n\n希少な不良では、全件を合格と判定しても誤分類率が低く見える場合があります。運用ではクラス別の誤りや判定コストを見ます。例えば「0.8と予測した試験片のうち約8割が合格するか」を点検するのが確率の較正の考え方です。少数データでは温度域ごとに評価のばらつきも大きく、ラベルを取得した候補だけで較正や実用性能を判断すると、選択方策の偏りが影響します。",
+    "crumbs": [
+      "第IV部 能動学習と分類",
+      "<span class='chapter-number'>9</span>  <span class='chapter-title'>第9章　ガウス過程による分類</span>"
+    ]
+  },
+  {
+    "objectID": "chapters/09-gp-classification.html#演習とまとめ",
+    "href": "chapters/09-gp-classification.html#演習とまとめ",
+    "title": "第9章　ガウス過程による分類",
+    "section": "9.7 演習とまとめ",
+    "text": "9.7 演習とまとめ\n\n確認。 \\(m_x=1\\) を固定して \\(s_x^2=0,3,8\\) の合格確率を計算してください。次に \\(m_x=0\\) で \\(s_x^2\\) を変えて、確率の平均と信用区間の両方を考えてください。\n操作。 Notebookの判定閾値を0.5から0.8へ変え、誤分類率と、Brier損失・対数損失を比較してください。同じモデルのままならどの指標が変わらないでしょうか。\n発展。 誘導点の数、位置、エポック数のうち一つだけを変更して再学習し、予測確率、信用区間、BALDの候補、評価損失を比較してください。評価ラベルは変更しないでください。\n導出。 式 9.3 の右辺を展開し、\\(\\mathbb E[P_x^2]\\) の項が相殺されることを確かめてください。\n\n二値のGP分類では、GP事前を潜在スコアに置き、逆リンクで確率へ写します。非ガウス尤度に対する潜在事後の推論と、得た事後を使うProbitの周辺化では、近似の意味が異なります。分類GPの基礎はRasmussenとWilliamsの第3章、誘導変数を用いた変分近似はHensmanらを参照してください (Rasmussen と Williams 2006年; Hensman ほか 2015年)。\n第10章では、同じ合成材料に保持時間を加え、表で管理した測定を候補提案と確認試験につなげます。\n\n\n\n\nGPyTorch contributors. 日付なし-a. GPyTorch 1.15.2: Likelihoods. https://docs.gpytorch.ai/en/v1.15.2/likelihoods.html.\n\n\nGPyTorch contributors. 日付なし-b. GPyTorch 1.15.2: Marginal Log Likelihoods. https://docs.gpytorch.ai/en/v1.15.2/marginal_log_likelihoods.html.\n\n\nHensman, James, Alexander Matthews, と Zoubin Ghahramani. 2015年. 「Scalable Variational Gaussian Process Classification」. Proceedings of the Eighteenth International Conference on Artificial Intelligence and Statistics, Proceedings of Machine Learning Research, vol. 38: 351–60. https://proceedings.mlr.press/v38/hensman15.html.\n\n\nRasmussen, Carl Edward, と Christopher K. I. Williams. 2006年. Gaussian Processes for Machine Learning. MIT Press. https://doi.org/10.7551/mitpress/3206.001.0001.\n\n\nrobotorchan contributors. 2026年. robotorchan: Bayesian Optimization and Active Learning with BoTorch. https://github.com/tanakakao/robotorchan/tree/b1bb77087cd117d83ed21a226a6fce39ccd5b497.",
+    "crumbs": [
+      "第IV部 能動学習と分類",
+      "<span class='chapter-number'>9</span>  <span class='chapter-title'>第9章　ガウス過程による分類</span>"
+    ]
+  },
+  {
+    "objectID": "chapters/10-practical-application.html",
+    "href": "chapters/10-practical-application.html",
+    "title": "第10章　実問題への適用",
+    "section": "",
+    "text": "10.1 何を変え、何を比較するか\n学習目標　実験ログの列から入力・目的値・状態を定義する。過去の試験を登録して候補を追加し、終了時の推薦を独立した測定で確認する。\n本書の合成材料に、温度 \\(T\\) [°C] に加えて保持時間 \\(h\\) [分] を導入します。試せる範囲は \\(140\\le T\\le180\\)、\\(10\\le h\\le40\\) とします。現行条件は \\(T=148,\\ h=20\\) です。試験片の強度 \\(Y\\) [MPa] は繰り返すとばらつきます。ここで高めたいのは、一回の測定値から想定した同じ条件での平均強度 \\(\\mathbb E[Y\\mid T,h]\\) です。過去の完了8件と失敗1件があり、新しく選んで測れるのは3件です。推薦後の確認は別枠で計8件を予約します。\n現場では、試料の調製手順、装置、ロット、測定方法を整理してからデータをまとめます。例えば、古い装置で温度が高い条件ばかり測っていると、装置差が曲線の形に見えることがあります。本例ではこの交絡を避けるため、同じ模擬ロットと装置で完了する場合を扱います。使う表はすべて合成データです。\n過去ログはCSVで同梱しています。合成データの過去ログ模擬計測器のタイムアウト1件は強度を欠測にしてあります。0 MPaを入れると、測れなかった条件で「強度が0だった」という別の観測を学習させることになります。実際に条件の不適合で測定が打ち切られる場合は、失敗の種類や測定限界を記録し、制約や打ち切りを表すモデルを検討します。",
+    "crumbs": [
+      "第V部 実践と発展",
+      "<span class='chapter-number'>10</span>  <span class='chapter-title'>第10章　実問題への適用</span>"
+    ]
+  },
+  {
+    "objectID": "chapters/10-practical-application.html#ix-section-10-1",
+    "href": "chapters/10-practical-application.html#ix-section-10-1",
+    "title": "第10章　実問題への適用",
+    "section": "",
+    "text": "列\n意味\nこの例での用途\n\n\n\n\nexperiment_id、lot\n試験ID、試料の模擬ロット\n突合と追跡\n\n\ntemperature_c、hold_min\n温度 [°C]、保持時間 [分]\nGPの2入力、候補提案\n\n\nstatus\nCOMPLETE または FAIL\n学習に使う完了行を判断\n\n\nstrength_mpa\n強度 [MPa]\n完了行の目的値\n\n\nfailure_reason\n失敗時に記録した理由\n運用と再測定の判断",
+    "crumbs": [
+      "第V部 実践と発展",
+      "<span class='chapter-number'>10</span>  <span class='chapter-title'>第10章　実問題への適用</span>"
+    ]
+  },
+  {
+    "objectID": "chapters/10-practical-application.html#ix-section-10-2",
+    "href": "chapters/10-practical-application.html#ix-section-10-2",
+    "title": "第10章　実問題への適用",
+    "section": "10.2 実行する　DataFrameで読み込み、過去の試験を登録する",
+    "text": "10.2 実行する　DataFrameで読み込み、過去の試験を登録する\n第10章のNotebook と同じフォルダで実行します。温度・時間の単位を表の列名で固定し、IDの重複、入力の範囲と欠測、状態と強度の整合性を検査します。過去ログの表はpandasで扱い、取込関数は1行ずつStudyの公開APIに渡します。\nimport pandas as pd\nimport torch\nfrom experiment import DTYPE, setup\nfrom production_experiment import new_study, register_history\nfrom robotorchan.study import TrialState\n\nsetup()\ntorch.set_default_dtype(DTYPE)\nhistory = pd.read_csv(\n    \"../data/ch10_historical_log.csv\",\n    keep_default_na=False, na_values={\"strength_mpa\": [\"\"]},\n)\nstudy = new_study()\nmetadata = register_history(study, history)\ncompleted = study.trials_dataframe(states=(TrialState.COMPLETE,))\n登録では add_trial(params) で試験を作り、start_trial(number) で開始済みにします。完了した行は tell(trial, value)、失敗行は tell(trial, state=TrialState.FAIL) を呼びます。入力を読み込むときから、完了行の目的値は有限の実数として扱います。trials_dataframe は、試験番号・状態・目的値・入力変数を表で返します。元のID・ロット・失敗理由は metadata に保存し、試験番号で1対1に結合できます。",
+    "crumbs": [
+      "第V部 実践と発展",
+      "<span class='chapter-number'>10</span>  <span class='chapter-title'>第10章　実問題への適用</span>"
+    ]
+  },
+  {
+    "objectID": "chapters/10-practical-application.html#ix-section-10-3",
+    "href": "chapters/10-practical-application.html#ix-section-10-3",
+    "title": "第10章　実問題への適用",
+    "section": "10.3 モデルを選び、候補提案と結果登録を繰り返す",
+    "text": "10.3 モデルを選び、候補提案と結果登録を繰り返す\nこの試験では2入力に対して強度が滑らかに変わると仮定し、SingleTaskGP を使います。入力変換は探索範囲に合わせて \\(x=(T-140)/40\\)、\\(z=(h-10)/30\\) とし、出力を学習時に標準化します。提案や測定には元の単位を使います。観測ノイズの分散はデータから推定します。小例では1件ずつ提案するLogEIを選び、基準には完了試験の最良観測値を使います。ノイズが大きく、基準値の不確実性が選択に効くときは、第7章のqLogNEIも比較候補です (Ament ほか 2023年; Letham ほか 2019年)。\n完了5件からBOを始める設定なので、過去8件を入れたStudyは初回からGPで提案します。ask は測定前に候補と番号を登録します。現場では、この番号を測定指示と結果の突合に使います。tell が完了してから次の ask を呼ぶと、新しい観測も含んだGPで候補が更新されます。\nfrom experiment import SEED\nfrom production_experiment import INPUTS, measure\n\ngenerator = torch.Generator().manual_seed(SEED + 101)\nfor index in range(3):\n    trial = study.ask()\n    setting = [trial.params[name] for name in INPUTS]\n    conditions = torch.tensor(setting, dtype=DTYPE)\n    observed = float(measure(conditions, generator))\n    study.tell(trial, observed)\n    experiment_id = f\"B{index + 1:02d}\"\n    record = [trial.number, experiment_id, \"SIM-A\", \"\"]\n    metadata.loc[len(metadata)] = record\n\nresults = study.trials_dataframe()\naudit = results.merge(metadata, on=\"number\", validate=\"one_to_one\")\n現場で提案値を装置の刻みに丸める必要がある場合は、入力範囲と候補集合の設計にその刻みを反映します。設定した値と実際に適用された値が異なれば、どちらも記録します。測定値を取り違えると、候補に対応した強度をモデルが学習できなくなります。\n\n\n\n追加試験\n温度 [°C]\n保持時間 [分]\n強度 [MPa]\n\n\n\n\nB01\n154.62\n13.76\n79.77\n\n\nB02\n180.00\n11.40\n70.52\n\n\nB03\n152.14\n22.48\n80.09",
+    "crumbs": [
+      "第V部 実践と発展",
+      "<span class='chapter-number'>10</span>  <span class='chapter-title'>第10章　実問題への適用</span>"
+    ]
+  },
+  {
+    "objectID": "chapters/10-practical-application.html#ix-section-10-4",
+    "href": "chapters/10-practical-application.html#ix-section-10-4",
+    "title": "第10章　実問題への適用",
+    "section": "10.4 推薦を出し、別枠で確認する",
+    "text": "10.4 推薦を出し、別枠で確認する\n完了試験を使ってGPを学習し直し、温度・保持時間それぞれ81点のグリッド上で事後平均を評価しました。図の地図はGPの予測で、色の変化は温度と時間に応じた予測平均です。最も高い事後平均を得たグリッド点を推薦とし、現行条件と比べます。このグリッドは、終了時の判断と図のために使う有限集合です。\n\n\n\n\n\n\n図 10.1: 完了11件のデータで学習したGPによる強度の事後平均。白丸は過去の完了試験、橙丸は今回追加した試験、×は過去の失敗、星は終了時の推薦。\n\n\n\n全完了試験での最良観測値は 82.05 MPa（156.00 °C、24.00分）でした。終了時の推薦は 156.00 °C、23.125分 で、その事後平均は 81.96 MPa です。\n確認試験では、現行条件と推薦条件をそれぞれ4件測ります。これらの測定は推薦を決めた後に行い、学習に用いたデータから独立な乱数を使います。単位・試験手順を揃えて比較することで、最高だった測定値と、次も期待できる強度の違いを読み取れます。\n\n\n\n\n\n\n図 10.2: 左は完了した試験の強度履歴。縦の点線より右は今回追加した3件。右は独立した確認試験で、点が個別測定、横棒が平均。\n\n\n\n確認試験の平均は、現行条件で 80.61 MPa、推薦条件で 83.48 MPa でした。4件ずつの測定を丸める前に比較した平均の差は 2.88 MPa です。\n個別の結果を確認できます。Studyの試験履歴、独立した確認試験\n現場で採用する前に、必要な改善幅を決め、ロット・日・装置の変動を含めて確認します。同じロット内に現行条件と推薦条件を割り付け、試験順序をランダム化すると、工程の時間変化と設定の差を見分けやすくなります (Montgomery 2019年)。",
+    "crumbs": [
+      "第V部 実践と発展",
+      "<span class='chapter-number'>10</span>  <span class='chapter-title'>第10章　実問題への適用</span>"
+    ]
+  },
+  {
+    "objectID": "chapters/10-practical-application.html#ix-section-10-5",
+    "href": "chapters/10-practical-application.html#ix-section-10-5",
+    "title": "第10章　実問題への適用",
+    "section": "10.5 実務で詰まりやすい点",
+    "text": "10.5 実務で詰まりやすい点\n\n\n\n\n\n\n\n\n症状\n確認する事実\n取り得る対応\n\n\n\n\n記録の単位が揃わない\n列定義、装置が返す単位、変換履歴\n元データを保持し、変換版に単位を記録する\n\n\n推薦が頻繁に範囲端に寄る\n実行可能範囲、装置の刻み、外挿の強さ\n範囲を確かめ、端付近に確認点を置く\n\n\n特定の条件に失敗が偏る\n装置停止・製造不可・測定限界の内訳\n故障ログと条件による不適合を追跡する\n\n\n過去データが現行品と合わない\nロット・装置・手順の変化、重なる条件\n同じ条件で比較し、まとめて使う妥当性を調べる\n\n\n\n候補を出せる範囲と、結果を適用できる範囲を記録します。目的が複数ある場合や、適合性が試験するまで不明な場合は第11章で扱います。",
+    "crumbs": [
+      "第V部 実践と発展",
+      "<span class='chapter-number'>10</span>  <span class='chapter-title'>第10章　実問題への適用</span>"
+    ]
+  },
+  {
+    "objectID": "chapters/10-practical-application.html#演習",
+    "href": "chapters/10-practical-application.html#演習",
+    "title": "第10章　実問題への適用",
+    "section": "10.6 演習",
+    "text": "10.6 演習\n\n確認。 過去ログの失敗行を目的値0として学習した場合、何を観測したことになりますか。履歴に残して学習から外すには、どの状態で登録しますか。\n操作。 Notebookで保持時間の探索下限を15分に引き上げてください。過去ログの範囲チェックで何が起きるかを確認し、どの古い試験をどの判断で使うかを書いてください。\n発展。 測定機器の不具合ではなく、製品が作れない条件で失敗が起きたと仮定します。現在の強度列に加えて何を記録し、何を制約として扱いますか。\n\n\n\n\n\nAment, Sebastian, Samuel Daulton, David Eriksson, Maximilian Balandat, と Eytan Bakshy. 2023年. 「Unexpected Improvements to Expected Improvement for Bayesian Optimization」. Advances in Neural Information Processing Systems 36. https://doi.org/10.52202/075280-0904.\n\n\nLetham, Benjamin, Brian Karrer, Guilherme Ottoni, と Eytan Bakshy. 2019年. 「Constrained Bayesian Optimization with Noisy Experiments」. Bayesian Analysis 14 (2): 495–519. https://doi.org/10.1214/18-BA1110.\n\n\nMontgomery, Douglas C. 2019年. Design and Analysis of Experiments. 10番目 版. Wiley. https://www.wiley.com/en-us/design-and-analysis-of-experiments-10th-edition-p-9781119492443.",
+    "crumbs": [
+      "第V部 実践と発展",
+      "<span class='chapter-number'>10</span>  <span class='chapter-title'>第10章　実問題への適用</span>"
+    ]
+  },
+  {
+    "objectID": "chapters/11-advanced-topics.html",
+    "href": "chapters/11-advanced-topics.html",
+    "title": "第11章　ベイズ最適化・能動学習の発展",
+    "section": "",
+    "text": "11.1 何が複雑になったかを特定する\n学習目標　基本形から何を拡張する必要があるかを、目的、実験の制約、観測できる情報、入力空間から判断する。代表的な考え方と、その適用に必要な前提を説明する。\n第10章では、温度と保持時間を選び、一つの強度測定を受け取りました。装置や原料が増えたときは、データ構造と最終判断を先に書き出します。例えば電力も下げたいなら目的が二つになり、受領した原料ロットを変更できず、ロットを確認してから温度を決めるなら、操作は状況に応じて選びます。第5章の獲得基準や第8章の情報量を一般化するには、何の改善や何についての情報を評価するのかを定義します。",
+    "crumbs": [
+      "第V部 実践と発展",
+      "<span class='chapter-number'>11</span>  <span class='chapter-title'>第11章　ベイズ最適化・能動学習の発展</span>"
+    ]
+  },
+  {
+    "objectID": "chapters/11-advanced-topics.html#何が複雑になったかを特定する",
+    "href": "chapters/11-advanced-topics.html#何が複雑になったかを特定する",
+    "title": "第11章　ベイズ最適化・能動学習の発展",
+    "section": "",
+    "text": "問題に加わった条件\n出発点\n\n\n\n\n競合する目的があり、取引関係を見たい\n多目的BO\n\n\n最終的な条件の合否を調べる必要がある\n制約付きBO\n\n\n評価の各回で安全基準を守る必要がある\nSafe BO\n\n\n整数・カテゴリ・組合せがある\nMixed・Discrete BO\n\n\n同じ設計を異なる近似・費用で評価できる\nMulti-Fidelity BO\n\n\n過去の装置・材料の観測を新しい課題に活かしたい\nTransfer BO\n\n\n二つの条件のうち好ましい方だけを返せる\nPreference BO\n\n\n局所モデルで扱いたい広い探索空間がある\nTrust Region BO\n\n\n先に観測する状況に合わせて操作を決める\nContextual BO\n\n\n観測ログと操作による効果を区別したい\nCausal BO",
+    "crumbs": [
+      "第V部 実践と発展",
+      "<span class='chapter-number'>11</span>  <span class='chapter-title'>第11章　ベイズ最適化・能動学習の発展</span>"
+    ]
+  },
+  {
+    "objectID": "chapters/11-advanced-topics.html#ix-section-11-2",
+    "href": "chapters/11-advanced-topics.html#ix-section-11-2",
+    "title": "第11章　ベイズ最適化・能動学習の発展",
+    "section": "11.2 多目的BO　強度と消費エネルギー",
+    "text": "11.2 多目的BO　強度と消費エネルギー\n目的が強度 \\(s(x)\\) [MPa] の最大化とエネルギー \\(e(x)\\) [kWh] の最小化だとします。\\(x\\) は操作条件のベクトルです。まとめて最大化するため、目的ベクトルを \\(F(x)=(s(x),-e(x))\\) とします。ある点 \\(a\\) の目的が点 \\(b\\) 以上で全成分が揃い、少なくとも一成分で上回れば、\\(a\\) が \\(b\\) を支配します。どの候補にも支配されない目的ベクトルの集合が、この候補集合でのParetoフロントです。\nハイパーボリューム（HV）は、基準となる参照点 \\(\\mathbf r\\) より全成分で良い点 \\(\\mathbf v\\) に対し、\\(\\mathbf r\\) と \\(\\mathbf v\\) が張る軸平行な箱の和集合の体積です。二目的では面積なので、強度とエネルギーの単位を使うこの例では MPa·kWh です。重なった面積は一度だけ数えます。比較するときは目的の向き、目的の尺度、参照点を揃えます。参照点はどの範囲でトレードオフを評価したいかを表します。\n第11章のNotebook では、既知の目的値が5点ある題材を手計算と公開APIで照合します。\nimport torch\nfrom botorch.utils.multi_objective.hypervolume import Hypervolume\nfrom botorch.utils.multi_objective.pareto import is_non_dominated\n\nstrength = torch.tensor([77., 81., 79., 80., 82.])\nenergy = torch.tensor([7., 10., 9., 8., 13.])\nobjectives = torch.stack((strength, -energy), dim=-1)\nfront = is_non_dominated(objectives)\nhv = Hypervolume(ref_point=torch.tensor([75., -14.]))\nvolume = hv.compute(objectives[front])\n\n\n\n\n\n\n図 11.1: 強度と消費エネルギーの目的値。右下ほど望ましい。A・B・D・Eは非支配で、CはDに支配される。矩形の和集合が参照点からのHVを表す。\n\n\n\n非支配点は A、B、D、E です。参照点は（75 MPa、14 kWh）で、面積は 37 MPa·kWh です。強度の区間を75–77、77–80、80–81、81–82 MPaに分けると、各帯の面積は \\(2(7),3(6),1(4),1(1)\\) となります。Dを追加する前の集合に対して、Dは 6 MPa·kWh の面積を加えます。\n未知の目的値を測る前に、第5章のEIと同じ発想で、面積増分の事後期待値を最大化できます。これが期待ハイパーボリューム改善（EHVI）です。観測ノイズがあると既存点のフロントにも不確実性があるため、NEHVIはその不確実性も積分します。意思決定者が価値の重みを既に決めている場合は、各目的を同じ評価尺度にし、単一の効用を定義する選択肢もあります (Daulton ほか 2021年)。",
+    "crumbs": [
+      "第V部 実践と発展",
+      "<span class='chapter-number'>11</span>  <span class='chapter-title'>第11章　ベイズ最適化・能動学習の発展</span>"
+    ]
+  },
+  {
+    "objectID": "chapters/11-advanced-topics.html#ix-section-11-3",
+    "href": "chapters/11-advanced-topics.html#ix-section-11-3",
+    "title": "第11章　ベイズ最適化・能動学習の発展",
+    "section": "11.3 制約付きBOとSafe BO　いつ守る条件か",
+    "text": "11.3 制約付きBOとSafe BO　いつ守る条件か\n例えば、装置が許す温度上限は候補を出す前に判定できる既知の入力制約です。一方、試験して初めて判明する強度以外の含水率などは未知の出力制約です。後者で、候補 \\(x\\) の改善量を \\((F_x-b)_+\\)、適合条件を \\(G_x\\ge0\\) とします。ここで \\(F_x\\) は予測する目的値、\\(b\\) は現在の適合済みの基準値、\\(G_x\\) は予測する制約の余裕、\\(a_+=\\max(a,0)\\) です。新しい候補の期待改善量を適合した場合だけ数えるなら、\n\\[\n\\alpha(x)=\\mathbb E\\!\\left[(F_x-b)_+\\,\\mathbf 1\\{G_x\\ge0\\}\\mid\\mathcal D\\right]\n\\]\nと書けます。\\(\\mathbf 1\\) は条件が成り立つとき1です。目的と制約の事後が条件付きで独立であれば、EIと適合確率の積に分けられます。相関する場合は、同時事後から積の期待値を評価します。適合済みの基準値がまだない場合は、適合点を見つけるための規則を別に定めます (Gardner ほか 2014年)。\n評価そのものが基準を逸脱してはならない場合は、Safe BOの設定です。代表的な方法は、確認済みの安全な初期点から始め、安全信号の事後下限が基準を満たすと判断できる候補を選び、得た観測で既知の範囲を広げます。保証は観測モデル、信頼域、初期安全集合などの仮定に依存します。モデル上の適合確率を、安全設備や承認手順の代わりに用いることはできません (Sui ほか 2015年)。",
+    "crumbs": [
+      "第V部 実践と発展",
+      "<span class='chapter-number'>11</span>  <span class='chapter-title'>第11章　ベイズ最適化・能動学習の発展</span>"
+    ]
+  },
+  {
+    "objectID": "chapters/11-advanced-topics.html#ix-section-11-4",
+    "href": "chapters/11-advanced-topics.html#ix-section-11-4",
+    "title": "第11章　ベイズ最適化・能動学習の発展",
+    "section": "11.4 Mixed・Discrete BOとTrust Region BO　探索空間から考える",
+    "text": "11.4 Mixed・Discrete BOとTrust Region BO　探索空間から考える\n第10章の温度を実数、処理回数を整数、原料品種をカテゴリとすると、候補は異なる変数型の組です。整数では前後の関係が意味を持ちます。カテゴリに0、1、2と番号を振っても、番号差が材料の類似度を表すとは限りません。モデルで変数の型に合った共分散を使い、候補計算にも各型の実行可能集合を渡します。少数のカテゴリなら離散部分を列挙し、各組で連続部分を探索できます。設備の順序や組合せを選ぶ場合は、候補の近傍を入れ替えや追加・削除で定義できるかを考えます。連続解を後から丸めると、候補の重複や制約違反が生じる場合があります (Ru ほか 2020年)。\nTrust Region BOでは、良い観測値の周辺などに探索領域を設け、改善の履歴に応じてその大きさを更新します。TuRBOでは、局所モデルと局所的な候補生成を組み合わせます。広い領域で滑らかさが一様でないと考える問題では、局所モデルが比較候補になります。一方で離れた領域にある有望点を見落とし得ます。再スタートや複数の探索領域の必要性を、初期点や予算と合わせて判断します (Eriksson ほか 2019年)。",
+    "crumbs": [
+      "第V部 実践と発展",
+      "<span class='chapter-number'>11</span>  <span class='chapter-title'>第11章　ベイズ最適化・能動学習の発展</span>"
+    ]
+  },
+  {
+    "objectID": "chapters/11-advanced-topics.html#ix-section-11-5",
+    "href": "chapters/11-advanced-topics.html#ix-section-11-5",
+    "title": "第11章　ベイズ最適化・能動学習の発展",
+    "section": "11.5 Multi-Fidelity・Transfer・Preference　観測の形式を広げる",
+    "text": "11.5 Multi-Fidelity・Transfer・Preference　観測の形式を広げる\nMulti-Fidelity BOでは、同じ設定で、安い近似評価と高価な本評価を選べます。例えば粗い計算格子と細かい格子でシミュレーションを回す場合、入力 \\(x\\) に評価の忠実度 \\(\\ell\\) を加えた \\(f(x,\\ell)\\) を考え、最終推薦は本評価の \\(\\ell_\\star\\) で比較します。粗い計算が本結果に与える情報と費用の両方を考える必要があります。粗い試験で設定の順位が逆転する領域があるなら、粗い観測の件数だけを増やしても目標での精度が上がるとは限りません。本評価での確認と、忠実度をまたぐ対になる試験を計画します (Kandasamy ほか 2017年)。\nTransfer BOでは、前製品のデータや同系統の装置を情報源として、新しい課題の試験数を減らせるか検討します。始め方には、過去に有望だった条件から測るウォームスタート、タスク間の共分散を使うモデル、情報源ごとのモデルを重み付きで使うアンサンブルがあります。温度の意味や目的値の定義が揃っているか、新しい課題に対して過去モデルの順位がどの程度当たるかを小規模に点検します。関係の弱いデータが判断を悪くする場合は負の転移と呼びます。対象タスクだけを使う方法を比較の起点にできます (Feurer ほか 2018年)。\nPreference BOでは、絶対点の代わりに、条件 \\(a\\) と \\(b\\) のどちらを好むかを測ります。潜在効用 \\(u(a),u(b)\\) と比較誤差の尺度 \\(\\tau&gt;0\\) を用い、例えば \\(a\\) が選ばれる確率を \\(\\Phi((u(a)-u(b))/\\tau)\\) と置きます。第9章とのつながりは、二値ラベルを生むのが単独の潜在値から二つの効用差に変わる点です。効用に同じ定数を足しても効用差は変わりません。比較する相手、評価者、提示順を記録し、複数の評価者や同順位の扱いも観測設計に入れます (González ほか 2017年)。",
+    "crumbs": [
+      "第V部 実践と発展",
+      "<span class='chapter-number'>11</span>  <span class='chapter-title'>第11章　ベイズ最適化・能動学習の発展</span>"
+    ]
+  },
+  {
+    "objectID": "chapters/11-advanced-topics.html#ix-section-11-6",
+    "href": "chapters/11-advanced-topics.html#ix-section-11-6",
+    "title": "第11章　ベイズ最適化・能動学習の発展",
+    "section": "11.6 Contextual BOとCausal BO　状況と介入",
+    "text": "11.6 Contextual BOとCausal BO　状況と介入\nContextual BOでは、先に観測する状況 \\(c\\) を固定したうえで操作 \\(x\\) を選びます。例えば納入された原料の特性を事前に測り、そのロットに対する温度を選びます。モデルは \\((x,c)\\) に対する応答を予測し、候補計算で変えるのは \\(x\\) です。状況が決まる前に設定を決める場合には、その時点で利用できる状況分布で効用を平均するなど、別の決定を定義します (Krause と Ong 2011年)。\nNotebookでは状況0の二つの操作の効用を5と2、状況1では1と6とします。二つの状況を等確率とすると、状況ごとに操作を選ぶ場合の平均効用は 5.5、先に一つの操作へ固定する場合の最良平均効用は 4.0 です。\nCausal BOでは、例えば操作変数を外から固定したときの期待応答 \\(\\mathbb E[Y\\mid\\mathrm{do}(X=x)]\\) を最大化する設定を考えます。\\(\\mathrm{do}(X=x)\\) は、値 \\(X\\) を決めていた仕組みを置き換えて \\(x\\) に固定する操作です。ログで \\(X=x\\) だった行を集めた \\(\\mathbb E[Y\\mid X=x]\\) は、ログの設定が他の要因にも左右される場合、介入した結果と異なります (Aglietti ほか 2020年)。\n小例として \\(U,\\epsilon_X,\\epsilon_Y\\) が互いに独立な標準正規変数で、\\(X=U+\\epsilon_X\\)、\\(Y=-X+3U+\\epsilon_Y\\) とします。\\(U\\) は記録されていない共通の要因です。第2章の条件付き正規分布から \\(\\mathbb E[U\\mid X=x]=x/2\\) なので、観測ログでの平均は \\(-x+3x/2=x/2\\) です。介入時には \\(U\\) の分布がもとのままなので、平均は \\(-x\\) になります。\n\n\n\n\n\n\n図 11.2: 合成ログの条件付き平均と、設定を外から固定した介入での平均。点は観測ログの一部、線は構造方程式から計算した理論値。\n\n\n\n合成観測データ5,000件を単回帰した傾きは 0.518 でした。観測の傾きの理論値0.5と、構造方程式から計算した介入の傾き−1を比べます。\nこの二本の直線は、設定と応答の相関からだけでは区別できません。何を操作でき、どの変数が交絡し、どの仮定で介入効果を判断できるかを明示します。状況を事前に観測して操作を選ぶ問題と、観測ログから介入効果を求める問題は、同じデータに両方現れることもあります。",
+    "crumbs": [
+      "第V部 実践と発展",
+      "<span class='chapter-number'>11</span>  <span class='chapter-title'>第11章　ベイズ最適化・能動学習の発展</span>"
+    ]
+  },
+  {
+    "objectID": "chapters/11-advanced-topics.html#演習とまとめ",
+    "href": "chapters/11-advanced-topics.html#演習とまとめ",
+    "title": "第11章　ベイズ最適化・能動学習の発展",
+    "section": "11.7 演習とまとめ",
+    "text": "11.7 演習とまとめ\n\n確認。 多目的の小例でCを除いてもHVが変わらない理由を説明してください。参照点を強度76 MPa、エネルギー14 kWhへ変えた面積も求めてください。\n操作。 Notebookの状況0が使われる確率を0.75にして、状況ありで決めるときと固定操作を使うときの平均効用をそれぞれ求めてください。\n発展。 原料ロットを受け取ってから設定を決め、強度は評価時にだけ得られ、各試験に装置上の既知制約があるとします。操作、状況、観測、候補の制約を列挙してください。ロットと設定の両方が過去ログで偏る場合、ログを使う前に何を確認しますか。\n\n手法の名前から選ぶ前に、決める量、測れる量、いつ守る制約か、何を評価するかを書きます。評価と停止の設計は第12章で整理します。\n\n\n\n\nAglietti, Virginia, Xiaoyu Lu, Andrei Paleyes, と Javier González. 2020年. 「Causal Bayesian Optimization」. Proceedings of the Twenty Third International Conference on Artificial Intelligence and Statistics, Proceedings of Machine Learning Research, vol. 108: 3155–64. https://proceedings.mlr.press/v108/aglietti20a.html.\n\n\nDaulton, Samuel, Maximilian Balandat, と Eytan Bakshy. 2021年. 「Parallel Bayesian Optimization of Multiple Noisy Objectives with Expected Hypervolume Improvement」. Advances in Neural Information Processing Systems 34. https://papers.nips.cc/paper/2021/hash/11704817e347269b7254e744b5e22dac-Abstract.html.\n\n\nEriksson, David, Michael Pearce, Jacob R. Gardner, Ryan Turner, と Matthias Poloczek. 2019年. 「Scalable Global Optimization via Local Bayesian Optimization」. Advances in Neural Information Processing Systems 32. https://proceedings.neurips.cc/paper_files/paper/2019/hash/6c990b7aca7bc7058f5e98ea909e924b-Abstract.html.\n\n\nFeurer, Matthias, Benjamin Letham, Frank Hutter, と Eytan Bakshy. 2018年. Practical Transfer Learning for Bayesian Optimization. https://arxiv.org/abs/1802.02219.\n\n\nGardner, Jacob R., Matt J. Kusner, Zhixiang Eddie Xu, Kilian Q. Weinberger, と John P. Cunningham. 2014年. 「Bayesian Optimization with Inequality Constraints」. Proceedings of the 31st International Conference on Machine Learning, Proceedings of Machine Learning Research, vol. 32: 937–45. https://proceedings.mlr.press/v32/gardner14.html.\n\n\nGonzález, Javier, Zhenwen Dai, Andreas Damianou, と Neil D. Lawrence. 2017年. 「Preferential Bayesian Optimization」. Proceedings of the 34th International Conference on Machine Learning, Proceedings of Machine Learning Research, vol. 70: 1282–91. https://proceedings.mlr.press/v70/gonzalez17a.html.\n\n\nKandasamy, Kirthevasan, Gautam Dasarathy, Jeff Schneider, と Barnabás Póczos. 2017年. 「Multi-fidelity Bayesian Optimisation with Continuous Approximations」. Proceedings of the 34th International Conference on Machine Learning, Proceedings of Machine Learning Research, vol. 70: 1799–808. https://proceedings.mlr.press/v70/kandasamy17a.html.\n\n\nKrause, Andreas, と Cheng S. Ong. 2011年. 「Contextual Gaussian Process Bandit Optimization」. Advances in Neural Information Processing Systems 24. https://proceedings.neurips.cc/paper_files/paper/2011/hash/f3f1b7fc5a8779a9e618e1f23a7b7860-Abstract.html.\n\n\nRu, Binxin, Ahsan Alvi, Vu Nguyen, Michael A. Osborne, と Stephen Roberts. 2020年. 「Bayesian Optimisation over Multiple Continuous and Categorical Inputs」. Proceedings of the 37th International Conference on Machine Learning, Proceedings of Machine Learning Research, vol. 119: 8276–85. https://proceedings.mlr.press/v119/ru20a.html.\n\n\nSui, Yanan, Alkis Gotovos, Joel Burdick, と Andreas Krause. 2015年. 「Safe Exploration for Optimization with Gaussian Processes」. Proceedings of the 32nd International Conference on Machine Learning, Proceedings of Machine Learning Research, vol. 37: 997–1005. https://proceedings.mlr.press/v37/sui15.html.",
+    "crumbs": [
+      "第V部 実践と発展",
+      "<span class='chapter-number'>11</span>  <span class='chapter-title'>第11章　ベイズ最適化・能動学習の発展</span>"
+    ]
+  },
+  {
+    "objectID": "chapters/12-method-selection.html",
+    "href": "chapters/12-method-selection.html",
+    "title": "第12章　まとめと次の学習",
+    "section": "",
+    "text": "12.1 実験の後に何を決めるか\n学習目標　目的を手法と評価指標に結び付け、現場で使う実験計画を記述する。学習結果の不確実性と、追加の検証が必要な場面を説明する。\nBOでは推薦 \\(\\hat x\\) と最適設定 \\(x^\\star\\) の平均応答の差 \\(f(x^\\star)-f(\\hat x)\\) を、最大化における単純リグレットとして測れます。\\(f\\) は測定誤差を含めない目的の真の平均です。真の最大値を指定できる合成試験では直接計算しやすい一方、実験では最大値が未知なので、独立した確認測定を使って現行条件や基準手法と比較します。ALでは、ラベルを集めたい領域と、予測の性能を評価したい領域を明記します。必要に応じて運用時と同じ入力分布、または意味が明確な重みを設定します (Frazier 2018年; Garnett 2023年; Settles 2009年)。",
+    "crumbs": [
+      "第V部 実践と発展",
+      "<span class='chapter-number'>12</span>  <span class='chapter-title'>第12章　まとめと次の学習</span>"
+    ]
+  },
+  {
+    "objectID": "chapters/12-method-selection.html#ix-section-12-1",
+    "href": "chapters/12-method-selection.html#ix-section-12-1",
+    "title": "第12章　まとめと次の学習",
+    "section": "",
+    "text": "最終的に決めたいこと\n始め方\n残す指標\n\n\n\n\n高い平均強度を生む設定\n単目的BO（第5〜7章）\n推薦の確認値、累計評価数、費用\n\n\n強度とエネルギーの取引関係\n多目的BO（第11章）\n非支配点、固定参照点のHV、確認値\n\n\n未測定領域の実数値を予測する\n回帰のAL（第8章）\n対象分布上のRMSE、予測区間の被覆\n\n\n合格確率や判定を改善する\n分類のAL（第8〜9章）\nBrier損失、対数損失、判定の誤りと費用\n\n\n規格を満たす範囲を知る\n境界付近と未測定域を調べ、適合範囲を推定\n境界の誤差、誤って適合と判断した割合",
+    "crumbs": [
+      "第V部 実践と発展",
+      "<span class='chapter-number'>12</span>  <span class='chapter-title'>第12章　まとめと次の学習</span>"
+    ]
+  },
+  {
+    "objectID": "chapters/12-method-selection.html#ix-section-12-2",
+    "href": "chapters/12-method-selection.html#ix-section-12-2",
+    "title": "第12章　まとめと次の学習",
+    "section": "12.2 実行する　判定と費用を結び付ける",
+    "text": "12.2 実行する　判定と費用を結び付ける\n第9章の合格判定を振り返ります。実務で誤って合格品とする費用を4、合格品を誤って不合格とする費用を1とします。いずれも同じ任意の費用単位で、正しく判定したときの費用は0です。二つの試験条件の予測合格確率を0.66と0.91とし、確率をもとに判定ごとの期待損失を計算します。\nimport torch\n\np = torch.tensor([0.66, 0.91], dtype=torch.float64)\nloss_if_accept = 4 * (1 - p)\nloss_if_reject = p\nthreshold = 4 / (4 + 1)\naccept = loss_if_accept &lt;= loss_if_reject\nbest_loss = torch.where(accept, loss_if_accept, loss_if_reject)\n費用から決めた閾値は 0.8 です。0.66の条件は不合格、0.91の条件は合格と判定します。二条件の等重み平均の期待損失は、閾値0.5の判定で 0.86、費用に基づく閾値では 0.51 です。\n\n\n\n\n\n\n図 12.1: 合格・不合格と判定する場合の期待損失。交点の確率0.8が閾値。丸は、二つの説明用確率で損失が小さい方を選んだ結果。\n\n\n\n期待損失の計算には予測確率を使うので、確率の較正や、費用の設定が意思決定に影響します。例えば費用を見直せば同じGPでも閾値は変わります。試験を追加してデータを得る行動は、合否を判定する行動とは費用も評価する結果も異なります。第12章のNotebookでは、閾値と費用だけを変える影響を再現できます。",
+    "crumbs": [
+      "第V部 実践と発展",
+      "<span class='chapter-number'>12</span>  <span class='chapter-title'>第12章　まとめと次の学習</span>"
+    ]
+  },
+  {
+    "objectID": "chapters/12-method-selection.html#ix-section-12-3",
+    "href": "chapters/12-method-selection.html#ix-section-12-3",
+    "title": "第12章　まとめと次の学習",
+    "section": "12.3 実験計画のチェックリスト",
+    "text": "12.3 実験計画のチェックリスト\n\n\n\n試験前に決める項目\n記録する内容\n\n\n\n\n目標\n推薦、範囲推定、予測、判定のどれを最終出力にするか\n\n\n操作・観測\n入力の範囲、型、単位、変更できない状況、測定内容\n\n\n適合性\n実行前に分かる制約、測って分かる制約、各試験で守る安全条件\n\n\nデータ\n測定装置と手順、時刻、ロット、欠測・打ち切り・失敗の理由\n\n\n初期設計\n既存データを使う根拠、候補の初期点、必要な反復測定\n\n\n比較\nランダムなどの基準、共通の初期条件、費用と時間の数え方\n\n\n停止と確認\n予算上限、停止時の推薦規則、確認枠、採用に必要な改善幅\n\n\n再現\nソフトウェアの版、seed、データ版、候補と結果を結ぶID\n\n\n\nたとえば、上限 20回 に対し、初期試験を6回、確認を4回とすると、適応的に選ぶ試験は最大 10回 です。試料を消費した失敗も、この枠を1回使います。\n並行作業では、提案済みで結果待ちの点を時間の記録に残し、計測完了の順序も保存します。測定が失敗しても試料を消費したなら、その費用を数えます。計算時間、試験回数、経過時間は用途が違うので分けて報告します。基準手法と比較するときは、目的値の範囲だけでなく初期観測、停止規則、確認予算を揃えます。",
+    "crumbs": [
+      "第V部 実践と発展",
+      "<span class='chapter-number'>12</span>  <span class='chapter-title'>第12章　まとめと次の学習</span>"
+    ]
+  },
+  {
+    "objectID": "chapters/12-method-selection.html#失敗から原因を絞る",
+    "href": "chapters/12-method-selection.html#失敗から原因を絞る",
+    "title": "第12章　まとめと次の学習",
+    "section": "12.4 失敗から原因を絞る",
+    "text": "12.4 失敗から原因を絞る\n\n不確かさの大きい条件ばかり測っている。 第4・5章のように予測平均と獲得値を照合し、次の測定が目的に合うかを調べます。\n最良観測値を再現できない。 第7章のように最良値と推薦を区別し、第10章のように別の試料で推薦を確認します。\n取得済み点で誤りが少ない。 第8章に沿って、運用時を想定した独立のデータで評価します。\n候補を再現できない。 第6・10章の記録を使い、試験番号・条件・時刻を照合します。失敗や結果待ちも記録します。",
+    "crumbs": [
+      "第V部 実践と発展",
+      "<span class='chapter-number'>12</span>  <span class='chapter-title'>第12章　まとめと次の学習</span>"
+    ]
+  },
+  {
+    "objectID": "chapters/12-method-selection.html#研究課題と読み進め方",
+    "href": "chapters/12-method-selection.html#研究課題と読み進め方",
+    "title": "第12章　まとめと次の学習",
+    "section": "12.5 研究課題と読み進め方",
+    "text": "12.5 研究課題と読み進め方\n運用時の入力分布が変わると、学習した確率の較正や、追加ラベルの価値が変わり得ます。どのデータを追加取得し、どの分布で評価するかを合わせて検討します (Settles 2009年; Bickford Smith ほか 2023年)。\n並行・非同期試験では、所要時間や失敗が条件によって異なる場合の予算配分が課題です。過去の観測を使う場合は、応答の構造や因果関係を新しい材料とどこまで共有できるかを確かめます (Garnett 2023年; Feurer ほか 2018年; Aglietti ほか 2020年)。\n\n\n\n次に深めるテーマ\n読む資料\nrobotorchanで試す入口\n\n\n\n\nGP回帰・分類の推論\n(Rasmussen と Williams 2006年, 第2・3章)\n第4章・第9章のNotebook\n\n\n獲得関数と逐次最適化\n(Frazier 2018年; Garnett 2023年)\n第5〜7章のNotebook\n\n\n予測改善と観測選択\n(Settles 2009年; Bickford Smith ほか 2023年)\n35 回帰の能動学習\n\n\n操作・状況・介入\n(Krause と Ong 2011年; Aglietti ほか 2020年)\n60 Contextual BO、58 Causal BO",
+    "crumbs": [
+      "第V部 実践と発展",
+      "<span class='chapter-number'>12</span>  <span class='chapter-title'>第12章　まとめと次の学習</span>"
+    ]
+  },
+  {
+    "objectID": "chapters/12-method-selection.html#演習とまとめ",
+    "href": "chapters/12-method-selection.html#演習とまとめ",
+    "title": "第12章　まとめと次の学習",
+    "section": "12.6 演習とまとめ",
+    "text": "12.6 演習とまとめ\n\n確認。 上限20回、初期6回、確認を各条件2回とすると、候補に何回使えますか。その途中で試料を使った失敗が1回ありました。候補予算を使い切った場合、成功して得た追加観測は最大何件ですか。\n操作。 Notebookで誤って合格とする費用を2に変え、閾値と二つの確率での判定を求めてください。\n発展。 「原料ロットが変わっても強度の合格確率を予測したい」という課題を選び、表の項目を1ページにまとめてください。どのロットを候補選択に使い、どのロットを評価に残しますか。\n\n実験の目的、観測できるデータ、次の候補の価値を順に定義できれば、モデルや最適化器を変えても説明の軸が保てます。まず小さな題材で一巡させ、試験の予算をどこに使い、最終判断にどの観測が効いたのかを振り返ってください。\n\n\n\n\nAglietti, Virginia, Xiaoyu Lu, Andrei Paleyes, と Javier González. 2020年. 「Causal Bayesian Optimization」. Proceedings of the Twenty Third International Conference on Artificial Intelligence and Statistics, Proceedings of Machine Learning Research, vol. 108: 3155–64. https://proceedings.mlr.press/v108/aglietti20a.html.\n\n\nBickford Smith, Freddie, Andreas Kirsch, Sebastian Farquhar, Yarin Gal, Adam Foster, と Tom Rainforth. 2023年. 「Prediction-Oriented Bayesian Active Learning」. Proceedings of the 26th International Conference on Artificial Intelligence and Statistics, Proceedings of Machine Learning Research, vol. 206: 7331–48. https://proceedings.mlr.press/v206/bickfordsmith23a.html.\n\n\nFeurer, Matthias, Benjamin Letham, Frank Hutter, と Eytan Bakshy. 2018年. Practical Transfer Learning for Bayesian Optimization. https://arxiv.org/abs/1802.02219.\n\n\nFrazier, Peter I. 2018年. A Tutorial on Bayesian Optimization. https://arxiv.org/abs/1807.02811.\n\n\nGarnett, Roman. 2023年. Bayesian Optimization. Cambridge University Press. https://bayesoptbook.com/.\n\n\nKrause, Andreas, と Cheng S. Ong. 2011年. 「Contextual Gaussian Process Bandit Optimization」. Advances in Neural Information Processing Systems 24. https://proceedings.neurips.cc/paper_files/paper/2011/hash/f3f1b7fc5a8779a9e618e1f23a7b7860-Abstract.html.\n\n\nRasmussen, Carl Edward, と Christopher K. I. Williams. 2006年. Gaussian Processes for Machine Learning. MIT Press. https://doi.org/10.7551/mitpress/3206.001.0001.\n\n\nSettles, Burr. 2009年. Active Learning Literature Survey. Computer Sciences Technical Report No. 1648. University of Wisconsin–Madison. https://burrsettles.com/pub/settles.activelearning.pdf.",
+    "crumbs": [
+      "第V部 実践と発展",
+      "<span class='chapter-number'>12</span>  <span class='chapter-title'>第12章　まとめと次の学習</span>"
+    ]
+  },
+  {
+    "objectID": "references.html",
+    "href": "references.html",
+    "title": "参考文献",
+    "section": "",
+    "text": "Aglietti, Virginia, Xiaoyu Lu, Andrei Paleyes, and Javier González.\n2020. “Causal Bayesian Optimization.” Proceedings of\nthe Twenty Third International Conference on Artificial Intelligence and\nStatistics, Proceedings of machine learning research, vol. 108:\n3155–64. https://proceedings.mlr.press/v108/aglietti20a.html.\n\n\nAment, Sebastian, Samuel Daulton, David Eriksson, Maximilian Balandat,\nand Eytan Bakshy. 2023. “Unexpected Improvements to Expected\nImprovement for Bayesian Optimization.” Advances in Neural\nInformation Processing Systems 36. https://doi.org/10.52202/075280-0904.\n\n\nBalandat, Maximilian, Brian Karrer, Daniel R. Jiang, et al. 2020.\n“BoTorch: A Framework for Efficient Monte-Carlo\nBayesian Optimization.” Advances in Neural Information\nProcessing Systems 33: 21524–38. https://proceedings.neurips.cc/paper/2020/hash/f5b1b89d98b7286673128a5fb112cb9a-Abstract.html.\n\n\nBickford Smith, Freddie, Andreas Kirsch, Sebastian Farquhar, Yarin Gal,\nAdam Foster, and Tom Rainforth. 2023. “Prediction-Oriented\nBayesian Active Learning.” Proceedings of the 26th\nInternational Conference on Artificial Intelligence and Statistics,\nProceedings of machine learning research, vol. 206: 7331–48. https://proceedings.mlr.press/v206/bickfordsmith23a.html.\n\n\nBoTorch Contributors. n.d.-a. Getting Started. https://botorch.org/docs/getting_started.\n\n\nBoTorch Contributors. n.d.-b. Optimization. https://botorch.org/docs/optimization.\n\n\nBrier, Glenn W. 1950. “Verification of Forecasts Expressed in\nTerms of Probability.” Monthly Weather Review 78 (1):\n1–3. https://doi.org/10.1175/1520-0493%281950%29078%3C0001%3AVOFEIT%3E2.0.CO%3B2.\n\n\nDaulton, Samuel, Maximilian Balandat, and Eytan Bakshy. 2021.\n“Parallel Bayesian Optimization of Multiple Noisy Objectives with\nExpected Hypervolume Improvement.” Advances in Neural\nInformation Processing Systems 34. https://papers.nips.cc/paper/2021/hash/11704817e347269b7254e744b5e22dac-Abstract.html.\n\n\nEriksson, David, Michael Pearce, Jacob R. Gardner, Ryan Turner, and\nMatthias Poloczek. 2019. “Scalable Global Optimization via Local\nBayesian Optimization.” Advances in Neural Information\nProcessing Systems 32. https://proceedings.neurips.cc/paper_files/paper/2019/hash/6c990b7aca7bc7058f5e98ea909e924b-Abstract.html.\n\n\nFeurer, Matthias, Benjamin Letham, Frank Hutter, and Eytan Bakshy. 2018.\nPractical Transfer Learning for Bayesian Optimization. https://arxiv.org/abs/1802.02219.\n\n\nFrazier, Peter I. 2018. A Tutorial on Bayesian Optimization. https://arxiv.org/abs/1807.02811.\n\n\nGardner, Jacob R., Matt J. Kusner, Zhixiang Eddie Xu, Kilian Q.\nWeinberger, and John P. Cunningham. 2014. “Bayesian Optimization\nwith Inequality Constraints.” Proceedings of the 31st\nInternational Conference on Machine Learning, Proceedings of\nmachine learning research, vol. 32: 937–45. https://proceedings.mlr.press/v32/gardner14.html.\n\n\nGarnett, Roman. 2023. Bayesian Optimization. Cambridge\nUniversity Press. https://bayesoptbook.com/.\n\n\nGonzález, Javier, Zhenwen Dai, Andreas Damianou, and Neil D. Lawrence.\n2017. “Preferential Bayesian Optimization.” Proceedings\nof the 34th International Conference on Machine Learning,\nProceedings of machine learning research, vol. 70: 1282–91. https://proceedings.mlr.press/v70/gonzalez17a.html.\n\n\nGPyTorch contributors. n.d.-a. GPyTorch 1.15.2:\nLikelihoods. https://docs.gpytorch.ai/en/v1.15.2/likelihoods.html.\n\n\nGPyTorch contributors. n.d.-b. GPyTorch 1.15.2:\nMarginal Log Likelihoods. https://docs.gpytorch.ai/en/v1.15.2/marginal_log_likelihoods.html.\n\n\nHensman, James, Alexander Matthews, and Zoubin Ghahramani. 2015.\n“Scalable Variational Gaussian Process Classification.”\nProceedings of the Eighteenth International Conference on Artificial\nIntelligence and Statistics, Proceedings of machine learning\nresearch, vol. 38: 351–60. https://proceedings.mlr.press/v38/hensman15.html.\n\n\nHoulsby, Neil, Ferenc Huszár, Zoubin Ghahramani, and Máté Lengyel. 2011.\nBayesian Active Learning for Classification and Preference\nLearning. https://arxiv.org/abs/1112.5745.\n\n\nJones, Donald R., Matthias Schonlau, and William J. Welch. 1998.\n“Efficient Global Optimization of Expensive Black-Box\nFunctions.” Journal of Global Optimization 13: 455–92.\nhttps://doi.org/10.1023/A:1008306431147.\n\n\nKandasamy, Kirthevasan, Gautam Dasarathy, Jeff Schneider, and Barnabás\nPóczos. 2017. “Multi-Fidelity Bayesian Optimisation with\nContinuous Approximations.” Proceedings of the 34th\nInternational Conference on Machine Learning, Proceedings of\nmachine learning research, vol. 70: 1799–808. https://proceedings.mlr.press/v70/kandasamy17a.html.\n\n\nKrause, Andreas, and Cheng S. Ong. 2011. “Contextual Gaussian\nProcess Bandit Optimization.” Advances in Neural Information\nProcessing Systems 24. https://proceedings.neurips.cc/paper_files/paper/2011/hash/f3f1b7fc5a8779a9e618e1f23a7b7860-Abstract.html.\n\n\nLetham, Benjamin, Brian Karrer, Guilherme Ottoni, and Eytan Bakshy.\n2019. “Constrained Bayesian Optimization with Noisy\nExperiments.” Bayesian Analysis 14 (2): 495–519. https://doi.org/10.1214/18-BA1110.\n\n\nMontgomery, Douglas C. 2019. Design and Analysis of\nExperiments. 10th ed. Wiley. https://www.wiley.com/en-us/design-and-analysis-of-experiments-10th-edition-p-9781119492443.\n\n\nMurphy, Kevin P. 2022. Probabilistic Machine Learning: An\nIntroduction. MIT Press. https://probml.github.io/pml-book/book1.html.\n\n\nPyTorch Contributors. 2025. SobolEngine. https://docs.pytorch.org/docs/2.9/generated/torch.quasirandom.SobolEngine.html.\n\n\nRasmussen, Carl Edward, and Christopher K. I. Williams. 2006.\nGaussian Processes for Machine Learning. MIT Press. https://doi.org/10.7551/mitpress/3206.001.0001.\n\n\nrobotorchan contributors. 2026. robotorchan: Bayesian Optimization and Active\nLearning with BoTorch. https://github.com/tanakakao/robotorchan/tree/b1bb77087cd117d83ed21a226a6fce39ccd5b497.\n\n\nRu, Binxin, Ahsan Alvi, Vu Nguyen, Michael A. Osborne, and Stephen\nRoberts. 2020. “Bayesian Optimisation over Multiple Continuous and\nCategorical Inputs.” Proceedings of the 37th International\nConference on Machine Learning, Proceedings of machine learning\nresearch, vol. 119: 8276–85. https://proceedings.mlr.press/v119/ru20a.html.\n\n\nSettles, Burr. 2009. Active Learning Literature Survey.\nComputer Sciences Technical Report No. 1648. University of\nWisconsin–Madison. https://burrsettles.com/pub/settles.activelearning.pdf.\n\n\nSrinivas, Niranjan, Andreas Krause, Sham M. Kakade, and Matthias Seeger.\n2010. “Gaussian Process Optimization in the Bandit Setting: No\nRegret and Experimental Design.” Proceedings of the 27th\nInternational Conference on Machine Learning, 1015–22. https://arxiv.org/abs/0912.3995.\n\n\nSui, Yanan, Alkis Gotovos, Joel Burdick, and Andreas Krause. 2015.\n“Safe Exploration for Optimization with Gaussian\nProcesses.” Proceedings of the 32nd International Conference\non Machine Learning, Proceedings of machine learning research, vol.\n37: 997–1005. https://proceedings.mlr.press/v37/sui15.html.",
+    "crumbs": [
+      "参考文献"
+    ]
+  },
+  {
+    "objectID": "appendices/exercises.html",
+    "href": "appendices/exercises.html",
+    "title": "章末演習の解答・解説",
+    "section": "",
+    "text": "第1章",
+    "crumbs": [
+      "付録",
+      "章末演習の解答・解説"
+    ]
+  },
+  {
+    "objectID": "appendices/exercises.html#第1章",
+    "href": "appendices/exercises.html#第1章",
+    "title": "章末演習の解答・解説",
+    "section": "",
+    "text": "\\(3+6=9\\) 回です。候補を細かくすると、選択前に評価する獲得関数の値は増えます。追加の試験数は、候補集合の大きさと独立に6回と決められます。\nn_extra を3に変えると、各方法は初期3件と追加3件で終了します。図の横軸の最後が6、各手法の evaluation_count が6になっているか確認します。固定格子とBOでは最初の3追加点の順が同じ設定のままです。ランダムのシードを変えるには random_generator を作る行の manual_seed に別の整数を渡します。\n最良観測値には測定誤差が含まれます。候補の温度と現行条件で反復測定し、平均とばらつきを比較すると、偶然高かった試験結果の影響を調べられます。最後の推薦で測定誤差を含む一回の成績と、平均として期待する品質をどちらも見ると、判断の理由を説明しやすくなります。",
+    "crumbs": [
+      "付録",
+      "章末演習の解答・解説"
+    ]
+  },
+  {
+    "objectID": "appendices/exercises.html#第2章",
+    "href": "appendices/exercises.html#第2章",
+    "title": "章末演習の解答・解説",
+    "section": "第2章",
+    "text": "第2章\n\n事後分散は \\(1/(1/25+1/9)=225/34\\) です。平均は \\(70.735\\) MPa、標準偏差は \\(2.572\\) MPaです。事前精度 \\(1/25\\) と、1件の観測の精度 \\(1/9\\) を足します。\nnoise_sd を6にすると1件の精度は \\(1/36\\) となります。4件の事後平均は約71.838 MPa、標準偏差は約2.572 MPaです。標準偏差3 MPaの設定では同じ4件で約72.294 MPa、1.437 MPaです。精度が下がると事前平均により近くなります。\n\\(c=\\rho(4)(5)\\) を条件付き正規分布の式に入れます。\\(\\rho=0\\) なら平均75 MPa、分散25 MPa²で周辺分布と一致します。\\(\\rho=-0.7\\) なら平均は71.5 MPa、分散は12.75 MPa²です。符号は平均の更新方向に関わり、分散を減らす項には \\(c^2\\) が入ります。",
+    "crumbs": [
+      "付録",
+      "章末演習の解答・解説"
+    ]
+  },
+  {
+    "objectID": "appendices/exercises.html#第3章",
+    "href": "appendices/exercises.html#第3章",
+    "title": "章末演習の解答・解説",
+    "section": "第3章",
+    "text": "第3章\n\n距離と長さ尺度がともに0.5です。RBFの式から共分散は \\(\\exp(-1/2)\\approx0.607\\) です。\n事前サンプルを描くセルの最初のRBF設定で、描画タイトルと ell をともに0.40へ変えます。例えば \\(r=0.20\\) における相関は \\(\\exp(-1/2)\\approx0.607\\) から \\(\\exp(-1/8)\\approx0.882\\) に増えます。近隣で同じ向きに動きやすくなります。信号分散を固定しているので各点の分散は同じです。\n上左の \\(K_{XX}\\) のうち、\\(x=0\\) と \\(x=1\\) それぞれの対角2成分にだけ0.1を足します。観測誤差は独立と仮定しているので、観測位置同士の非対角はそのままです。予測の対象を潜在強度とした場合、予測側ブロックにも観測誤差を加えません。",
+    "crumbs": [
+      "付録",
+      "章末演習の解答・解説"
+    ]
+  },
+  {
+    "objectID": "appendices/exercises.html#第4章",
+    "href": "appendices/exercises.html#第4章",
+    "title": "章末演習の解答・解説",
+    "section": "第4章",
+    "text": "第4章\n\n標準偏差は \\(\\sqrt{3^2+2^2}=\\sqrt{13}\\approx3.606\\) MPa、約95%区間の半幅は \\(1.96\\sqrt{13}\\approx7.07\\) MPa です。\nNotebookの check_noise_variance を0.5に変更すると、GPと手計算の両方に同じ分散が入ります。\\(A^{-1}\\) を通じて観測の補正が弱まり、この小例では各点の平均が零に近づきます。事後分散は各点で増えます。\\(\\tau^2 I\\) を大きくすると、正定値行列の逆の順序が逆転し、\\(K_{*X}A^{-1}K_{X*}\\) が半正定値順序で小さくなるためです。\nNotebookの matern_lengthscale だけを0.10と0.35に変え、たとえば \\(x=0.73\\) の周辺を読みます。この例では短い長さ尺度のモデルほど離れた点の影響が弱く、観測間で事前平均へ戻りやすくなります。目盛の揃ったグラフ上で平均と区間幅を判断し、長さ尺度変更が常にすべての位置の帯に同じ方向の効果を与えるとは結論しません。\n標準正規乱数を共通にして倍率だけを6 MPaに変えれば、測定値の違いとモデルの仮定の違いを追いやすくなります。両方の実験で同じ入力位置・同じ事前仮定・同じ観測分散 \\(36\\,\\mathrm{MPa}^2\\) を使うと、潜在事後共分散は一致します。測定値を作り直した実験では \\(\\mathbf y\\) が変わるため、事後平均への補正量が変わります。",
+    "crumbs": [
+      "付録",
+      "章末演習の解答・解説"
+    ]
+  },
+  {
+    "objectID": "appendices/exercises.html#第5章",
+    "href": "appendices/exercises.html#第5章",
+    "title": "章末演習の解答・解説",
+    "section": "第5章",
+    "text": "第5章\n\nAの \\(z\\) は2、Bの \\(z\\) は \\(-0.25\\)。PIは約0.9773と0.4013でAが上位です。EIは約1.0042 MPaと1.1454 MPaでBが上位です。UCBは \\(81+2(0.5)=82\\) MPa と \\(79+2(4)=87\\) MPa でBが上位です。Bは改善の頻度が低くても、起きたときの改善量が大きくなり得ます。\n\\(\\beta=0\\) は平均を最大にする点です。係数を上げると平均が多少低くても標準偏差の大きい点が有力になります。候補の \\(x\\) 値を比べるだけでなく、候補ごとの \\(\\mu,\\sigma\\) を出力し、UCBの2項のうちどちらが効いたかを調べます。\n\\(b=78\\) MPa では、PIはAがほぼ1、Bが約0.599で、EIはAが3.000 MPa、Bが2.145 MPaです。両方でAが上位です。\\(b=82\\) MPa では、PIはAが約0.023、Bが約0.227で、EIはAが0.004 MPa、Bが0.525 MPaです。両方でBが上位です。PIの順位は \\(z_A=z_B\\) となる \\(b=81+2/7\\) MPa を境に変わります。極端な閾値で評価値が桁落ちして同点に見える場合は、標準化した \\(z\\) や対数領域のスコアも確認します。\nある観測に偶然大きい正の誤差が乗ると、観測最大値が真の最高強度より高くなり得ます。その観測値を固定基準にすると、別の有望条件でも改善確率や期待改善がほぼ消えることがあります。候補と既観測点の潜在値について、現在の事後分布で不確かさを扱う noisy EI 系がこれに対応する一例です。",
+    "crumbs": [
+      "付録",
+      "章末演習の解答・解説"
+    ]
+  },
+  {
+    "objectID": "appendices/exercises.html#第6章",
+    "href": "appendices/exercises.html#第6章",
+    "title": "章末演習の解答・解説",
+    "section": "第6章",
+    "text": "第6章\n\n初期4回と追加4回で装置測定は8回です。モデル学習や獲得関数の内部評価は実験予算を消費しません。推薦温度を実機で1回確認すれば合計9回になります。\nfail_number = 0 とします。4試行の状態は FAIL, COMPLETE, COMPLETE, COMPLETE です。目的値を得た3件が登録されます。\n例えば成功した試行を3回追加した後の最良観測値の改善が0.2 MPa未満なら停止候補とし、一定の測定予算内で確認します。失敗試行は累計の試行数に含め、測定値・改善履歴には加えません。測定ノイズが0.2 MPa程度以上なら観測の増分が誤差で変動するので、反復測定や事後予測も参照します。",
+    "crumbs": [
+      "付録",
+      "章末演習の解答・解説"
+    ]
+  },
+  {
+    "objectID": "appendices/exercises.html#第7章",
+    "href": "appendices/exercises.html#第7章",
+    "title": "章末演習の解答・解説",
+    "section": "第7章",
+    "text": "第7章\n\n各seedの8点の学習データ、256点の検証データ、信号モデルと出力標準化、観測分散を固定します。入力変換は \\(x_T=(T-140)/40\\) と \\(x_r=r/0.01\\) です。ベイズ最適化まで行う場合も、モデルが内部で変換する設定なら候補探索の範囲は外部の物理座標で指定します。\ncases のノイズあり2行にある 2.0 を 4.0 へ変えます。同じseedの誤差を2倍にするため、各方式の違いを追いやすくなります。best_observed_mpa は実測の最大、recommendation_gap_mpa はシミュレータの真値で測った推薦点と最大との差です。両方をseedごとに比較し、観測最大値が上がった場合も、推薦点の差が減ったかを確認します。\n2点をまとめて提案して計測する場面では評価回数は2です。開始から両方終わるまでの経過時間には、準備や評価待ちも含めます。片方が先に終わり、すぐに次を提案する運用では、完了点と保留点を区別します。両方が終わってから次の一組を提案する運用と比べるなら、同じ実測数に達するまでの時間と同じ終了時刻までの実測数をそれぞれ記録します。",
+    "crumbs": [
+      "付録",
+      "章末演習の解答・解説"
+    ]
+  },
+  {
+    "objectID": "appendices/exercises.html#第8章",
+    "href": "appendices/exercises.html#第8章",
+    "title": "章末演習の解答・解説",
+    "section": "第8章",
+    "text": "第8章\n\nどちらも平均確率は0.5なので、予測エントロピーは \\(\\log 2\\approx0.693\\) natです。常に0.5ならBALDは0です。0.2と0.8が等確率なら、対称性で条件付きエントロピーは \\(h(0.2)\\approx0.500\\) nat、差は約0.193 natです。\n比較用の test_x を作った直後に test_x = test_x[test_x[:, 0] &gt;= 0.625] と絞り込み、それから truth と学習曲線を作り直します。物理温度165 °Cは正規化座標0.625です。選択に使うスコアはそのままなので、各シードの候補順と取得ラベルは同じです。評価する温度の重みが変わり、同じ予測でも、損失の平均が変わります。\n\\(c(z,x)=0\\) なら、その一回の測定で \\(z\\) の分散は減りません。候補の \\(s^2(x)\\) と測定ノイズが同じなら、\\(|c(z,x)|\\) が大きい方が \\(z\\) での分散を大きく減らします。対象を有限個の \\(z_j\\) と非負の重み \\(w_j\\)（\\(\\sum_j w_j=1\\)）で表すなら、各候補で \\(\\sum_j w_jc(z_j,x)^2/[s^2(x)+\\sigma_n^2]\\) を計算して最大のものを選びます。カーネル等を固定する前提です。",
+    "crumbs": [
+      "付録",
+      "章末演習の解答・解説"
+    ]
+  },
+  {
+    "objectID": "appendices/exercises.html#第9章",
+    "href": "appendices/exercises.html#第9章",
+    "title": "章末演習の解答・解説",
+    "section": "第9章",
+    "text": "第9章\n\n\\(\\Phi(1)\\)、\\(\\Phi(1/2)\\)、\\(\\Phi(1/3)\\) なので、およそ0.841、0.691、0.631です。\\(m_x=0\\) のとき平均合格確率はどの分散でも0.5です。潜在標準偏差 \\(s_x\\) が増えると \\(\\Phi(-z_{.975}s_x)\\) は小さく、\\(\\Phi(z_{.975}s_x)\\) は大きくなり、確率の信用区間は広がります。\nNotebookの decision_threshold を0.8にすると、予測確率0.5以上0.8未満の判定が1から0になります。この範囲の正解ラベルによって誤分類率が変わります。Brier損失と対数損失は判定ラベルを使わないため変わりません。\n例えば第9章の学習呼び出しの epochs=120 を一律40にして、同じ初期データ、学習seed、評価ラベルで比較します。帯の幅は一方向に動くとは限りません。新しいBALD最大点と、試験前・試験後の値をそれぞれ記録します。評価ラベルを使ってエポック数を選ぶと、同じ評価ラベルでの最終報告に調整の影響が入ります。\n第1項は \\(\\mathbb E[P_x]-\\mathbb E[P_x^2]\\)、第2項は \\(\\mathbb E[P_x^2]-\\mathbb E[P_x]^2\\) です。二次の期待値が相殺され、\\(\\bar p_x-\\bar p_x^2\\) が残ります。",
+    "crumbs": [
+      "付録",
+      "章末演習の解答・解説"
+    ]
+  },
+  {
+    "objectID": "appendices/exercises.html#第10章",
+    "href": "appendices/exercises.html#第10章",
+    "title": "章末演習の解答・解説",
+    "section": "第10章",
+    "text": "第10章\n\nその条件で0 MPaという測定を得たことになります。タイムアウトなら強度を欠測とし、TrialState.FAIL として理由を記録します。この教材のStudyで学習するのは完了行です。\n下限15分の宣言と過去ログの10分・13分が矛盾するため、登録前の範囲検査で止まります。教材で新しいStudyに取込むには、古い表を保存したうえで、その2行を範囲外として除外します。範囲外を含む過去データが新範囲の予測に役立つかは別の検証です。含める場合は、モデルの学習に使う領域と候補を出す領域を実装上も分けます。\n製造可・不可と判定理由、分かれば限界に対する測定余裕を、強度とは別に記録します。候補時点で分かる装置制約は適用できる入力を先に制限し、試験しないと分からない製造適合性は未知の出力として扱えます。強度を取得できなかった行へ架空の強度を入れる必要はありません。",
+    "crumbs": [
+      "付録",
+      "章末演習の解答・解説"
+    ]
+  },
+  {
+    "objectID": "appendices/exercises.html#第11章",
+    "href": "appendices/exercises.html#第11章",
+    "title": "章末演習の解答・解説",
+    "section": "第11章",
+    "text": "第11章\n\nDはCより強く、エネルギー消費も小さいため、Cの矩形はDの矩形に含まれます。参照強度を75から76へ上げると、高さ \\(14-7=7\\) kWh、幅1 MPaの部分が除かれ、面積は30 MPa·kWhになります。\n状況ごとの最良行動は0と1で、平均効用は \\(0.75(5)+0.25(6)=5.25\\) です。操作0に固定すると4.00、操作1に固定すると3.00です。状況を知る前の固定操作としては0を選びます。\n操作は温度・保持時間、状況は事前に観測したロット、観測は実際に得た強度です。装置の既知制約で実行可能集合を決めます。過去ログではロットごとの設定の重なり、設定を選んだ理由、装置や時期に伴う変化を調べます。比較可能なログが不足する場合は、許可された共通条件で追加測定します。",
+    "crumbs": [
+      "付録",
+      "章末演習の解答・解説"
+    ]
+  },
+  {
+    "objectID": "appendices/exercises.html#第12章",
+    "href": "appendices/exercises.html#第12章",
+    "title": "章末演習の解答・解説",
+    "section": "第12章",
+    "text": "第12章\n\n確認は計4回なので、適応的な追加候補の枠は \\(20-6-4=10\\) 回です。失敗1回も枠を使うので、追加の成功観測は最大9件です。\n閾値は \\(2/(2+1)=2/3\\) です。0.66は閾値未満なので不合格、0.91は閾値以上なので合格です。表示を2桁に丸めた0.67から判定するより、計算で得た閾値をそのまま使います。\nロット間で試料調製や装置条件を記録し、候補選択で見るロットと評価へ残すロットを決めます。新しいロットへの汎化を評価したい場合は、ロット全体を学習から外して試します。必要な評価サンプル数、費用、希少な不合格をどう数えるかも先に決めます。",
+    "crumbs": [
+      "付録",
+      "章末演習の解答・解説"
+    ]
+  },
+  {
+    "objectID": "appendices/term-index.html",
+    "href": "appendices/term-index.html",
+    "title": "索引",
+    "section": "",
+    "text": "あ・か\n節番号から本文へ移動できます。PDFでは、括弧内に本文のページ番号を示します。",
+    "crumbs": [
+      "付録",
+      "索引"
+    ]
+  },
+  {
+    "objectID": "appendices/term-index.html#あか",
+    "href": "appendices/term-index.html#あか",
+    "title": "索引",
+    "section": "",
+    "text": "用語\n節\n\n\n\n\n上側信頼限界\n5.4節\n\n\nエントロピー\n8.3節、8.4節\n\n\n外挿\n4.7節、10.5節\n\n\n改善確率\n5.2節\n\n\nガウス過程\n3.2節、4.3節\n\n\n獲得関数\n1.4節、5.1節\n\n\n確認測定\n6.3節、10.4節\n\n\nカーネル\n3.3節、3.4節\n\n\n期待改善量\n5.3節、7.2節\n\n\n較正（確率）\n9.6節\n\n\n共分散\n2.2節、3.6節\n\n\nグリッド探索\n1.5節",
+    "crumbs": [
+      "付録",
+      "索引"
+    ]
+  },
+  {
+    "objectID": "appendices/term-index.html#さた",
+    "href": "appendices/term-index.html#さた",
+    "title": "索引",
+    "section": "さ・た",
+    "text": "さ・た\n\n\n\n用語\n節\n\n\n\n\n事後分布\n2.4節、4.3節\n\n\n事前分布\n2.4節、3.2節\n\n\n実験計画\n6.1節、12.3節\n\n\n周辺尤度\n4.5節\n\n\n条件付き正規分布\n2.5節、4.3節\n\n\n信用区間\n4.4節、9.4節\n\n\n正規化（入力）\n7.1節、10.3節\n\n\n制約付きベイズ最適化\n11.3節\n\n\n潜在強度\n4.2節、4.4節\n\n\n対数損失\n9.6節\n\n\n単純リグレット\n12.1節\n\n\n逐次貪欲法\n7.5節\n\n\n転移ベイズ最適化\n11.5節",
+    "crumbs": [
+      "付録",
+      "索引"
+    ]
+  },
+  {
+    "objectID": "appendices/term-index.html#なは",
+    "href": "appendices/term-index.html#なは",
+    "title": "索引",
+    "section": "な・は",
+    "text": "な・は\n\n\n\n用語\n節\n\n\n\n\n長さ尺度\n3.5節、4.6節\n\n\n能動学習\n8.1節、8.6節\n\n\nハイパーボリューム\n11.2節\n\n\nバッチ評価\n7.5節\n\n\n判定閾値\n9.6節、12.2節\n\n\n半正定値\n3.3節\n\n\n標準化（出力）\n4.7節、7.1節\n\n\n不確実性サンプリング\n8.3節、8.5節\n\n\nブラックボックス最適化\n1.3節\n\n\nプールベース能動学習\n8.1節、8.2節\n\n\nベイズの定理\n2.4節\n\n\nベイズ最適化\n1.3節、6.2節\n\n\n変分推論\n9.3節",
+    "crumbs": [
+      "付録",
+      "索引"
+    ]
+  },
+  {
+    "objectID": "appendices/term-index.html#まやら",
+    "href": "appendices/term-index.html#まやら",
+    "title": "索引",
+    "section": "ま・や・ら",
+    "text": "ま・や・ら\n\n\n\n用語\n節\n\n\n\n\n尤度\n2.4節、9.2節\n\n\n予測区間\n4.4節\n\n\n予測確率\n9.1節、9.4節\n\n\nランダム探索\n1.5節、8.6節\n\n\nロット・コンテキスト\n10.1節、11.6節",
+    "crumbs": [
+      "付録",
+      "索引"
+    ]
+  },
+  {
+    "objectID": "appendices/term-index.html#英数字",
+    "href": "appendices/term-index.html#英数字",
+    "title": "索引",
+    "section": "英数字",
+    "text": "英数字\n\n\n\n用語\n節\n\n\n\n\nAsk-and-Tell\n6.4節、10.3節\n\n\nBALD\n8.4節、9.5節\n\n\nBernoulli尤度\n9.2節\n\n\nBO・ALの違い\n8.1節、12.1節\n\n\nBrier損失\n8.6節、9.6節\n\n\nCausal BO\n11.6節\n\n\nCholesky分解\n4.3節\n\n\nContextual BO\n11.6節\n\n\nDataFrame\n10.2節\n\n\nELBO\n9.3節\n\n\nEPIG\n8.5節\n\n\nLogEI・qLogEI\n5.5節、7.5節\n\n\nMatérnカーネル\n3.4節、4.6節\n\n\nMixed・Discrete BO\n11.4節\n\n\nMulti-Fidelity BO\n11.5節\n\n\nParetoフロント\n11.2節\n\n\nPreference BO\n11.5節\n\n\nProbit・Logit\n9.2節、9.4節\n\n\nqLogNEI\n5.6節、7.2節\n\n\nRBFカーネル\n3.4節\n\n\nSafe BO\n11.3節\n\n\nSobol点列\n6.1節\n\n\nStudy\n6.4節、10.2節\n\n\nTuRBO\n11.4節",
+    "crumbs": [
+      "付録",
+      "索引"
+    ]
+  },
+  {
+    "objectID": "appendices/colophon.html",
+    "href": "appendices/colophon.html",
+    "title": "奥付・引用方法",
+    "section": "",
+    "text": "書籍とソフトウェアの引用\n書名　Pythonで学ぶベイズ最適化と能動学習\n巻　第1巻 基礎理論と実践\n著者・編者　tanakakao\n版　第1版（v1.0.0、2026年）\nオンライン版　https://tanakakao.github.io/bo-al-book/\n特定の説明や計算結果を参照する場合は、章・節、図番号またはNotebook名を添えます。本書の再現にはrobotorchan 0.1.0、コミット b1bb770 を使いました。ソフトウェアを参照する場合は、その引用情報も記録してください。robotorchanの引用情報",
+    "crumbs": [
+      "付録",
+      "奥付・引用方法"
+    ]
+  },
+  {
+    "objectID": "appendices/colophon.html#書籍とソフトウェアの引用",
+    "href": "appendices/colophon.html#書籍とソフトウェアの引用",
+    "title": "奥付・引用方法",
+    "section": "",
+    "text": "tanakakao（2026）『Pythonで学ぶベイズ最適化と能動学習 第1巻 基礎理論と実践』第1版。https://tanakakao.github.io/bo-al-book/",
+    "crumbs": [
+      "付録",
+      "奥付・引用方法"
+    ]
+  },
+  {
+    "objectID": "appendices/colophon.html#利用条件",
+    "href": "appendices/colophon.html#利用条件",
+    "title": "奥付・引用方法",
+    "section": "利用条件",
+    "text": "利用条件\n本文・演習と解答・本書制作の図およびNotebookの解説は CC BY 4.0、本書のサンプルコードと補助スクリプトは BSD-3-Clause、合成CSVは CC0 1.0 です。第三者資料とソフトウェアには各配布元の利用条件が適用されます。配布用原稿と教材ZIPに利用条件を掲載しています。",
+    "crumbs": [
+      "付録",
+      "奥付・引用方法"
+    ]
+  },
+  {
+    "objectID": "appendices/colophon.html#ai利用の開示",
+    "href": "appendices/colophon.html#ai利用の開示",
+    "title": "奥付・引用方法",
+    "section": "AI利用の開示",
+    "text": "AI利用の開示\n本書の構成の検討、本文およびサンプルコードの草案、図表の作成と検証にChatGPTを使用しました。\n試験データは学習用の合成データです。測定回数、シード、ライブラリの版、図の再生成手順は配布用原稿のREADMEにあります。",
+    "crumbs": [
+      "付録",
+      "奥付・引用方法"
+    ]
+  }
+]
