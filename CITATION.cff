@@ -1,0 +1,16 @@
+cff-version: 1.2.0
+message: "本書を参照した場合は、preferred-citation の情報を使用してください。"
+title: "Pythonで学ぶベイズ最適化と能動学習 第1巻 基礎理論と実践"
+authors:
+  - name: "tanakakao"
+version: "1.0.0"
+repository-code: "https://github.com/tanakakao/bo-al-book"
+url: "https://tanakakao.github.io/bo-al-book/"
+preferred-citation:
+  type: book
+  title: "Pythonで学ぶベイズ最適化と能動学習 第1巻 基礎理論と実践"
+  authors:
+    - name: "tanakakao"
+  edition: "第1版"
+  year: 2026
+  url: "https://tanakakao.github.io/bo-al-book/"

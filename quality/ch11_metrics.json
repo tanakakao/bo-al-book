@@ -1,0 +1,19 @@
+{
+  "pareto": [
+    "A",
+    "B",
+    "D",
+    "E"
+  ],
+  "hypervolume": 37.0,
+  "gain_d": 6.0,
+  "context_policy": [
+    0,
+    1
+  ],
+  "contextual_reward": 5.5,
+  "fixed_reward": 4.0,
+  "observational_slope": 0.5182845569444446,
+  "observational_expected_slope": 0.5,
+  "intervention_slope": -1.0
+}

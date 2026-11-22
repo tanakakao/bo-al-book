@@ -1,0 +1,21 @@
+{
+  "threshold": 0.8,
+  "probability": [
+    0.66,
+    0.91
+  ],
+  "equal_weight_mean_default_loss": 0.8599999999999999,
+  "equal_weight_mean_optimal_loss": 0.51,
+  "default_decisions": [
+    1,
+    1
+  ],
+  "optimal_decisions": [
+    0,
+    1
+  ],
+  "total_budget": 20,
+  "initial": 6,
+  "adaptive": 10,
+  "confirm": 4
+}

@@ -1,0 +1,13 @@
+# 参考文献 {-}
+
+```{=latex}
+\begingroup
+\small
+```
+
+::: {#refs}
+:::
+
+```{=latex}
+\endgroup
+```

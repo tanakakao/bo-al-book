@@ -1,0 +1,101 @@
+project:
+  type: book
+  output-dir: _book
+  resources:
+    - notebooks/*.ipynb
+    - notebooks/experiment.py
+    - notebooks/classification_experiment.py
+    - notebooks/production_experiment.py
+    - data/*.csv
+    - downloads/*.zip
+    - LICENSE.md
+    - LICENSES/BSD-3-Clause.txt
+    - CITATION.cff
+
+book:
+  title: "Pythonで学ぶベイズ最適化と能動学習"
+  subtitle: "第1巻 基礎理論と実践 · 第1版"
+  author: tanakakao
+  site-url: "https://tanakakao.github.io/bo-al-book/"
+  output-file: BO_AL_book_vol1_v1.0.0
+  description: "ガウス過程の基礎からベイズ最適化、能動学習、二値GP分類をPythonで学びます。"
+  downloads: [pdf]
+  chapters:
+    - index.qmd
+    - part: "第I部 ベイズ最適化への導入"
+      chapters:
+        - chapters/01-bayesian-optimization.qmd
+        - chapters/02-probability.qmd
+    - part: "第II部 ガウス過程回帰"
+      chapters:
+        - chapters/03-gp-basics.qmd
+        - chapters/04-gp-prediction.qmd
+    - part: "第III部 ベイズ最適化の基礎"
+      chapters:
+        - chapters/05-acquisition.qmd
+        - chapters/06-bo-execution.qmd
+        - chapters/07-practical-bo.qmd
+    - part: "第IV部 能動学習と分類"
+      chapters:
+        - chapters/08-active-learning.qmd
+        - chapters/09-gp-classification.qmd
+    - part: "第V部 実践と発展"
+      chapters:
+        - chapters/10-practical-application.qmd
+        - chapters/11-advanced-topics.qmd
+        - chapters/12-method-selection.qmd
+    - references.qmd
+  appendices:
+    - appendices/exercises.qmd
+    - appendices/term-index.qmd
+    - appendices/colophon.qmd
+
+lang: ja
+bibliography: references.bib
+number-sections: false
+crossref:
+  chapters: true
+  fig-title: 図
+  fig-prefix: 図
+  eq-prefix: 式
+execute:
+  enabled: false
+
+format:
+  html:
+    theme: cosmo
+    css: book.css
+    toc: true
+    toc-depth: 2
+    code-copy: true
+    default-image-extension: svg
+  pdf:
+    documentclass: scrbook
+    pdf-engine: xelatex
+    default-image-extension: pdf
+    CJKmainfont: "Noto Serif CJK JP"
+    mainfont: "Noto Serif"
+    sansfont: "Noto Sans"
+    monofont: "DejaVu Sans Mono"
+    papersize: a4
+    geometry:
+      - top=22mm
+      - bottom=24mm
+      - inner=25mm
+      - outer=25mm
+    fontsize: 11pt
+    toc: true
+    toc-depth: 1
+    classoption: [oneside, openany]
+    latex-auto-install: false
+    include-in-header:
+      text: |
+        \BeforeStartingTOC[toc]{\small}
+        \newcommand{\BookChapterCounters}[1]{%
+          \setcounter{figure}{0}%
+          \setcounter{equation}{0}%
+          \renewcommand{\thefigure}{#1.\arabic{figure}}%
+          \renewcommand{\theequation}{#1.\arabic{equation}}%
+          \renewcommand{\theHfigure}{#1.\arabic{figure}}%
+          \renewcommand{\theHequation}{#1.\arabic{equation}}%
+        }

@@ -1,0 +1,237 @@
+# 索引 {-}
+
+節番号から本文へ移動できます。PDFでは、括弧内に本文のページ番号を示します。
+
+## あ・か
+
+::: {.content-visible when-format="html"}
+
+| 用語 | 節 |
+|---|---|
+| 上側信頼限界 | [5.4節](../chapters/05-acquisition.qmd#ix-section-5-4) |
+| エントロピー | [8.3節](../chapters/08-active-learning.qmd#ix-section-8-3)、[8.4節](../chapters/08-active-learning.qmd#ix-section-8-4) |
+| 外挿 | [4.7節](../chapters/04-gp-prediction.qmd#ix-section-4-7)、[10.5節](../chapters/10-practical-application.qmd#ix-section-10-5) |
+| 改善確率 | [5.2節](../chapters/05-acquisition.qmd#ix-section-5-2) |
+| ガウス過程 | [3.2節](../chapters/03-gp-basics.qmd#ix-section-3-2)、[4.3節](../chapters/04-gp-prediction.qmd#ix-section-4-3) |
+| 獲得関数 | [1.4節](../chapters/01-bayesian-optimization.qmd#ix-section-1-4)、[5.1節](../chapters/05-acquisition.qmd#sec-acq-first-run) |
+| 確認測定 | [6.3節](../chapters/06-bo-execution.qmd#ix-section-6-3)、[10.4節](../chapters/10-practical-application.qmd#ix-section-10-4) |
+| カーネル | [3.3節](../chapters/03-gp-basics.qmd#ix-section-3-3)、[3.4節](../chapters/03-gp-basics.qmd#ix-section-3-4) |
+| 期待改善量 | [5.3節](../chapters/05-acquisition.qmd#ix-section-5-3)、[7.2節](../chapters/07-practical-bo.qmd#sec-bo-noise) |
+| 較正（確率） | [9.6節](../chapters/09-gp-classification.qmd#ix-section-9-6) |
+| 共分散 | [2.2節](../chapters/02-probability.qmd#ix-section-2-2)、[3.6節](../chapters/03-gp-basics.qmd#sec-gp-covariance-blocks) |
+| グリッド探索 | [1.5節](../chapters/01-bayesian-optimization.qmd#ix-section-1-5) |
+
+:::
+
+~~~{=latex}
+\begin{longtable}{@{}p{0.43\linewidth}p{0.53\linewidth}@{}}
+\toprule 用語 & 節（ページ） \\ \midrule
+\endfirsthead
+\toprule 用語 & 節（ページ） \\ \midrule
+\endhead
+\bottomrule
+\endfoot
+上側信頼限界 & \hyperref[ix-ix-section-5-4]{5.4節（\pageref*{ix-ix-section-5-4}）} \\
+エントロピー & \hyperref[ix-ix-section-8-3]{8.3節（\pageref*{ix-ix-section-8-3}）}、\hyperref[ix-ix-section-8-4]{8.4節（\pageref*{ix-ix-section-8-4}）} \\
+外挿 & \hyperref[ix-ix-section-4-7]{4.7節（\pageref*{ix-ix-section-4-7}）}、\hyperref[ix-ix-section-10-5]{10.5節（\pageref*{ix-ix-section-10-5}）} \\
+改善確率 & \hyperref[ix-ix-section-5-2]{5.2節（\pageref*{ix-ix-section-5-2}）} \\
+ガウス過程 & \hyperref[ix-ix-section-3-2]{3.2節（\pageref*{ix-ix-section-3-2}）}、\hyperref[ix-ix-section-4-3]{4.3節（\pageref*{ix-ix-section-4-3}）} \\
+獲得関数 & \hyperref[ix-ix-section-1-4]{1.4節（\pageref*{ix-ix-section-1-4}）}、\hyperref[ix-sec-acq-first-run]{5.1節（\pageref*{ix-sec-acq-first-run}）} \\
+確認測定 & \hyperref[ix-ix-section-6-3]{6.3節（\pageref*{ix-ix-section-6-3}）}、\hyperref[ix-ix-section-10-4]{10.4節（\pageref*{ix-ix-section-10-4}）} \\
+カーネル & \hyperref[ix-ix-section-3-3]{3.3節（\pageref*{ix-ix-section-3-3}）}、\hyperref[ix-ix-section-3-4]{3.4節（\pageref*{ix-ix-section-3-4}）} \\
+期待改善量 & \hyperref[ix-ix-section-5-3]{5.3節（\pageref*{ix-ix-section-5-3}）}、\hyperref[ix-sec-bo-noise]{7.2節（\pageref*{ix-sec-bo-noise}）} \\
+較正（確率） & \hyperref[ix-ix-section-9-6]{9.6節（\pageref*{ix-ix-section-9-6}）} \\
+共分散 & \hyperref[ix-ix-section-2-2]{2.2節（\pageref*{ix-ix-section-2-2}）}、\hyperref[ix-sec-gp-covariance-blocks]{3.6節（\pageref*{ix-sec-gp-covariance-blocks}）} \\
+グリッド探索 & \hyperref[ix-ix-section-1-5]{1.5節（\pageref*{ix-ix-section-1-5}）} \\
+\end{longtable}
+~~~
+
+## さ・た
+
+::: {.content-visible when-format="html"}
+
+| 用語 | 節 |
+|---|---|
+| 事後分布 | [2.4節](../chapters/02-probability.qmd#ix-section-2-4)、[4.3節](../chapters/04-gp-prediction.qmd#ix-section-4-3) |
+| 事前分布 | [2.4節](../chapters/02-probability.qmd#ix-section-2-4)、[3.2節](../chapters/03-gp-basics.qmd#ix-section-3-2) |
+| 実験計画 | [6.1節](../chapters/06-bo-execution.qmd#sec-bo-initial-design)、[12.3節](../chapters/12-method-selection.qmd#ix-section-12-3) |
+| 周辺尤度 | [4.5節](../chapters/04-gp-prediction.qmd#ix-section-4-5) |
+| 条件付き正規分布 | [2.5節](../chapters/02-probability.qmd#ix-section-2-5)、[4.3節](../chapters/04-gp-prediction.qmd#ix-section-4-3) |
+| 信用区間 | [4.4節](../chapters/04-gp-prediction.qmd#sec-gp-observation-interval)、[9.4節](../chapters/09-gp-classification.qmd#ix-section-9-4) |
+| 正規化（入力） | [7.1節](../chapters/07-practical-bo.qmd#sec-bo-scaling)、[10.3節](../chapters/10-practical-application.qmd#ix-section-10-3) |
+| 制約付きベイズ最適化 | [11.3節](../chapters/11-advanced-topics.qmd#ix-section-11-3) |
+| 潜在強度 | [4.2節](../chapters/04-gp-prediction.qmd#ix-section-4-2)、[4.4節](../chapters/04-gp-prediction.qmd#sec-gp-observation-interval) |
+| 対数損失 | [9.6節](../chapters/09-gp-classification.qmd#ix-section-9-6) |
+| 単純リグレット | [12.1節](../chapters/12-method-selection.qmd#ix-section-12-1) |
+| 逐次貪欲法 | [7.5節](../chapters/07-practical-bo.qmd#sec-bo-batch) |
+| 転移ベイズ最適化 | [11.5節](../chapters/11-advanced-topics.qmd#ix-section-11-5) |
+
+:::
+
+~~~{=latex}
+\begin{longtable}{@{}p{0.43\linewidth}p{0.53\linewidth}@{}}
+\toprule 用語 & 節（ページ） \\ \midrule
+\endfirsthead
+\toprule 用語 & 節（ページ） \\ \midrule
+\endhead
+\bottomrule
+\endfoot
+事後分布 & \hyperref[ix-ix-section-2-4]{2.4節（\pageref*{ix-ix-section-2-4}）}、\hyperref[ix-ix-section-4-3]{4.3節（\pageref*{ix-ix-section-4-3}）} \\
+事前分布 & \hyperref[ix-ix-section-2-4]{2.4節（\pageref*{ix-ix-section-2-4}）}、\hyperref[ix-ix-section-3-2]{3.2節（\pageref*{ix-ix-section-3-2}）} \\
+実験計画 & \hyperref[ix-sec-bo-initial-design]{6.1節（\pageref*{ix-sec-bo-initial-design}）}、\hyperref[ix-ix-section-12-3]{12.3節（\pageref*{ix-ix-section-12-3}）} \\
+周辺尤度 & \hyperref[ix-ix-section-4-5]{4.5節（\pageref*{ix-ix-section-4-5}）} \\
+条件付き正規分布 & \hyperref[ix-ix-section-2-5]{2.5節（\pageref*{ix-ix-section-2-5}）}、\hyperref[ix-ix-section-4-3]{4.3節（\pageref*{ix-ix-section-4-3}）} \\
+信用区間 & \hyperref[ix-sec-gp-observation-interval]{4.4節（\pageref*{ix-sec-gp-observation-interval}）}、\hyperref[ix-ix-section-9-4]{9.4節（\pageref*{ix-ix-section-9-4}）} \\
+正規化（入力） & \hyperref[ix-sec-bo-scaling]{7.1節（\pageref*{ix-sec-bo-scaling}）}、\hyperref[ix-ix-section-10-3]{10.3節（\pageref*{ix-ix-section-10-3}）} \\
+制約付きベイズ最適化 & \hyperref[ix-ix-section-11-3]{11.3節（\pageref*{ix-ix-section-11-3}）} \\
+潜在強度 & \hyperref[ix-ix-section-4-2]{4.2節（\pageref*{ix-ix-section-4-2}）}、\hyperref[ix-sec-gp-observation-interval]{4.4節（\pageref*{ix-sec-gp-observation-interval}）} \\
+対数損失 & \hyperref[ix-ix-section-9-6]{9.6節（\pageref*{ix-ix-section-9-6}）} \\
+単純リグレット & \hyperref[ix-ix-section-12-1]{12.1節（\pageref*{ix-ix-section-12-1}）} \\
+逐次貪欲法 & \hyperref[ix-sec-bo-batch]{7.5節（\pageref*{ix-sec-bo-batch}）} \\
+転移ベイズ最適化 & \hyperref[ix-ix-section-11-5]{11.5節（\pageref*{ix-ix-section-11-5}）} \\
+\end{longtable}
+~~~
+
+## な・は
+
+::: {.content-visible when-format="html"}
+
+| 用語 | 節 |
+|---|---|
+| 長さ尺度 | [3.5節](../chapters/03-gp-basics.qmd#ix-section-3-5)、[4.6節](../chapters/04-gp-prediction.qmd#ix-section-4-6) |
+| 能動学習 | [8.1節](../chapters/08-active-learning.qmd#ix-section-8-1)、[8.6節](../chapters/08-active-learning.qmd#ix-section-8-6) |
+| ハイパーボリューム | [11.2節](../chapters/11-advanced-topics.qmd#ix-section-11-2) |
+| バッチ評価 | [7.5節](../chapters/07-practical-bo.qmd#sec-bo-batch) |
+| 判定閾値 | [9.6節](../chapters/09-gp-classification.qmd#ix-section-9-6)、[12.2節](../chapters/12-method-selection.qmd#ix-section-12-2) |
+| 半正定値 | [3.3節](../chapters/03-gp-basics.qmd#ix-section-3-3) |
+| 標準化（出力） | [4.7節](../chapters/04-gp-prediction.qmd#ix-section-4-7)、[7.1節](../chapters/07-practical-bo.qmd#sec-bo-scaling) |
+| 不確実性サンプリング | [8.3節](../chapters/08-active-learning.qmd#ix-section-8-3)、[8.5節](../chapters/08-active-learning.qmd#ix-section-8-5) |
+| ブラックボックス最適化 | [1.3節](../chapters/01-bayesian-optimization.qmd#ix-section-1-3) |
+| プールベース能動学習 | [8.1節](../chapters/08-active-learning.qmd#ix-section-8-1)、[8.2節](../chapters/08-active-learning.qmd#ix-section-8-2) |
+| ベイズの定理 | [2.4節](../chapters/02-probability.qmd#ix-section-2-4) |
+| ベイズ最適化 | [1.3節](../chapters/01-bayesian-optimization.qmd#ix-section-1-3)、[6.2節](../chapters/06-bo-execution.qmd#sec-bo-manual-loop) |
+| 変分推論 | [9.3節](../chapters/09-gp-classification.qmd#ix-section-9-3) |
+
+:::
+
+~~~{=latex}
+\begin{longtable}{@{}p{0.43\linewidth}p{0.53\linewidth}@{}}
+\toprule 用語 & 節（ページ） \\ \midrule
+\endfirsthead
+\toprule 用語 & 節（ページ） \\ \midrule
+\endhead
+\bottomrule
+\endfoot
+長さ尺度 & \hyperref[ix-ix-section-3-5]{3.5節（\pageref*{ix-ix-section-3-5}）}、\hyperref[ix-ix-section-4-6]{4.6節（\pageref*{ix-ix-section-4-6}）} \\
+能動学習 & \hyperref[ix-ix-section-8-1]{8.1節（\pageref*{ix-ix-section-8-1}）}、\hyperref[ix-ix-section-8-6]{8.6節（\pageref*{ix-ix-section-8-6}）} \\
+ハイパーボリューム & \hyperref[ix-ix-section-11-2]{11.2節（\pageref*{ix-ix-section-11-2}）} \\
+バッチ評価 & \hyperref[ix-sec-bo-batch]{7.5節（\pageref*{ix-sec-bo-batch}）} \\
+判定閾値 & \hyperref[ix-ix-section-9-6]{9.6節（\pageref*{ix-ix-section-9-6}）}、\hyperref[ix-ix-section-12-2]{12.2節（\pageref*{ix-ix-section-12-2}）} \\
+半正定値 & \hyperref[ix-ix-section-3-3]{3.3節（\pageref*{ix-ix-section-3-3}）} \\
+標準化（出力） & \hyperref[ix-ix-section-4-7]{4.7節（\pageref*{ix-ix-section-4-7}）}、\hyperref[ix-sec-bo-scaling]{7.1節（\pageref*{ix-sec-bo-scaling}）} \\
+不確実性サンプリング & \hyperref[ix-ix-section-8-3]{8.3節（\pageref*{ix-ix-section-8-3}）}、\hyperref[ix-ix-section-8-5]{8.5節（\pageref*{ix-ix-section-8-5}）} \\
+ブラックボックス最適化 & \hyperref[ix-ix-section-1-3]{1.3節（\pageref*{ix-ix-section-1-3}）} \\
+プールベース能動学習 & \hyperref[ix-ix-section-8-1]{8.1節（\pageref*{ix-ix-section-8-1}）}、\hyperref[ix-ix-section-8-2]{8.2節（\pageref*{ix-ix-section-8-2}）} \\
+ベイズの定理 & \hyperref[ix-ix-section-2-4]{2.4節（\pageref*{ix-ix-section-2-4}）} \\
+ベイズ最適化 & \hyperref[ix-ix-section-1-3]{1.3節（\pageref*{ix-ix-section-1-3}）}、\hyperref[ix-sec-bo-manual-loop]{6.2節（\pageref*{ix-sec-bo-manual-loop}）} \\
+変分推論 & \hyperref[ix-ix-section-9-3]{9.3節（\pageref*{ix-ix-section-9-3}）} \\
+\end{longtable}
+~~~
+
+## ま・や・ら
+
+::: {.content-visible when-format="html"}
+
+| 用語 | 節 |
+|---|---|
+| 尤度 | [2.4節](../chapters/02-probability.qmd#ix-section-2-4)、[9.2節](../chapters/09-gp-classification.qmd#ix-section-9-2) |
+| 予測区間 | [4.4節](../chapters/04-gp-prediction.qmd#sec-gp-observation-interval) |
+| 予測確率 | [9.1節](../chapters/09-gp-classification.qmd#ix-section-9-1)、[9.4節](../chapters/09-gp-classification.qmd#ix-section-9-4) |
+| ランダム探索 | [1.5節](../chapters/01-bayesian-optimization.qmd#ix-section-1-5)、[8.6節](../chapters/08-active-learning.qmd#ix-section-8-6) |
+| ロット・コンテキスト | [10.1節](../chapters/10-practical-application.qmd#ix-section-10-1)、[11.6節](../chapters/11-advanced-topics.qmd#ix-section-11-6) |
+
+:::
+
+~~~{=latex}
+\begin{longtable}{@{}p{0.43\linewidth}p{0.53\linewidth}@{}}
+\toprule 用語 & 節（ページ） \\ \midrule
+\endfirsthead
+\toprule 用語 & 節（ページ） \\ \midrule
+\endhead
+\bottomrule
+\endfoot
+尤度 & \hyperref[ix-ix-section-2-4]{2.4節（\pageref*{ix-ix-section-2-4}）}、\hyperref[ix-ix-section-9-2]{9.2節（\pageref*{ix-ix-section-9-2}）} \\
+予測区間 & \hyperref[ix-sec-gp-observation-interval]{4.4節（\pageref*{ix-sec-gp-observation-interval}）} \\
+予測確率 & \hyperref[ix-ix-section-9-1]{9.1節（\pageref*{ix-ix-section-9-1}）}、\hyperref[ix-ix-section-9-4]{9.4節（\pageref*{ix-ix-section-9-4}）} \\
+ランダム探索 & \hyperref[ix-ix-section-1-5]{1.5節（\pageref*{ix-ix-section-1-5}）}、\hyperref[ix-ix-section-8-6]{8.6節（\pageref*{ix-ix-section-8-6}）} \\
+ロット・コンテキスト & \hyperref[ix-ix-section-10-1]{10.1節（\pageref*{ix-ix-section-10-1}）}、\hyperref[ix-ix-section-11-6]{11.6節（\pageref*{ix-ix-section-11-6}）} \\
+\end{longtable}
+~~~
+
+## 英数字
+
+::: {.content-visible when-format="html"}
+
+| 用語 | 節 |
+|---|---|
+| Ask-and-Tell | [6.4節](../chapters/06-bo-execution.qmd#sec-study-ask-tell)、[10.3節](../chapters/10-practical-application.qmd#ix-section-10-3) |
+| BALD | [8.4節](../chapters/08-active-learning.qmd#ix-section-8-4)、[9.5節](../chapters/09-gp-classification.qmd#ix-section-9-5) |
+| Bernoulli尤度 | [9.2節](../chapters/09-gp-classification.qmd#ix-section-9-2) |
+| BO・ALの違い | [8.1節](../chapters/08-active-learning.qmd#ix-section-8-1)、[12.1節](../chapters/12-method-selection.qmd#ix-section-12-1) |
+| Brier損失 | [8.6節](../chapters/08-active-learning.qmd#ix-section-8-6)、[9.6節](../chapters/09-gp-classification.qmd#ix-section-9-6) |
+| Causal BO | [11.6節](../chapters/11-advanced-topics.qmd#ix-section-11-6) |
+| Cholesky分解 | [4.3節](../chapters/04-gp-prediction.qmd#ix-section-4-3) |
+| Contextual BO | [11.6節](../chapters/11-advanced-topics.qmd#ix-section-11-6) |
+| DataFrame | [10.2節](../chapters/10-practical-application.qmd#ix-section-10-2) |
+| ELBO | [9.3節](../chapters/09-gp-classification.qmd#ix-section-9-3) |
+| EPIG | [8.5節](../chapters/08-active-learning.qmd#ix-section-8-5) |
+| LogEI・qLogEI | [5.5節](../chapters/05-acquisition.qmd#ix-section-5-5)、[7.5節](../chapters/07-practical-bo.qmd#sec-bo-batch) |
+| Matérnカーネル | [3.4節](../chapters/03-gp-basics.qmd#ix-section-3-4)、[4.6節](../chapters/04-gp-prediction.qmd#ix-section-4-6) |
+| Mixed・Discrete BO | [11.4節](../chapters/11-advanced-topics.qmd#ix-section-11-4) |
+| Multi-Fidelity BO | [11.5節](../chapters/11-advanced-topics.qmd#ix-section-11-5) |
+| Paretoフロント | [11.2節](../chapters/11-advanced-topics.qmd#ix-section-11-2) |
+| Preference BO | [11.5節](../chapters/11-advanced-topics.qmd#ix-section-11-5) |
+| Probit・Logit | [9.2節](../chapters/09-gp-classification.qmd#ix-section-9-2)、[9.4節](../chapters/09-gp-classification.qmd#ix-section-9-4) |
+| qLogNEI | [5.6節](../chapters/05-acquisition.qmd#ix-section-5-6)、[7.2節](../chapters/07-practical-bo.qmd#sec-bo-noise) |
+| RBFカーネル | [3.4節](../chapters/03-gp-basics.qmd#ix-section-3-4) |
+| Safe BO | [11.3節](../chapters/11-advanced-topics.qmd#ix-section-11-3) |
+| Sobol点列 | [6.1節](../chapters/06-bo-execution.qmd#sec-bo-initial-design) |
+| Study | [6.4節](../chapters/06-bo-execution.qmd#sec-study-ask-tell)、[10.2節](../chapters/10-practical-application.qmd#ix-section-10-2) |
+| TuRBO | [11.4節](../chapters/11-advanced-topics.qmd#ix-section-11-4) |
+
+:::
+
+~~~{=latex}
+\begin{longtable}{@{}p{0.43\linewidth}p{0.53\linewidth}@{}}
+\toprule 用語 & 節（ページ） \\ \midrule
+\endfirsthead
+\toprule 用語 & 節（ページ） \\ \midrule
+\endhead
+\bottomrule
+\endfoot
+Ask-and-Tell & \hyperref[ix-sec-study-ask-tell]{6.4節（\pageref*{ix-sec-study-ask-tell}）}、\hyperref[ix-ix-section-10-3]{10.3節（\pageref*{ix-ix-section-10-3}）} \\
+BALD & \hyperref[ix-ix-section-8-4]{8.4節（\pageref*{ix-ix-section-8-4}）}、\hyperref[ix-ix-section-9-5]{9.5節（\pageref*{ix-ix-section-9-5}）} \\
+Bernoulli尤度 & \hyperref[ix-ix-section-9-2]{9.2節（\pageref*{ix-ix-section-9-2}）} \\
+BO・ALの違い & \hyperref[ix-ix-section-8-1]{8.1節（\pageref*{ix-ix-section-8-1}）}、\hyperref[ix-ix-section-12-1]{12.1節（\pageref*{ix-ix-section-12-1}）} \\
+Brier損失 & \hyperref[ix-ix-section-8-6]{8.6節（\pageref*{ix-ix-section-8-6}）}、\hyperref[ix-ix-section-9-6]{9.6節（\pageref*{ix-ix-section-9-6}）} \\
+Causal BO & \hyperref[ix-ix-section-11-6]{11.6節（\pageref*{ix-ix-section-11-6}）} \\
+Cholesky分解 & \hyperref[ix-ix-section-4-3]{4.3節（\pageref*{ix-ix-section-4-3}）} \\
+Contextual BO & \hyperref[ix-ix-section-11-6]{11.6節（\pageref*{ix-ix-section-11-6}）} \\
+DataFrame & \hyperref[ix-ix-section-10-2]{10.2節（\pageref*{ix-ix-section-10-2}）} \\
+ELBO & \hyperref[ix-ix-section-9-3]{9.3節（\pageref*{ix-ix-section-9-3}）} \\
+EPIG & \hyperref[ix-ix-section-8-5]{8.5節（\pageref*{ix-ix-section-8-5}）} \\
+LogEI・qLogEI & \hyperref[ix-ix-section-5-5]{5.5節（\pageref*{ix-ix-section-5-5}）}、\hyperref[ix-sec-bo-batch]{7.5節（\pageref*{ix-sec-bo-batch}）} \\
+Matérnカーネル & \hyperref[ix-ix-section-3-4]{3.4節（\pageref*{ix-ix-section-3-4}）}、\hyperref[ix-ix-section-4-6]{4.6節（\pageref*{ix-ix-section-4-6}）} \\
+Mixed・Discrete BO & \hyperref[ix-ix-section-11-4]{11.4節（\pageref*{ix-ix-section-11-4}）} \\
+Multi-Fidelity BO & \hyperref[ix-ix-section-11-5]{11.5節（\pageref*{ix-ix-section-11-5}）} \\
+Paretoフロント & \hyperref[ix-ix-section-11-2]{11.2節（\pageref*{ix-ix-section-11-2}）} \\
+Preference BO & \hyperref[ix-ix-section-11-5]{11.5節（\pageref*{ix-ix-section-11-5}）} \\
+Probit・Logit & \hyperref[ix-ix-section-9-2]{9.2節（\pageref*{ix-ix-section-9-2}）}、\hyperref[ix-ix-section-9-4]{9.4節（\pageref*{ix-ix-section-9-4}）} \\
+qLogNEI & \hyperref[ix-ix-section-5-6]{5.6節（\pageref*{ix-ix-section-5-6}）}、\hyperref[ix-sec-bo-noise]{7.2節（\pageref*{ix-sec-bo-noise}）} \\
+RBFカーネル & \hyperref[ix-ix-section-3-4]{3.4節（\pageref*{ix-ix-section-3-4}）} \\
+Safe BO & \hyperref[ix-ix-section-11-3]{11.3節（\pageref*{ix-ix-section-11-3}）} \\
+Sobol点列 & \hyperref[ix-sec-bo-initial-design]{6.1節（\pageref*{ix-sec-bo-initial-design}）} \\
+Study & \hyperref[ix-sec-study-ask-tell]{6.4節（\pageref*{ix-sec-study-ask-tell}）}、\hyperref[ix-ix-section-10-2]{10.2節（\pageref*{ix-ix-section-10-2}）} \\
+TuRBO & \hyperref[ix-ix-section-11-4]{11.4節（\pageref*{ix-ix-section-11-4}）} \\
+\end{longtable}
+~~~

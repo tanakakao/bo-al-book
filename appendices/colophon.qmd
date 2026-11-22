@@ -1,0 +1,23 @@
+# 奥付・引用方法 {-}
+
+**書名**　Pythonで学ぶベイズ最適化と能動学習  
+**巻**　第1巻 基礎理論と実践  
+**著者・編者**　tanakakao  
+**版**　第1版（v1.0.0、2026年）  
+**オンライン版**　<https://tanakakao.github.io/bo-al-book/>
+
+## 書籍とソフトウェアの引用
+
+> tanakakao（2026）『Pythonで学ぶベイズ最適化と能動学習 第1巻 基礎理論と実践』第1版。<https://tanakakao.github.io/bo-al-book/>
+
+特定の説明や計算結果を参照する場合は、章・節、図番号またはNotebook名を添えます。本書の再現にはrobotorchan 0.1.0、コミット `b1bb770` を使いました。ソフトウェアを参照する場合は、その引用情報も記録してください。[robotorchanの引用情報](https://github.com/tanakakao/robotorchan/blob/b1bb77087cd117d83ed21a226a6fce39ccd5b497/CITATION.cff)
+
+## 利用条件
+
+本文・演習と解答・本書制作の図およびNotebookの解説は [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/deed.ja)、本書のサンプルコードと補助スクリプトは [BSD-3-Clause](https://spdx.org/licenses/BSD-3-Clause.html)、合成CSVは [CC0 1.0](https://creativecommons.org/publicdomain/zero/1.0/deed.ja) です。第三者資料とソフトウェアには各配布元の利用条件が適用されます。配布用原稿と教材ZIPに利用条件を掲載しています。
+
+## AI利用の開示
+
+本書の構成の検討、本文およびサンプルコードの草案、図表の作成と検証にChatGPTを使用しました。
+
+試験データは学習用の合成データです。測定回数、シード、ライブラリの版、図の再生成手順は配布用原稿のREADMEにあります。

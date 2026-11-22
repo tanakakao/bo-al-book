@@ -1,0 +1,24 @@
+{
+  "posterior_updates": [
+    {
+      "observations": 0,
+      "mean_mpa": 70.0,
+      "sd_mpa": 5.0
+    },
+    {
+      "observations": 1,
+      "mean_mpa": 70.73529411764704,
+      "sd_mpa": 2.5724787771376323
+    },
+    {
+      "observations": 4,
+      "mean_mpa": 72.29357798165138,
+      "sd_mpa": 1.4367394278317271
+    }
+  ],
+  "measurement_noise_sd_mpa": 3.0,
+  "new_measurement_sd_mpa": 3.326292257677644,
+  "conditional_mean_mpa": 78.5,
+  "conditional_sd_mpa": 3.570714214271425,
+  "conditional_covariance_mpa2": 12.750000000000002
+}
