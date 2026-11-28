@@ -191,7 +191,7 @@ window.Quarto = {
     <div class="sidebar-title mb-0 py-0">
       <a href="../">Pythonで学ぶベイズ最適化と能動学習</a> 
         <div class="sidebar-tools-main">
-    <a href="../BO_AL_book_vol1_v1.0.0.pdf" title="Download PDF" class="quarto-navigation-tool px-1" aria-label="Download PDF"><i class="bi bi-file-pdf"></i></a>
+    <a href="../BO_AL_book_vol1_v1.0.1.pdf" title="Download PDF" class="quarto-navigation-tool px-1" aria-label="Download PDF"><i class="bi bi-file-pdf"></i></a>
 </div>
     </div>
       </div>
@@ -328,6 +328,12 @@ window.Quarto = {
 </li>
           <li class="sidebar-item">
   <div class="sidebar-item-container"> 
+  <a href="../appendices/reproduction.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">実験の生成式とAPI対応</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
   <a href="../appendices/term-index.html" class="sidebar-item-text sidebar-link">
  <span class="menu-text">索引</span></a>
   </div>
@@ -355,7 +361,7 @@ window.Quarto = {
   <li><a href="#ix-section-1-3" id="toc-ix-section-1-3" class="nav-link" data-scroll-target="#ix-section-1-3">1.3 ブラックボックス最適化と評価回数</a></li>
   <li><a href="#ix-section-1-4" id="toc-ix-section-1-4" class="nav-link" data-scroll-target="#ix-section-1-4">1.4 代理モデル、獲得関数、探索と活用</a></li>
   <li><a href="#ix-section-1-5" id="toc-ix-section-1-5" class="nav-link" data-scroll-target="#ix-section-1-5">1.5 同じ予算でランダム・格子・BOを比べる</a></li>
-  <li><a href="#使いどころと演習" id="toc-使いどころと演習" class="nav-link" data-scroll-target="#使いどころと演習">1.6 使いどころと演習</a></li>
+  <li><a href="#章末演習とまとめ" id="toc-章末演習とまとめ" class="nav-link" data-scroll-target="#章末演習とまとめ">1.6 章末演習とまとめ</a></li>
   </ul>
 </nav>
     </div>
@@ -381,11 +387,12 @@ window.Quarto = {
 </header>
 
 
+<p><strong>学習目標</strong>　限られた予算のもとで次に試す温度を提案し、格子・ランダム探索と比べる。</p>
 <p>新しい材料の強度を高めるために、処理温度を変えて試片を作るとします。試片の準備から測定までに時間がかかり、試せる温度は数点です。この章では、まずPythonで次の測定点を一つ選び、その後で選び方と評価予算の関係を考えます。Pythonで配列と関数を使ったことがあれば読み始められます。</p>
 <section id="高価な試験で次にどの温度を選ぶか" class="level2">
 <h2 class="anchored" data-anchor-id="高価な試験で次にどの温度を選ぶか">1.1 高価な試験で、次にどの温度を選ぶか</h2>
-<p>仮想の材料試験で、処理温度 <span class="math inline">\(T\)</span> は <span class="math inline">\(140\)</span> ～ <span class="math inline">\(180\,^\circ\mathrm{C}\)</span> の範囲から1 °C刻みで選べます。強度はメガパスカル（MPa）で測ります。温度の数値を °C で表すとき、計算では <span class="math inline">\(x=(T-140)/40\)</span> に変換します。この式で、<span class="math inline">\(140\,^\circ\mathrm C\)</span> は <span class="math inline">\(x=0\)</span>、<span class="math inline">\(180\,^\circ\mathrm C\)</span> は <span class="math inline">\(x=1\)</span> です。変換しても温度の順序と候補数は同じです。</p>
-<p>最初に <span class="math inline">\(144\)</span>、<span class="math inline">\(160\)</span>、<span class="math inline">\(176\,^\circ\mathrm{C}\)</span> の3点を測りました。あと6点を測れます。高い強度が得られた温度の近くを測れば、さらに強い条件が見つかるかもしれません。離れた未測定の温度にも、見落とした山があるかもしれません。今回の問いは、<strong>これまでの3件を使って、次の試験をどこで行うか</strong>です。</p>
+<p>仮想の材料試験で、処理温度 <span class="math inline">\(T\)</span> は 140〜180 °C の範囲から1 °C刻みで選べます。強度はメガパスカル（MPa）で測ります。温度の数値を °C で表すとき、計算では <span class="math inline">\(x=(T-140)/40\)</span> に変換します。この式で、140 °Cは <span class="math inline">\(x=0\)</span>、180 °Cは <span class="math inline">\(x=1\)</span> です。変換しても温度の順序と候補数は同じです。</p>
+<p>最初に 144、160、176 °C の3点を測りました。あと6点を測れます。高い強度が得られた温度の近くを測れば、さらに強い条件が見つかるかもしれません。離れた未測定の温度にも、見落とした山があるかもしれません。今回の問いは、<strong>これまでの3件を使って、次の試験をどこで行うか</strong>です。</p>
 </section>
 <section id="sec-bo-first-run" class="level2">
 <h2 class="anchored" data-anchor-id="sec-bo-first-run">1.2 Pythonで最初の候補を得る</h2>
@@ -393,15 +400,17 @@ window.Quarto = {
 <div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb1"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> torch</span>
 <span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> botorch.acquisition.analytic <span class="im">import</span> LogExpectedImprovement</span>
 <span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> botorch.optim <span class="im">import</span> optimize_acqf_discrete</span>
-<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> experiment <span class="im">import</span> DTYPE, fit_material_gp, material_strength, setup</span>
-<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a>setup()</span>
-<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a>pool <span class="op">=</span> torch.linspace(<span class="dv">0</span>, <span class="dv">1</span>, <span class="dv">41</span>, dtype<span class="op">=</span>DTYPE).unsqueeze(<span class="op">-</span><span class="dv">1</span>)</span>
-<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a>initial <span class="op">=</span> torch.tensor([<span class="dv">4</span>, <span class="dv">20</span>, <span class="dv">36</span>])</span>
-<span id="cb1-9"><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a>train_x <span class="op">=</span> pool[initial]</span>
-<span id="cb1-10"><a href="#cb1-10" aria-hidden="true" tabindex="-1"></a>train_y <span class="op">=</span> material_strength(train_x)</span>
-<span id="cb1-11"><a href="#cb1-11" aria-hidden="true" tabindex="-1"></a>available <span class="op">=</span> torch.ones(<span class="bu">len</span>(pool), dtype<span class="op">=</span>torch.<span class="bu">bool</span>)</span>
-<span id="cb1-12"><a href="#cb1-12" aria-hidden="true" tabindex="-1"></a>available[initial] <span class="op">=</span> <span class="va">False</span></span></code></pre></div><button title="コピー" class="code-copy-button"><i class="bi"></i></button></div>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> experiment <span class="im">import</span> (</span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a>    DTYPE, fit_material_gp, material_strength, setup,</span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a>)</span>
+<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a>setup()</span>
+<span id="cb1-9"><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a>pool <span class="op">=</span> torch.linspace(<span class="dv">0</span>, <span class="dv">1</span>, <span class="dv">41</span>, dtype<span class="op">=</span>DTYPE).unsqueeze(<span class="op">-</span><span class="dv">1</span>)</span>
+<span id="cb1-10"><a href="#cb1-10" aria-hidden="true" tabindex="-1"></a>initial <span class="op">=</span> torch.tensor([<span class="dv">4</span>, <span class="dv">20</span>, <span class="dv">36</span>])</span>
+<span id="cb1-11"><a href="#cb1-11" aria-hidden="true" tabindex="-1"></a>train_x <span class="op">=</span> pool[initial]</span>
+<span id="cb1-12"><a href="#cb1-12" aria-hidden="true" tabindex="-1"></a>train_y <span class="op">=</span> material_strength(train_x)</span>
+<span id="cb1-13"><a href="#cb1-13" aria-hidden="true" tabindex="-1"></a>available <span class="op">=</span> torch.ones(<span class="bu">len</span>(pool), dtype<span class="op">=</span>torch.<span class="bu">bool</span>)</span>
+<span id="cb1-14"><a href="#cb1-14" aria-hidden="true" tabindex="-1"></a>available[initial] <span class="op">=</span> <span class="va">False</span></span></code></pre></div><button title="コピー" class="code-copy-button"><i class="bi"></i></button></div>
 <p><code>pool</code> は41行1列です。1行が1つの温度で、1列が入力の種類を表します。<code>material_strength</code> が一回の試験を代替します。続くコードでは、既測定の点を除いた候補にスコアを付け、一番高い点を選びます。<code>LogExpectedImprovement</code> は、現在の最良値をどれだけ更新できそうかという基準に基づくスコアです。式は第5章で扱います。</p>
 <div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb2"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a>train_yvar <span class="op">=</span> torch.full_like(train_y, <span class="fl">0.01</span>)</span>
 <span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a>model <span class="op">=</span> fit_material_gp(train_x, train_y, train_yvar)</span>
@@ -443,11 +452,11 @@ x^\star\in\mathop{\mathrm{arg\,max}}_{x\in\mathcal X} f(x)
 <li>実行可能な候補のうち、獲得関数が大きい温度を選びます。</li>
 <li>その点を1回測り、新しい観測を追加します。評価予算が残っていれば学習から繰り返します。</li>
 </ol>
-<p>この教材では一入力・一目的の最大化を扱います。観測や測定範囲の制約、複数点を一度に試す場合は、候補の選び方や予算の数え方を調整します。</p>
+<p>この章の実行例では、一入力・一目的の最大化を扱います。第7・10章では二入力、第11章では複数の目的に広げます。観測や測定範囲の制約、複数点を一度に試す場合は、候補の選び方や予算の数え方を調整します。</p>
 </section>
 <section id="ix-section-1-5" class="level2">
 <h2 class="anchored" data-anchor-id="ix-section-1-5">1.5 同じ予算でランダム・格子・BOを比べる</h2>
-<p>三つの方法に同じ初期3点、同じ41候補、同じ追加6点の予算を与えます。追加点の選び方だけを変えます。格子の追加点は <span class="math inline">\(140,148,\ldots,180\,^\circ\mathrm{C}\)</span> の6点を温度の昇順で評価します。ランダムは未測定の候補から重複なく引きます。BOは直前までの測定でモデルを更新してから、次の点を選びます。</p>
+<p>三つの方法に同じ初期3点、同じ41候補、同じ追加6点の予算を与えます。追加点の選び方だけを変えます。格子の追加点は 140、148、…、180 °C の6点を温度の昇順で評価します。ランダムは未測定の候補から重複なく引きます。BOは直前までの測定でモデルを更新してから、次の点を選びます。</p>
 <div id="fig-bo-budget-comparison" class="quarto-float quarto-figure quarto-figure-center anchored" data-fig-pos="!ht">
 <figure class="quarto-float quarto-float-fig figure">
 <div aria-describedby="fig-bo-budget-comparison-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
@@ -459,13 +468,19 @@ x^\star\in\mathop{\mathrm{arg\,max}}_{x\in\mathcal X} f(x)
 </figure>
 </div>
 <p>この例では試験にノイズがないので、予算内に観測した最良値を全候補の最大と直接比較できます。最大から最良値を引いた差が小さいほど、予算内に良い条件まで到達したことを示します。</p>
+<div id="tbl-ch01-results" class="quarto-float quarto-figure quarto-figure-center anchored">
+<figure class="quarto-float quarto-float-tbl figure">
+<figcaption class="quarto-float-caption-top quarto-float-caption quarto-float-tbl" id="tbl-ch01-results-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+表&nbsp;1.1: 探索戦略ごとの最良観測値
+</figcaption>
+<div aria-describedby="tbl-ch01-results-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
 <table class="caption-top table">
 <colgroup>
-<col style="width: 15%">
-<col style="width: 21%">
-<col style="width: 21%">
-<col style="width: 21%">
-<col style="width: 21%">
+<col style="width: 26%">
+<col style="width: 16%">
+<col style="width: 20%">
+<col style="width: 12%">
+<col style="width: 26%">
 </colgroup>
 <thead>
 <tr class="header">
@@ -500,11 +515,14 @@ x^\star\in\mathop{\mathrm{arg\,max}}_{x\in\mathcal X} f(x)
 </tr>
 </tbody>
 </table>
+</div>
+</figure>
+</div>
 <p>全41候補の最大は <strong>80.36 MPa</strong> です。この実行で最良観測値が最も高かった方法は <strong>固定格子</strong> です。</p>
 <p>固定格子は温度範囲を均一に調べやすく、格子が粗い場合はその間にある強い点を拾えません。ランダムは同じ予算でもシードで結果が変わります。BOは測った値を次回に利用しますが、代理モデル・獲得関数の仮定や最初の3点が結果に影響します。図の差はこの合成関数・初期点・ランダムシード・格子の順番での例です。手法の性能を比べるときは、複数の問題と初期点、シードについて予算と評価方法を揃えて検討します。実機では測定コストのほか、候補計算にかかる時間も記録します。</p>
 </section>
-<section id="使いどころと演習" class="level2">
-<h2 class="anchored" data-anchor-id="使いどころと演習">1.6 使いどころと演習</h2>
+<section id="章末演習とまとめ" class="level2">
+<h2 class="anchored" data-anchor-id="章末演習とまとめ">1.6 章末演習とまとめ</h2>
 <p>試行が安価で候補を網羅できるときには、全候補を調べれば最大値を直接確認できます。測定の条件変更や試片の準備に時間がかかるとき、少数の試験から予測を更新する価値が高くなります。探索範囲、測定回数、測定のばらつき、最後に推薦する条件を先に整理しておくと、比較の基準が明確になります。</p>
 <ol type="1">
 <li><strong>確認。</strong> 初期3点、追加6点の試験で評価予算はいくつですか。候補を41点から細かくしたとき、物理的な試験回数もそのまま増えますか。</li>

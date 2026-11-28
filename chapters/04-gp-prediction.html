@@ -191,7 +191,7 @@ window.Quarto = {
     <div class="sidebar-title mb-0 py-0">
       <a href="../">Pythonで学ぶベイズ最適化と能動学習</a> 
         <div class="sidebar-tools-main">
-    <a href="../BO_AL_book_vol1_v1.0.0.pdf" title="Download PDF" class="quarto-navigation-tool px-1" aria-label="Download PDF"><i class="bi bi-file-pdf"></i></a>
+    <a href="../BO_AL_book_vol1_v1.0.1.pdf" title="Download PDF" class="quarto-navigation-tool px-1" aria-label="Download PDF"><i class="bi bi-file-pdf"></i></a>
 </div>
     </div>
       </div>
@@ -328,6 +328,12 @@ window.Quarto = {
 </li>
           <li class="sidebar-item">
   <div class="sidebar-item-container"> 
+  <a href="../appendices/reproduction.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">実験の生成式とAPI対応</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
   <a href="../appendices/term-index.html" class="sidebar-item-text sidebar-link">
  <span class="menu-text">索引</span></a>
   </div>
@@ -384,11 +390,18 @@ window.Quarto = {
 </header>
 
 
+<p><strong>学習目標</strong>　観測からGPの事後平均と分散を計算し、潜在強度と次の測定値の区間を区別する。</p>
 <p>この章では、<strong>測っていない位置の予測値と、その不確かさがどこから生まれるか</strong>を学びます。観測点と予測点の共分散を使って事後平均・共分散を導き、潜在関数と一回の将来観測の区間を描き分けます。最後に、観測点数・ノイズ・カーネルを変えて予測を比較します。</p>
 <section id="sec-gp-first-run" class="level2">
 <h2 class="anchored" data-anchor-id="sec-gp-first-run">4.1 Pythonで予測を描く</h2>
-<p>仮想の材料試験で、処理温度 <span class="math inline">\(T\)</span> を <span class="math inline">\(140\)</span>–<span class="math inline">\(180\,^\circ\mathrm{C}\)</span> の間で変え、引張強度を測ります。この例では温度を <span class="math inline">\(x=(T-140\,^\circ\mathrm{C})/(40\,^\circ\mathrm{C})\)</span> と変換します。<span class="math inline">\(x=0.5\)</span> は <span class="math inline">\(160\,^\circ\mathrm{C}\)</span> です。強度の単位にはメガパスカル（MPa）を使います。合成データには標準偏差 <span class="math inline">\(2\,\mathrm{MPa}\)</span> の独立な測定ノイズを加えています。</p>
+<p>仮想の材料試験で、処理温度 <span class="math inline">\(T\)</span> を 140〜180 °C の間で変え、引張強度を測ります。この例では温度の数値を °C で表して <span class="math inline">\(x=(T-140)/40\)</span> と変換します。<span class="math inline">\(x=0.5\)</span> は 160 °C です。強度の単位にはメガパスカル（MPa）を使います。合成データには標準偏差 <span class="math inline">\(2\,\mathrm{MPa}\)</span> の独立な測定ノイズを加えています。</p>
 <p><a href="../notebooks/ch04_gp_prediction.ipynb">第4章のNotebook</a>で先頭から実行できます。この節では、6件の測定結果をモデルに渡し、学習し、未測定の温度で予測します。<code>grid</code> はグラフを描くための入力です。学習に使うのは <code>train_x</code> と <code>train_y</code> の組です。</p>
+<div id="tbl-ch04-1" class="quarto-float quarto-figure quarto-figure-center anchored">
+<figure class="quarto-float quarto-float-tbl figure">
+<figcaption class="quarto-float-caption-top quarto-float-caption quarto-float-tbl" id="tbl-ch04-1-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+表&nbsp;4.1: 予測例のテンソルと形状
+</figcaption>
+<div aria-describedby="tbl-ch04-1-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
 <table class="caption-top table">
 <colgroup>
 <col style="width: 30%">
@@ -425,6 +438,9 @@ window.Quarto = {
 </tr>
 </tbody>
 </table>
+</div>
+</figure>
+</div>
 <div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb1"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> torch</span>
 <span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> robotorchan.models <span class="im">import</span> SingleTaskGP</span>
 <span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> experiment <span class="im">import</span> DTYPE, observations, setup</span>
@@ -451,7 +467,7 @@ window.Quarto = {
 </figcaption>
 </figure>
 </div>
-<p><a href="#fig-prediction-intervals" class="quarto-xref">図&nbsp;<span>4.1</span></a> の黒い縦線は <span class="math inline">\(x=0.50\)</span>（<span class="math inline">\(160\,^\circ\mathrm{C}\)</span>）です。まず縦線と青い中心線が交わる所を見ます。ここが、測定ノイズを加える前の強度 <span class="math inline">\(f(x)\)</span> の事後平均です。次に、その位置で二つの帯の上下端を比べます。</p>
+<p><a href="#fig-prediction-intervals" class="quarto-xref">図&nbsp;<span>4.1</span></a> の黒い縦線は <span class="math inline">\(x=0.50\)</span>（160 °C）です。まず縦線と青い中心線が交わる所を見ます。ここが、測定ノイズを加える前の強度 <span class="math inline">\(f(x)\)</span> の事後平均です。次に、その位置で二つの帯の上下端を比べます。</p>
 <p>この温度での事後平均は、どちらも <strong>75.56 MPa</strong> です。</p>
 <table class="caption-top table">
 <thead>
@@ -487,6 +503,12 @@ y_i=f(x_i)+\varepsilon_i,\qquad
 <p>と書きます。<span class="math inline">\(x_i\)</span> は入力、<span class="math inline">\(f(x_i)\)</span> は測定誤差を加える前の潜在強度、<span class="math inline">\(y_i\)</span> は観測強度です。<span class="math inline">\(\varepsilon_i\)</span> は互いに独立で <span class="math inline">\(f\)</span> からも独立、<span class="math inline">\(\tau^2\)</span> は観測分散です。この節では等分散とします。既知の分散が入力ごとに異なる場合は、以下の <span class="math inline">\(\tau^2 I_n\)</span> をそれらの分散を並べた対角行列に置き換えられます。</p>
 <p>ガウス過程（Gaussian process、GP）<span class="math inline">\(f\sim\mathcal{GP}(m,k)\)</span> は、任意の有限個の入力での関数値が同時正規分布に従うという仮定です。<span class="math inline">\(m(x)\)</span> は事前平均、<span class="math inline">\(k(x,x')\)</span> は位置 <span class="math inline">\(x\)</span> と <span class="math inline">\(x'\)</span> の関数値の事前共分散です。ここでは有限集合上での計算だけを使います <span class="citation" data-cites="rasmussen2006">(<a href="../references.html#ref-rasmussen2006" role="doc-biblioref">Rasmussen と Williams 2006年, sec. 2.2</a>)</span>。</p>
 <p>観測入力を <span class="math inline">\(X=(x_1,\ldots,x_n)\)</span>、予測入力を <span class="math inline">\(X_*=(x_{*1},\ldots,x_{*r})\)</span> とし、<span class="math inline">\(I_n\)</span> を <span class="math inline">\(n\)</span> 次の単位行列とします。</p>
+<div id="tbl-ch04-2" class="quarto-float quarto-figure quarto-figure-center anchored">
+<figure class="quarto-float quarto-float-tbl figure">
+<figcaption class="quarto-float-caption-top quarto-float-caption quarto-float-tbl" id="tbl-ch04-2-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+表&nbsp;4.2: 観測と予測の共分散行列
+</figcaption>
+<div aria-describedby="tbl-ch04-2-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
 <table class="caption-top table">
 <colgroup>
 <col style="width: 30%">
@@ -533,6 +555,9 @@ y_i=f(x_i)+\varepsilon_i,\qquad
 </tr>
 </tbody>
 </table>
+</div>
+</figure>
+</div>
 <p>観測によって知りたいのは <span class="math inline">\(\mathbf f_*\)</span> です。まだ観測していない段階で <span class="math inline">\(\mathbf y\)</span> と <span class="math inline">\(\mathbf f_*\)</span> を一緒に並べると、独立ノイズの和と多変量正規分布の性質から</p>
 <p><span id="eq-gp-joint"><span class="math display">\[
 \begin{bmatrix}\mathbf y\\ \mathbf f_*\end{bmatrix}
@@ -587,7 +612,7 @@ A^{-1}=\frac{1}{a^2-c^2}
 \]</span></p>
 <p>最初の予測点の平均は、<span class="math inline">\([e^{-1/8},\,e^{-9/8}]\)</span> に <span class="math inline">\(A^{-1}(1,-0.5)^{\mathsf T}\)</span> を掛けて得られます。二点目は共分散ベクトルの成分を入れ替えます。<a href="#eq-gp-posterior" class="quarto-xref">式&nbsp;<span>4.2</span></a> に同じ行列を入れれば共分散も求まります。<span class="math inline">\(\Sigma_*\)</span> の対角は各点の分散、非対角は二点の共分散です。</p>
 <p>事後平均は <span class="math inline">\((0.6780, -0.1894)^{\mathsf T}\)</span>、事後共分散の対角成分はともに 0.2489、非対角成分はともに 0.1780 でした。非対角成分には二つの未知点の依存関係が残ります。倍精度で手計算の式と公開APIを比較した最大絶対差は、この実行で平均 0、共分散 1.1e-16 でした。</p>
-<p>NotebookではPyTorchの <code>torch.linalg.cholesky</code> で <span class="math inline">\(A=CC^{\mathsf T}\)</span> と分解し、<code>torch.cholesky_solve</code> で <span class="math inline">\(A Z=B\)</span> を解きます。平均の計算では <span class="math inline">\(B=\mathbf y-\mathbf m_X\)</span>、共分散の計算では <span class="math inline">\(B=K_{X*}\)</span> です。この手順では逆行列を明示的に作りません。右辺ごとに三角行列の連立方程式に帰着します。<code>api.mean</code> が <span class="math inline">\(\boldsymbol{\mu}_*\)</span>、<code>api.variance</code> が <span class="math inline">\(\Sigma_*\)</span> の対角、<code>api.distribution.covariance_matrix</code> が <span class="math inline">\(\Sigma_*\)</span> 全体に対応します。この対応を確かめてから標準偏差へ変換すると、図の帯と式の関係を追いやすくなります。密な場合、<span class="math inline">\(n\)</span> 点でのCholesky分解には概ね <span class="math inline">\(O(n^3)\)</span> の演算と <span class="math inline">\(O(n^2)\)</span> の行列記憶が必要です <span class="citation" data-cites="rasmussen2006">(<a href="../references.html#ref-rasmussen2006" role="doc-biblioref">Rasmussen と Williams 2006年, sec. 2.2</a>)</span>。</p>
+<p>NotebookではPyTorchの <code>torch.linalg.cholesky</code> で <span class="math inline">\(A=CC^{\mathsf T}\)</span> と分解し、<code>torch.cholesky_solve</code> で <span class="math inline">\(A Z=B\)</span> を解きます。平均の計算では <span class="math inline">\(B=\mathbf y-\mathbf m_X\)</span>、共分散の計算では <span class="math inline">\(B=K_{X*}\)</span> です。この手順では逆行列を明示的に作りません。右辺ごとに三角行列の連立方程式に帰着します。<code>api.mean</code> が <span class="math inline">\(\boldsymbol{\mu}_*\)</span>、<code>api.variance</code> が <span class="math inline">\(\Sigma_*\)</span> の対角、<code>api.distribution.covariance_matrix</code> が <span class="math inline">\(\Sigma_*\)</span> 全体に対応します。この対応を確かめてから標準偏差へ変換すると、図の帯と式の関係を追いやすくなります。密な場合、<span class="math inline">\(n\)</span> 点でのCholesky分解には概ね <span class="math inline">\(O(n^3)\)</span> の演算と <span class="math inline">\(O(n^2)\)</span> の行列記憶が必要です <span class="citation" data-cites="rasmussen2006">(<a href="../references.html#ref-rasmussen2006" role="doc-biblioref">Rasmussen と Williams 2006年, 第2章第2節</a>)</span>。倍精度の密行列1枚だけでも、<span class="math inline">\(n=1000\)</span> で約8 MB、<span class="math inline">\(n=10000\)</span> で約800 MBです。学習中は分解・勾配用などの行列も必要になり、パラメータ更新のたびに計算が繰り返されます。CPU上の小規模な単出力回帰なら数百点から始めやすく、数千点では実機で学習時間とメモリを測り、数万点では誘導点を使う疎GPなども比較します。境目はデバイス、dtype、カーネル、ソルバー、再学習頻度で変わります。</p>
 </section>
 </section>
 <section id="sec-gp-observation-interval" class="level2">
@@ -599,6 +624,50 @@ y_{\mathrm{new}}\mid \mathbf y\sim\mathcal N(\mu_*,\sigma_*^2+\tau_{\mathrm{new}
 \tag{4.3}\]</span></span></p>
 <p>です。ここでは <span class="math inline">\(X,X_*\)</span> とハイパーパラメータを固定しているため、条件の表示を省きました。各区間はその分布の平均に対しておおむね「<span class="math inline">\(\pm 1.96\)</span> × 標準偏差」です。<span class="math inline">\(1.96\)</span> は標準正規分布の累積確率 <span class="math inline">\(0.975\)</span> の分位点の近似です。分散は足せますが、標準偏差の加算にはなりません。</p>
 <p>この章のコードでは <code>model.posterior(grid)</code> が潜在関数、<code>model.posterior(grid, observation_noise=True)</code> が観測ノイズを含む事後分布を返します。今回のように指定した既知分散が一定なら、新しい位置でも同じ分散になります。測定精度が条件によって変わる場合は、新規入力に対応した分散をモデル化するか、選んだモデルの公開APIで明示できるかを確認します。出力を標準化したモデルへ予測分散を明示的に渡す場合は、入力する分散の尺度も確認します。</p>
+<section id="同じ95でも何に対する確率か" class="level3">
+<h3 class="anchored" data-anchor-id="同じ95でも何に対する確率か">同じ95%でも、何に対する確率か</h3>
+<div id="tbl-ch04-3" class="quarto-float quarto-figure quarto-figure-center anchored">
+<figure class="quarto-float quarto-float-tbl figure">
+<figcaption class="quarto-float-caption-top quarto-float-caption quarto-float-tbl" id="tbl-ch04-3-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+表&nbsp;4.3: 信用区間・信頼区間・予測区間の読み方
+</figcaption>
+<div aria-describedby="tbl-ch04-3-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+<table class="caption-top table">
+<colgroup>
+<col style="width: 33%">
+<col style="width: 33%">
+<col style="width: 33%">
+</colgroup>
+<thead>
+<tr class="header">
+<th>区間</th>
+<th>何を囲むか</th>
+<th>95%の意味</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>頻度論の信頼区間（confidence interval）</td>
+<td>固定された未知の量。例として温度を一つ固定したときの平均強度</td>
+<td>同じ設計でデータを取り直し、同じ作り方で区間を求め続けると、約95%の区間が真値を覆う</td>
+</tr>
+<tr class="even">
+<td>ベイズ信用区間（credible interval）</td>
+<td>観測後の未知量。図の青い帯なら温度 <span class="math inline">\(x_*\)</span> の潜在強度</td>
+<td>観測データと採用したモデルの下で、その温度の潜在強度が区間に入る事後確率が約95%</td>
+</tr>
+<tr class="odd">
+<td>予測区間（prediction interval）</td>
+<td>次に得られる観測値。図の橙の帯なら試験片一つの強度</td>
+<td>この章のベイズ事後予測では、同じ条件の次の測定値が区間に入る確率が約95%。頻度論で作る場合は、将来観測を含めた反復での被覆率で評価する</td>
+</tr>
+</tbody>
+</table>
+</div>
+</figure>
+</div>
+<p>この章の信用区間と事後予測区間は、どちらも温度を一つ固定した<strong>点ごとの区間</strong>です。曲線全体が帯に入る確率も95%と読みたい場合には、同時区間が必要です。また、採用したカーネルやノイズの仮定が違えば、実測での被覆率も変わります。</p>
+</section>
 </section>
 <section id="ix-section-4-5" class="level2">
 <h2 class="anchored" data-anchor-id="ix-section-4-5">4.5 周辺尤度でハイパーパラメータを選ぶ</h2>
@@ -608,7 +677,7 @@ y_{\mathrm{new}}\mid \mathbf y\sim\mathcal N(\mu_*,\sigma_*^2+\tau_{\mathrm{new}
 =-\frac12\mathbf r_\theta^{\mathsf T}A_\theta^{-1}\mathbf r_\theta
 -\frac12\log |A_\theta|-\frac{n}{2}\log(2\pi).
 \tag{4.4}\]</span></span></p>
-<p>第1項は観測と平均のずれを共分散で測ったもの、第2項は正規分布の正規化から生じる項、第3項は <span class="math inline">\(\theta\)</span> を動かしたときに一定です。<span class="math inline">\(A_\theta=CC^{\mathsf T}\)</span> なら <span class="math inline">\(\log|A_\theta|=2\sum_{i=1}^{n}\log C_{ii}\)</span> と計算できます。ノイズを推定するなら <span class="math inline">\(\tau_\theta^2\)</span> も <span class="math inline">\(\theta\)</span> の一部です。既知の分散を渡す場合は、その値を固定します <span class="citation" data-cites="rasmussen2006">(<a href="../references.html#ref-rasmussen2006" role="doc-biblioref">Rasmussen と Williams 2006年, sec. 2.3および</a>§5.4)</span>。</p>
+<p>第1項は観測と平均のずれを共分散で測ったもの、第2項は正規分布の正規化から生じる項、第3項は <span class="math inline">\(\theta\)</span> を動かしたときに一定です。<span class="math inline">\(A_\theta=CC^{\mathsf T}\)</span> なら <span class="math inline">\(\log|A_\theta|=2\sum_{i=1}^{n}\log C_{ii}\)</span> と計算できます。ノイズを推定するなら <span class="math inline">\(\tau_\theta^2\)</span> も <span class="math inline">\(\theta\)</span> の一部です。既知の分散を渡す場合は、その値を固定します <span class="citation" data-cites="rasmussen2006">(<a href="../references.html#ref-rasmussen2006" role="doc-biblioref">Rasmussen と Williams 2006年, 第2章第3節および第5章第4節</a>)</span>。</p>
 <p>教材の <code>SingleTaskGP.fit()</code> はBoTorchの公開学習機能に周辺尤度を渡します。モデルの目的関数には設定されたパラメータ事前分布の項も入り得ます。<a href="#eq-gp-mll" class="quarto-xref">式&nbsp;<span>4.4</span></a> はガウス観測のデータ項です。二点の照合では <span class="math inline">\(\theta\)</span> を人が指定して固定し、冒頭の実行ではデータから推定しました。後者の帯は推定した <span class="math inline">\(\widehat\theta\)</span> を条件として計算したものです。<span class="math inline">\(\theta\)</span> の不確かさまで含めるには <span class="math inline">\(p(\theta\mid X,\mathbf y)\)</span> にわたる予測分布の積分が必要です。</p>
 </section>
 <section id="ix-section-4-6" class="level2">
@@ -662,7 +731,7 @@ y_{\mathrm{new}}\mid \mathbf y\sim\mathcal N(\mu_*,\sigma_*^2+\tau_{\mathrm{new}
 
 <div id="refs" class="references csl-bib-body hanging-indent" role="list" style="display: none">
 <div id="ref-balandat2020" class="csl-entry" role="listitem">
-Balandat, Maximilian, Brian Karrer, Daniel R. Jiang, ほか. 2020年. <span>「<span>BoTorch</span>: A Framework for Efficient Monte-Carlo Bayesian Optimization」</span>. <em>Advances in Neural Information Processing Systems</em> 33: 21524–38. <a href="https://proceedings.neurips.cc/paper/2020/hash/f5b1b89d98b7286673128a5fb112cb9a-Abstract.html">https://proceedings.neurips.cc/paper/2020/hash/f5b1b89d98b7286673128a5fb112cb9a-Abstract.html</a>.
+Balandat, Maximilian, Brian Karrer, Daniel R. Jiang, ほか. 2020年. <span>“<span>BoTorch</span>: A Framework for Efficient Monte-Carlo Bayesian Optimization”</span>. <em>Advances in Neural Information Processing Systems</em> 33: 21524–38. <a href="https://proceedings.neurips.cc/paper/2020/hash/f5b1b89d98b7286673128a5fb112cb9a-Abstract.html">https://proceedings.neurips.cc/paper/2020/hash/f5b1b89d98b7286673128a5fb112cb9a-Abstract.html</a>.
 </div>
 <div id="ref-rasmussen2006" class="csl-entry" role="listitem">
 Rasmussen, Carl Edward, と Christopher K. I. Williams. 2006年. <em>Gaussian Processes for Machine Learning</em>. MIT Press. <a href="https://doi.org/10.7551/mitpress/3206.001.0001">https://doi.org/10.7551/mitpress/3206.001.0001</a>.

@@ -191,7 +191,7 @@ window.Quarto = {
     <div class="sidebar-title mb-0 py-0">
       <a href="../">Pythonで学ぶベイズ最適化と能動学習</a> 
         <div class="sidebar-tools-main">
-    <a href="../BO_AL_book_vol1_v1.0.0.pdf" title="Download PDF" class="quarto-navigation-tool px-1" aria-label="Download PDF"><i class="bi bi-file-pdf"></i></a>
+    <a href="../BO_AL_book_vol1_v1.0.1.pdf" title="Download PDF" class="quarto-navigation-tool px-1" aria-label="Download PDF"><i class="bi bi-file-pdf"></i></a>
 </div>
     </div>
       </div>
@@ -328,6 +328,12 @@ window.Quarto = {
 </li>
           <li class="sidebar-item">
   <div class="sidebar-item-container"> 
+  <a href="../appendices/reproduction.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">実験の生成式とAPI対応</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
   <a href="../appendices/term-index.html" class="sidebar-item-text sidebar-link">
  <span class="menu-text">索引</span></a>
   </div>
@@ -355,7 +361,7 @@ window.Quarto = {
   <li><a href="#ix-section-12-3" id="toc-ix-section-12-3" class="nav-link" data-scroll-target="#ix-section-12-3">12.3 実験計画のチェックリスト</a></li>
   <li><a href="#失敗から原因を絞る" id="toc-失敗から原因を絞る" class="nav-link" data-scroll-target="#失敗から原因を絞る">12.4 失敗から原因を絞る</a></li>
   <li><a href="#研究課題と読み進め方" id="toc-研究課題と読み進め方" class="nav-link" data-scroll-target="#研究課題と読み進め方">12.5 研究課題と読み進め方</a></li>
-  <li><a href="#演習とまとめ" id="toc-演習とまとめ" class="nav-link" data-scroll-target="#演習とまとめ">12.6 演習とまとめ</a></li>
+  <li><a href="#章末演習とまとめ" id="toc-章末演習とまとめ" class="nav-link" data-scroll-target="#章末演習とまとめ">12.6 章末演習とまとめ</a></li>
   </ul>
 </nav>
     </div>
@@ -384,6 +390,12 @@ window.Quarto = {
 <p><strong>学習目標</strong>　目的を手法と評価指標に結び付け、現場で使う実験計画を記述する。学習結果の不確実性と、追加の検証が必要な場面を説明する。</p>
 <section id="ix-section-12-1" class="level2">
 <h2 class="anchored" data-anchor-id="ix-section-12-1">12.1 実験の後に何を決めるか</h2>
+<div id="tbl-ch12-1" class="quarto-float quarto-figure quarto-figure-center anchored">
+<figure class="quarto-float quarto-float-tbl figure">
+<figcaption class="quarto-float-caption-top quarto-float-caption quarto-float-tbl" id="tbl-ch12-1-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+表&nbsp;12.1: 最終目的に応じた手法と評価指標
+</figcaption>
+<div aria-describedby="tbl-ch12-1-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
 <table class="caption-top table">
 <colgroup>
 <col style="width: 33%">
@@ -425,6 +437,9 @@ window.Quarto = {
 </tr>
 </tbody>
 </table>
+</div>
+</figure>
+</div>
 <p>BOでは推薦 <span class="math inline">\(\hat x\)</span> と最適設定 <span class="math inline">\(x^\star\)</span> の平均応答の差 <span class="math inline">\(f(x^\star)-f(\hat x)\)</span> を、最大化における<strong>単純リグレット</strong>として測れます。<span class="math inline">\(f\)</span> は測定誤差を含めない目的の真の平均です。真の最大値を指定できる合成試験では直接計算しやすい一方、実験では最大値が未知なので、独立した確認測定を使って現行条件や基準手法と比較します。ALでは、ラベルを集めたい領域と、予測の性能を評価したい領域を明記します。必要に応じて運用時と同じ入力分布、または意味が明確な重みを設定します <span class="citation" data-cites="frazier2018 garnett2023 settles2009">(<a href="../references.html#ref-frazier2018" role="doc-biblioref">Frazier 2018年</a>; <a href="../references.html#ref-garnett2023" role="doc-biblioref">Garnett 2023年</a>; <a href="../references.html#ref-settles2009" role="doc-biblioref">Settles 2009年</a>)</span>。</p>
 </section>
 <section id="ix-section-12-2" class="level2">
@@ -453,6 +468,12 @@ window.Quarto = {
 </section>
 <section id="ix-section-12-3" class="level2">
 <h2 class="anchored" data-anchor-id="ix-section-12-3">12.3 実験計画のチェックリスト</h2>
+<div id="tbl-ch12-2" class="quarto-float quarto-figure quarto-figure-center anchored">
+<figure class="quarto-float quarto-float-tbl figure">
+<figcaption class="quarto-float-caption-top quarto-float-caption quarto-float-tbl" id="tbl-ch12-2-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+表&nbsp;12.2: 実験設計で記録する項目
+</figcaption>
+<div aria-describedby="tbl-ch12-2-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
 <table class="caption-top table">
 <thead>
 <tr class="header">
@@ -495,6 +516,9 @@ window.Quarto = {
 </tr>
 </tbody>
 </table>
+</div>
+</figure>
+</div>
 <p>たとえば、上限 <strong>20回</strong> に対し、初期試験を6回、確認を4回とすると、適応的に選ぶ試験は最大 <strong>10回</strong> です。試料を消費した失敗も、この枠を1回使います。</p>
 <p>並行作業では、提案済みで結果待ちの点を時間の記録に残し、計測完了の順序も保存します。測定が失敗しても試料を消費したなら、その費用を数えます。計算時間、試験回数、経過時間は用途が違うので分けて報告します。基準手法と比較するときは、目的値の範囲だけでなく初期観測、停止規則、確認予算を揃えます。</p>
 </section>
@@ -511,12 +535,18 @@ window.Quarto = {
 <h2 class="anchored" data-anchor-id="研究課題と読み進め方">12.5 研究課題と読み進め方</h2>
 <p>運用時の入力分布が変わると、学習した確率の較正や、追加ラベルの価値が変わり得ます。どのデータを追加取得し、どの分布で評価するかを合わせて検討します <span class="citation" data-cites="settles2009 bickfordsmith2023">(<a href="../references.html#ref-settles2009" role="doc-biblioref">Settles 2009年</a>; <a href="../references.html#ref-bickfordsmith2023" role="doc-biblioref">Bickford Smith ほか 2023年</a>)</span>。</p>
 <p>並行・非同期試験では、所要時間や失敗が条件によって異なる場合の予算配分が課題です。過去の観測を使う場合は、応答の構造や因果関係を新しい材料とどこまで共有できるかを確かめます <span class="citation" data-cites="garnett2023 feurer2018 aglietti2020">(<a href="../references.html#ref-garnett2023" role="doc-biblioref">Garnett 2023年</a>; <a href="../references.html#ref-feurer2018" role="doc-biblioref">Feurer ほか 2018年</a>; <a href="../references.html#ref-aglietti2020" role="doc-biblioref">Aglietti ほか 2020年</a>)</span>。</p>
+<div id="tbl-ch12-3" class="quarto-float quarto-figure quarto-figure-center anchored">
+<figure class="quarto-float quarto-float-tbl figure">
+<figcaption class="quarto-float-caption-top quarto-float-caption quarto-float-tbl" id="tbl-ch12-3-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+表&nbsp;12.3: 次に読む資料と実行例
+</figcaption>
+<div aria-describedby="tbl-ch12-3-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
 <table class="caption-top table">
 <thead>
 <tr class="header">
 <th>次に深めるテーマ</th>
 <th>読む資料</th>
-<th>robotorchanで試す入口</th>
+<th>関連するrobotorchanの実行例</th>
 </tr>
 </thead>
 <tbody>
@@ -533,20 +563,23 @@ window.Quarto = {
 <tr class="odd">
 <td>予測改善と観測選択</td>
 <td><span class="citation" data-cites="settles2009 bickfordsmith2023">(<a href="../references.html#ref-settles2009" role="doc-biblioref">Settles 2009年</a>; <a href="../references.html#ref-bickfordsmith2023" role="doc-biblioref">Bickford Smith ほか 2023年</a>)</span></td>
-<td><a href="https://github.com/tanakakao/robotorchan/blob/b1bb77087cd117d83ed21a226a6fce39ccd5b497/examples/notebooks/35_regression_active_learning.ipynb">35 回帰の能動学習</a></td>
+<td><a href="https://github.com/tanakakao/robotorchan/blob/b1bb77087cd117d83ed21a226a6fce39ccd5b497/examples/notebooks/35_regression_active_learning.ipynb">回帰の能動学習のNotebook</a></td>
 </tr>
 <tr class="even">
 <td>操作・状況・介入</td>
 <td><span class="citation" data-cites="krause2011 aglietti2020">(<a href="../references.html#ref-krause2011" role="doc-biblioref">Krause と Ong 2011年</a>; <a href="../references.html#ref-aglietti2020" role="doc-biblioref">Aglietti ほか 2020年</a>)</span></td>
-<td><a href="https://github.com/tanakakao/robotorchan/blob/b1bb77087cd117d83ed21a226a6fce39ccd5b497/examples/notebooks/60_contextual_bayesian_optimization.ipynb">60 Contextual BO</a>、<a href="https://github.com/tanakakao/robotorchan/blob/b1bb77087cd117d83ed21a226a6fce39ccd5b497/examples/notebooks/58_causal_bayesian_optimization.ipynb">58 Causal BO</a></td>
+<td><a href="https://github.com/tanakakao/robotorchan/blob/b1bb77087cd117d83ed21a226a6fce39ccd5b497/examples/notebooks/60_contextual_bayesian_optimization.ipynb">Contextual BOのNotebook</a>、<a href="https://github.com/tanakakao/robotorchan/blob/b1bb77087cd117d83ed21a226a6fce39ccd5b497/examples/notebooks/58_causal_bayesian_optimization.ipynb">Causal BOのNotebook</a></td>
 </tr>
 </tbody>
 </table>
+</div>
+</figure>
+</div>
 </section>
-<section id="演習とまとめ" class="level2">
-<h2 class="anchored" data-anchor-id="演習とまとめ">12.6 演習とまとめ</h2>
+<section id="章末演習とまとめ" class="level2">
+<h2 class="anchored" data-anchor-id="章末演習とまとめ">12.6 章末演習とまとめ</h2>
 <ol type="1">
-<li><strong>確認。</strong> 上限20回、初期6回、確認を各条件2回とすると、候補に何回使えますか。その途中で試料を使った失敗が1回ありました。候補予算を使い切った場合、成功して得た追加観測は最大何件ですか。</li>
+<li><strong>確認。</strong> 上限20回、初期6回、現行条件と推薦条件の確認を各2回とすると、候補に何回使えますか。その途中で試料を使った失敗が1回ありました。候補予算を使い切った場合、成功して得た追加観測は最大何件ですか。</li>
 <li><strong>操作。</strong> Notebookで誤って合格とする費用を2に変え、閾値と二つの確率での判定を求めてください。</li>
 <li><strong>発展。</strong> 「原料ロットが変わっても強度の合格確率を予測したい」という課題を選び、表の項目を1ページにまとめてください。どのロットを候補選択に使い、どのロットを評価に残しますか。</li>
 </ol>
@@ -555,10 +588,10 @@ window.Quarto = {
 
 <div id="refs" class="references csl-bib-body hanging-indent" role="list" style="display: none">
 <div id="ref-aglietti2020" class="csl-entry" role="listitem">
-Aglietti, Virginia, Xiaoyu Lu, Andrei Paleyes, と Javier González. 2020年. <span>「Causal Bayesian Optimization」</span>. <em>Proceedings of the Twenty Third International Conference on Artificial Intelligence and Statistics</em>, Proceedings of Machine Learning Research, vol. 108: 3155–64. <a href="https://proceedings.mlr.press/v108/aglietti20a.html">https://proceedings.mlr.press/v108/aglietti20a.html</a>.
+Aglietti, Virginia, Xiaoyu Lu, Andrei Paleyes, と Javier González. 2020年. <span>“Causal Bayesian Optimization”</span>. <em>Proceedings of the Twenty Third International Conference on Artificial Intelligence and Statistics</em>, Proceedings of Machine Learning Research, vol. 108: 3155–64. <a href="https://proceedings.mlr.press/v108/aglietti20a.html">https://proceedings.mlr.press/v108/aglietti20a.html</a>.
 </div>
 <div id="ref-bickfordsmith2023" class="csl-entry" role="listitem">
-Bickford Smith, Freddie, Andreas Kirsch, Sebastian Farquhar, Yarin Gal, Adam Foster, と Tom Rainforth. 2023年. <span>「Prediction-Oriented Bayesian Active Learning」</span>. <em>Proceedings of the 26th International Conference on Artificial Intelligence and Statistics</em>, Proceedings of Machine Learning Research, vol. 206: 7331–48. <a href="https://proceedings.mlr.press/v206/bickfordsmith23a.html">https://proceedings.mlr.press/v206/bickfordsmith23a.html</a>.
+Bickford Smith, Freddie, Andreas Kirsch, Sebastian Farquhar, Yarin Gal, Adam Foster, と Tom Rainforth. 2023年. <span>“Prediction-Oriented Bayesian Active Learning”</span>. <em>Proceedings of the 26th International Conference on Artificial Intelligence and Statistics</em>, Proceedings of Machine Learning Research, vol. 206: 7331–48. <a href="https://proceedings.mlr.press/v206/bickfordsmith23a.html">https://proceedings.mlr.press/v206/bickfordsmith23a.html</a>.
 </div>
 <div id="ref-feurer2018" class="csl-entry" role="listitem">
 Feurer, Matthias, Benjamin Letham, Frank Hutter, と Eytan Bakshy. 2018年. <em>Practical Transfer Learning for Bayesian Optimization</em>. <a href="https://arxiv.org/abs/1802.02219">https://arxiv.org/abs/1802.02219</a>.
@@ -570,7 +603,7 @@ Frazier, Peter I. 2018年. <em>A Tutorial on Bayesian Optimization</em>. <a href
 Garnett, Roman. 2023年. <em>Bayesian Optimization</em>. Cambridge University Press. <a href="https://bayesoptbook.com/">https://bayesoptbook.com/</a>.
 </div>
 <div id="ref-krause2011" class="csl-entry" role="listitem">
-Krause, Andreas, と Cheng S. Ong. 2011年. <span>「Contextual Gaussian Process Bandit Optimization」</span>. <em>Advances in Neural Information Processing Systems</em> 24. <a href="https://proceedings.neurips.cc/paper_files/paper/2011/hash/f3f1b7fc5a8779a9e618e1f23a7b7860-Abstract.html">https://proceedings.neurips.cc/paper_files/paper/2011/hash/f3f1b7fc5a8779a9e618e1f23a7b7860-Abstract.html</a>.
+Krause, Andreas, と Cheng S. Ong. 2011年. <span>“Contextual Gaussian Process Bandit Optimization”</span>. <em>Advances in Neural Information Processing Systems</em> 24. <a href="https://proceedings.neurips.cc/paper_files/paper/2011/hash/f3f1b7fc5a8779a9e618e1f23a7b7860-Abstract.html">https://proceedings.neurips.cc/paper_files/paper/2011/hash/f3f1b7fc5a8779a9e618e1f23a7b7860-Abstract.html</a>.
 </div>
 <div id="ref-rasmussen2006" class="csl-entry" role="listitem">
 Rasmussen, Carl Edward, と Christopher K. I. Williams. 2006年. <em>Gaussian Processes for Machine Learning</em>. MIT Press. <a href="https://doi.org/10.7551/mitpress/3206.001.0001">https://doi.org/10.7551/mitpress/3206.001.0001</a>.

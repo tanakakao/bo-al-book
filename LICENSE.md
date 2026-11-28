@@ -8,4 +8,4 @@
 
 本文・図を再利用する際の出典表記例は「tanakakao『Pythonで学ぶベイズ最適化と能動学習 第1巻 基礎理論と実践』第1版、CC BY 4.0」です。書籍のURL、ライセンスへのリンク、変更がある場合は変更の表示を添えてください。
 
-第三者の書誌・引用資料、依存ライブラリ、生成ツールの同梱ファイルには、それぞれの権利者が示す利用条件が適用されます。生成済みHTMLの `site_libs/` に含まれるファイルのライセンス表示は配布元のものです。
+第三者の書誌・引用資料、依存ライブラリ、生成ツールの同梱ファイルには、それぞれの権利者が示す利用条件が適用されます。生成済みHTMLの `site_libs/` に含まれるファイルのライセンス表示は配布元のものです。書誌スタイル `chicago-author-date-ja.csl` は [Chicago Manual of Style (author-date)](https://github.com/citation-style-language/styles/blob/master/chicago-author-date.csl) の日本語文書向け変更版で、原典と同じ [CC BY-SA 3.0](https://creativecommons.org/licenses/by-sa/3.0/) を適用します。

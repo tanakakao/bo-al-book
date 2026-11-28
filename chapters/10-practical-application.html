@@ -191,7 +191,7 @@ window.Quarto = {
     <div class="sidebar-title mb-0 py-0">
       <a href="../">Pythonで学ぶベイズ最適化と能動学習</a> 
         <div class="sidebar-tools-main">
-    <a href="../BO_AL_book_vol1_v1.0.0.pdf" title="Download PDF" class="quarto-navigation-tool px-1" aria-label="Download PDF"><i class="bi bi-file-pdf"></i></a>
+    <a href="../BO_AL_book_vol1_v1.0.1.pdf" title="Download PDF" class="quarto-navigation-tool px-1" aria-label="Download PDF"><i class="bi bi-file-pdf"></i></a>
 </div>
     </div>
       </div>
@@ -328,6 +328,12 @@ window.Quarto = {
 </li>
           <li class="sidebar-item">
   <div class="sidebar-item-container"> 
+  <a href="../appendices/reproduction.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">実験の生成式とAPI対応</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
   <a href="../appendices/term-index.html" class="sidebar-item-text sidebar-link">
  <span class="menu-text">索引</span></a>
   </div>
@@ -355,7 +361,7 @@ window.Quarto = {
   <li><a href="#ix-section-10-3" id="toc-ix-section-10-3" class="nav-link" data-scroll-target="#ix-section-10-3">10.3 モデルを選び、候補提案と結果登録を繰り返す</a></li>
   <li><a href="#ix-section-10-4" id="toc-ix-section-10-4" class="nav-link" data-scroll-target="#ix-section-10-4">10.4 推薦を出し、別枠で確認する</a></li>
   <li><a href="#ix-section-10-5" id="toc-ix-section-10-5" class="nav-link" data-scroll-target="#ix-section-10-5">10.5 実務で詰まりやすい点</a></li>
-  <li><a href="#演習" id="toc-演習" class="nav-link" data-scroll-target="#演習">10.6 演習</a></li>
+  <li><a href="#章末演習" id="toc-章末演習" class="nav-link" data-scroll-target="#章末演習">10.6 章末演習</a></li>
   </ul>
 </nav>
     </div>
@@ -386,6 +392,12 @@ window.Quarto = {
 <h2 class="anchored" data-anchor-id="ix-section-10-1">10.1 何を変え、何を比較するか</h2>
 <p>本書の合成材料に、温度 <span class="math inline">\(T\)</span> [°C] に加えて保持時間 <span class="math inline">\(h\)</span> [分] を導入します。試せる範囲は <span class="math inline">\(140\le T\le180\)</span>、<span class="math inline">\(10\le h\le40\)</span> とします。現行条件は <span class="math inline">\(T=148,\ h=20\)</span> です。試験片の強度 <span class="math inline">\(Y\)</span> [MPa] は繰り返すとばらつきます。ここで高めたいのは、一回の測定値から想定した<strong>同じ条件での平均強度</strong> <span class="math inline">\(\mathbb E[Y\mid T,h]\)</span> です。過去の完了8件と失敗1件があり、新しく選んで測れるのは3件です。推薦後の確認は別枠で計8件を予約します。</p>
 <p>現場では、試料の調製手順、装置、ロット、測定方法を整理してからデータをまとめます。例えば、古い装置で温度が高い条件ばかり測っていると、装置差が曲線の形に見えることがあります。本例ではこの交絡を避けるため、同じ模擬ロットと装置で完了する場合を扱います。使う表はすべて合成データです。</p>
+<div id="tbl-ch10-1" class="quarto-float quarto-figure quarto-figure-center anchored">
+<figure class="quarto-float quarto-float-tbl figure">
+<figcaption class="quarto-float-caption-top quarto-float-caption quarto-float-tbl" id="tbl-ch10-1-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+表&nbsp;10.1: 合成過去ログの列
+</figcaption>
+<div aria-describedby="tbl-ch10-1-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
 <table class="caption-top table">
 <colgroup>
 <col style="width: 33%">
@@ -427,7 +439,10 @@ window.Quarto = {
 </tr>
 </tbody>
 </table>
-<p>過去ログはCSVで同梱しています。<a href="../data/ch10_historical_log.csv">合成データの過去ログ</a>模擬計測器のタイムアウト1件は強度を欠測にしてあります。0 MPaを入れると、測れなかった条件で「強度が0だった」という別の観測を学習させることになります。実際に条件の不適合で測定が打ち切られる場合は、失敗の種類や測定限界を記録し、制約や打ち切りを表すモデルを検討します。</p>
+</div>
+</figure>
+</div>
+<p>同梱の合成データの過去ログ（<a href="../data/ch10_historical_log.csv"><code>ch10_historical_log.csv</code></a>）では、模擬計測器のタイムアウト1件を強度の欠測として記録しています。0 MPaを入れると、測れなかった条件で「強度が0だった」という別の観測を学習させることになります。実際に条件の不適合で測定が打ち切られる場合は、失敗の種類や測定限界を記録し、制約や打ち切りを表すモデルを検討します。</p>
 </section>
 <section id="ix-section-10-2" class="level2">
 <h2 class="anchored" data-anchor-id="ix-section-10-2">10.2 実行する　DataFrameで読み込み、過去の試験を登録する</h2>
@@ -452,7 +467,7 @@ window.Quarto = {
 <section id="ix-section-10-3" class="level2">
 <h2 class="anchored" data-anchor-id="ix-section-10-3">10.3 モデルを選び、候補提案と結果登録を繰り返す</h2>
 <p>この試験では2入力に対して強度が滑らかに変わると仮定し、<code>SingleTaskGP</code> を使います。入力変換は探索範囲に合わせて <span class="math inline">\(x=(T-140)/40\)</span>、<span class="math inline">\(z=(h-10)/30\)</span> とし、出力を学習時に標準化します。提案や測定には元の単位を使います。観測ノイズの分散はデータから推定します。小例では1件ずつ提案するLogEIを選び、基準には完了試験の最良観測値を使います。ノイズが大きく、基準値の不確実性が選択に効くときは、第7章のqLogNEIも比較候補です <span class="citation" data-cites="ament2023 letham2019">(<a href="../references.html#ref-ament2023" role="doc-biblioref">Ament ほか 2023年</a>; <a href="../references.html#ref-letham2019" role="doc-biblioref">Letham ほか 2019年</a>)</span>。</p>
-<p>完了5件からBOを始める設定なので、過去8件を入れたStudyは初回からGPで提案します。<code>ask</code> は測定前に候補と番号を登録します。現場では、この番号を測定指示と結果の突合に使います。<code>tell</code> が完了してから次の <code>ask</code> を呼ぶと、新しい観測も含んだGPで候補が更新されます。</p>
+<p><code>new_study()</code> では <code>n_initial_trials=5</code> を指定します。これはBOに切り替えるために必要な完了試験の件数です。過去ログの完了8件が条件を満たし、失敗1件は数に入らないので、登録後の最初の <code>ask()</code> からGPで提案します。<code>ask</code> は測定前に候補と番号を登録します。現場では、この番号を測定指示と結果の突合に使います。<code>tell</code> が完了してから次の <code>ask</code> を呼ぶと、新しい観測も含んだGPで候補が更新されます。</p>
 <div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb2"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> experiment <span class="im">import</span> SEED</span>
 <span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> production_experiment <span class="im">import</span> INPUTS, measure</span>
 <span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a></span>
@@ -470,6 +485,12 @@ window.Quarto = {
 <span id="cb2-15"><a href="#cb2-15" aria-hidden="true" tabindex="-1"></a>results <span class="op">=</span> study.trials_dataframe()</span>
 <span id="cb2-16"><a href="#cb2-16" aria-hidden="true" tabindex="-1"></a>audit <span class="op">=</span> results.merge(metadata, on<span class="op">=</span><span class="st">"number"</span>, validate<span class="op">=</span><span class="st">"one_to_one"</span>)</span></code></pre></div><button title="コピー" class="code-copy-button"><i class="bi"></i></button></div>
 <p>現場で提案値を装置の刻みに丸める必要がある場合は、入力範囲と候補集合の設計にその刻みを反映します。設定した値と実際に適用された値が異なれば、どちらも記録します。測定値を取り違えると、候補に対応した強度をモデルが学習できなくなります。</p>
+<div id="tbl-ch10-trials" class="quarto-float quarto-figure quarto-figure-center anchored">
+<figure class="quarto-float quarto-float-tbl figure">
+<figcaption class="quarto-float-caption-top quarto-float-caption quarto-float-tbl" id="tbl-ch10-trials-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+表&nbsp;10.2: BOで追加した3件の試験
+</figcaption>
+<div aria-describedby="tbl-ch10-trials-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
 <table class="caption-top table">
 <thead>
 <tr class="header">
@@ -500,6 +521,9 @@ window.Quarto = {
 </tr>
 </tbody>
 </table>
+</div>
+</figure>
+</div>
 </section>
 <section id="ix-section-10-4" class="level2">
 <h2 class="anchored" data-anchor-id="ix-section-10-4">10.4 推薦を出し、別枠で確認する</h2>
@@ -526,12 +550,18 @@ window.Quarto = {
 </figcaption>
 </figure>
 </div>
-<p>確認試験の平均は、現行条件で <strong>80.61 MPa</strong>、推薦条件で <strong>83.48 MPa</strong> でした。4件ずつの測定を丸める前に比較した平均の差は <strong>2.88 MPa</strong> です。</p>
-<p>個別の結果を確認できます。<a href="../data/ch10_trial_log.csv">Studyの試験履歴</a>、<a href="../data/ch10_confirmation.csv">独立した確認試験</a></p>
+<p>確認試験の平均は、現行条件で <strong>80.61 MPa</strong>、推薦条件で <strong>83.48 MPa</strong> でした。推薦条件から現行条件を引いた平均差は <strong>2.88 MPa</strong>、標準誤差は 0.56 MPa、独立2群のWelchの95%信頼区間は <strong>1.43〜4.32 MPa</strong> です。反復は各4件で、この区間は独立な測定と各群の近似正規性を前提とします。</p>
+<p>個別値は、Studyの履歴（<a href="../data/ch10_trial_log.csv"><code>ch10_trial_log.csv</code></a>）と、独立した確認試験（<a href="../data/ch10_confirmation.csv"><code>ch10_confirmation.csv</code></a>）で確認できます。推薦条件の確認平均は、その条件でのモデルの事後平均と過去の最良観測値の両方を上回りました。モデルの予測、過去に選んだ一件の測定値、新しい4件の標本平均は異なる量です。この小例で観測された差を、別ロットでも同じ幅の改善が出る保証とは扱いません。</p>
 <p>現場で採用する前に、必要な改善幅を決め、ロット・日・装置の変動を含めて確認します。同じロット内に現行条件と推薦条件を割り付け、試験順序をランダム化すると、工程の時間変化と設定の差を見分けやすくなります <span class="citation" data-cites="montgomery2019">(<a href="../references.html#ref-montgomery2019" role="doc-biblioref">Montgomery 2019年</a>)</span>。</p>
 </section>
 <section id="ix-section-10-5" class="level2">
 <h2 class="anchored" data-anchor-id="ix-section-10-5">10.5 実務で詰まりやすい点</h2>
+<div id="tbl-ch10-2" class="quarto-float quarto-figure quarto-figure-center anchored">
+<figure class="quarto-float quarto-float-tbl figure">
+<figcaption class="quarto-float-caption-top quarto-float-caption quarto-float-tbl" id="tbl-ch10-2-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+表&nbsp;10.3: ログを使うときの診断
+</figcaption>
+<div aria-describedby="tbl-ch10-2-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
 <table class="caption-top table">
 <colgroup>
 <col style="width: 33%">
@@ -568,10 +598,13 @@ window.Quarto = {
 </tr>
 </tbody>
 </table>
+</div>
+</figure>
+</div>
 <p>候補を出せる範囲と、結果を適用できる範囲を記録します。目的が複数ある場合や、適合性が試験するまで不明な場合は<a href="../chapters/11-advanced-topics.html">第11章</a>で扱います。</p>
 </section>
-<section id="演習" class="level2">
-<h2 class="anchored" data-anchor-id="演習">10.6 演習</h2>
+<section id="章末演習" class="level2">
+<h2 class="anchored" data-anchor-id="章末演習">10.6 章末演習</h2>
 <ol type="1">
 <li><strong>確認。</strong> 過去ログの失敗行を目的値0として学習した場合、何を観測したことになりますか。履歴に残して学習から外すには、どの状態で登録しますか。</li>
 <li><strong>操作。</strong> Notebookで保持時間の探索下限を15分に引き上げてください。過去ログの範囲チェックで何が起きるかを確認し、どの古い試験をどの判断で使うかを書いてください。</li>
@@ -581,13 +614,13 @@ window.Quarto = {
 
 <div id="refs" class="references csl-bib-body hanging-indent" role="list" style="display: none">
 <div id="ref-ament2023" class="csl-entry" role="listitem">
-Ament, Sebastian, Samuel Daulton, David Eriksson, Maximilian Balandat, と Eytan Bakshy. 2023年. <span>「Unexpected Improvements to Expected Improvement for Bayesian Optimization」</span>. <em>Advances in Neural Information Processing Systems</em> 36. <a href="https://doi.org/10.52202/075280-0904">https://doi.org/10.52202/075280-0904</a>.
+Ament, Sebastian, Samuel Daulton, David Eriksson, Maximilian Balandat, と Eytan Bakshy. 2023年. <span>“Unexpected Improvements to Expected Improvement for Bayesian Optimization”</span>. <em>Advances in Neural Information Processing Systems</em> 36. <a href="https://doi.org/10.52202/075280-0904">https://doi.org/10.52202/075280-0904</a>.
 </div>
 <div id="ref-letham2019" class="csl-entry" role="listitem">
-Letham, Benjamin, Brian Karrer, Guilherme Ottoni, と Eytan Bakshy. 2019年. <span>「Constrained Bayesian Optimization with Noisy Experiments」</span>. <em>Bayesian Analysis</em> 14 (2): 495–519. <a href="https://doi.org/10.1214/18-BA1110">https://doi.org/10.1214/18-BA1110</a>.
+Letham, Benjamin, Brian Karrer, Guilherme Ottoni, と Eytan Bakshy. 2019年. <span>“Constrained Bayesian Optimization with Noisy Experiments”</span>. <em>Bayesian Analysis</em> 14 (2): 495–519. <a href="https://doi.org/10.1214/18-BA1110">https://doi.org/10.1214/18-BA1110</a>.
 </div>
 <div id="ref-montgomery2019" class="csl-entry" role="listitem">
-Montgomery, Douglas C. 2019年. <em>Design and Analysis of Experiments</em>. 10番目 版. Wiley. <a href="https://www.wiley.com/en-us/design-and-analysis-of-experiments-10th-edition-p-9781119492443">https://www.wiley.com/en-us/design-and-analysis-of-experiments-10th-edition-p-9781119492443</a>.
+Montgomery, Douglas C. 2019年. <em>Design and Analysis of Experiments</em>. 第10版. Wiley. <a href="https://www.wiley.com/en-us/design-and-analysis-of-experiments-10th-edition-p-9781119492443">https://www.wiley.com/en-us/design-and-analysis-of-experiments-10th-edition-p-9781119492443</a>.
 </div>
 </div>
 </section>

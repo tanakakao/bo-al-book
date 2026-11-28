@@ -191,7 +191,7 @@ window.Quarto = {
     <div class="sidebar-title mb-0 py-0">
       <a href="../">Pythonで学ぶベイズ最適化と能動学習</a> 
         <div class="sidebar-tools-main">
-    <a href="../BO_AL_book_vol1_v1.0.0.pdf" title="Download PDF" class="quarto-navigation-tool px-1" aria-label="Download PDF"><i class="bi bi-file-pdf"></i></a>
+    <a href="../BO_AL_book_vol1_v1.0.1.pdf" title="Download PDF" class="quarto-navigation-tool px-1" aria-label="Download PDF"><i class="bi bi-file-pdf"></i></a>
 </div>
     </div>
       </div>
@@ -328,6 +328,12 @@ window.Quarto = {
 </li>
           <li class="sidebar-item">
   <div class="sidebar-item-container"> 
+  <a href="../appendices/reproduction.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">実験の生成式とAPI対応</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
   <a href="../appendices/term-index.html" class="sidebar-item-text sidebar-link">
  <span class="menu-text">索引</span></a>
   </div>
@@ -355,7 +361,7 @@ window.Quarto = {
   <li><a href="#gpの仮定と訓練データだけでは見えない誤差" id="toc-gpの仮定と訓練データだけでは見えない誤差" class="nav-link" data-scroll-target="#gpの仮定と訓練データだけでは見えない誤差">7.3 GPの仮定と、訓練データだけでは見えない誤差</a></li>
   <li><a href="#sec-bo-solver" id="toc-sec-bo-solver" class="nav-link" data-scroll-target="#sec-bo-solver">7.4 局所解と初期点を診断する</a></li>
   <li><a href="#sec-bo-batch" id="toc-sec-bo-batch" class="nav-link" data-scroll-target="#sec-bo-batch">7.5 バッチ評価と同時事後分布</a></li>
-  <li><a href="#再現性と演習" id="toc-再現性と演習" class="nav-link" data-scroll-target="#再現性と演習">7.6 再現性と演習</a></li>
+  <li><a href="#章末演習とまとめ" id="toc-章末演習とまとめ" class="nav-link" data-scroll-target="#章末演習とまとめ">7.6 章末演習とまとめ</a></li>
   </ul>
 </nav>
     </div>
@@ -381,6 +387,7 @@ window.Quarto = {
 </header>
 
 
+<p><strong>学習目標</strong>　入力尺度・ノイズ・初期点・バッチ選択が実験に及ぼす影響を比較する。</p>
 <p>反復のコードが動いたら、測定のたびに良い条件へ近づくでしょうか。候補の良し悪しには、データの尺度、測定のばらつき、代理モデルの仮定、獲得関数を最大化する数値計算が関わります。本章では材料試験を使い、何を固定して何を変えたかを確かめながら、四つの実験を読みます。</p>
 <section id="sec-bo-scaling" class="level2">
 <h2 class="anchored" data-anchor-id="sec-bo-scaling">7.1 入力の正規化と出力の標準化</h2>
@@ -397,19 +404,19 @@ window.Quarto = {
 <span id="cb1-9"><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a>)</span>
 <span id="cb1-10"><a href="#cb1-10" aria-hidden="true" tabindex="-1"></a>gp.fit()</span></code></pre></div><button title="コピー" class="code-copy-button"><i class="bi"></i></button></div>
 <p>標準化は出力の中心と尺度を調整します。学習データの平均 <span class="math inline">\(m_y\)</span> と正の標準偏差 <span class="math inline">\(s_y\)</span> を使い、<span class="math inline">\(y'=(y-m_y)/s_y\)</span> と変換すると、分散は <span class="math inline">\(s_y^2\)</span> で割ります。BoTorchの <code>Standardize</code> を使うこのモデルでは、<code>posterior</code> が返す強度を元のMPa尺度で読みます。獲得関数の <code>best_f</code> に観測最大値を渡す場合も、posteriorと同じ尺度にします <span class="citation" data-cites="botorch-getting-started">(<a href="../references.html#ref-botorch-getting-started" role="doc-biblioref">BoTorch Contributors, 日付なし-a</a>)</span>。</p>
-<p>Notebookでは、温度と添加比の合成試験に8点の初期設計を使います。初期設計のシードを4通り変え、各回でデータ・モデル・出力標準化・256の検証点を揃えて、入力の正規化だけを変えます。平均予測と基準値の平方誤差の平均に平方根を取ったRMSEを計算します。</p>
+<p>Notebookでは、温度と添加比の合成試験に8点の初期設計を使います。初期設計のシードを20通り変え、各回でデータ・モデル・出力標準化・256の検証点を揃えて、入力の正規化だけを変えます。平均予測と基準値の平方誤差の平均に平方根を取ったRMSEを計算します。</p>
 <div id="fig-bo-scaling" class="quarto-float quarto-figure quarto-figure-center anchored" data-fig-pos="!ht">
 <figure class="quarto-float quarto-float-fig figure">
 <div aria-describedby="fig-bo-scaling-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
 <img src="../figures/ch07_scaling.svg" class="img-fluid figure-img" style="width:94.0%" data-fig-pos="!ht">
 </div>
 <figcaption class="quarto-float-caption-bottom quarto-float-caption quarto-float-fig" id="fig-bo-scaling-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
-図&nbsp;7.1: 4通りの初期設計に対する、物理座標のまま学習した場合と入力を正規化した場合のRMSE。各線は同じ設計と同じ256検証点の組を結ぶ。
+図&nbsp;7.1: 20通りの初期設計に対するRMSE。細線は同じ設計と同じ256検証点での対応、太線は中央値、縦棒は第1〜第3四分位。
 </figcaption>
 </figure>
 </div>
-<p>RMSEの中央値は、物理座標のモデルで <strong>7.82 MPa</strong>、入力を正規化したモデルで <strong>4.36 MPa</strong> でした。この合成試験では4回の比較中4回で正規化後の誤差が小さくなりました。</p>
-<p>この差には、採用したGPのカーネル・長さ尺度の事前設定と入力尺度の組み合わせが関わります。温度の尺度で全列を割る操作や、測定器に入力する値を二重に変換する操作は避けます。最初に候補の列順、元の単位、入力変換後の範囲、返却される座標を確認します。</p>
+<p>RMSEの中央値は、物理座標のモデルで <strong>7.71 MPa</strong>、入力を正規化したモデルで <strong>3.87 MPa</strong> でした。この合成試験では20回の比較中19回で正規化後の誤差が小さくなりました。</p>
+<p>この差には、採用したGPのカーネル・長さ尺度の事前設定と入力尺度の組み合わせが関わります。比較にはBoTorch 0.18.1を使います。BoTorch 0.12.0では多くの既定モデルで次元に応じた対数正規のハイパーパラメータ事前分布が導入されました。版やカーネル、事前分布を変えると同じRMSE差が再現されるとは限りません <span class="citation" data-cites="botorch-changelog">(<a href="../references.html#ref-botorch-changelog" role="doc-biblioref">BoTorch contributors 2024年</a>)</span>。温度の尺度で全列を割る操作や、測定器に入力する値を二重に変換する操作は避けます。最初に候補の列順、元の単位、入力変換後の範囲、返却される座標を確認します。</p>
 </section>
 <section id="sec-bo-noise" class="level2">
 <h2 class="anchored" data-anchor-id="sec-bo-noise">7.2 観測ノイズと、測定済みの最良値</h2>
@@ -419,7 +426,13 @@ window.Quarto = {
 I(F_B,F_X)=\max\!\left(0,\ \max F_X-\max F_B\right)
 \]</span></p>
 <p>です。その期待値がnoisy EIの考え方です。実行例の <code>qLogNoisyExpectedImprovement</code> は、既観測入力を <code>X_baseline</code> に渡し、同時サンプリングと対数領域の近似で計算します。初期観測の誤差が大きいときの比較対象として使います <span class="citation" data-cites="letham2019 ament2023">(<a href="../references.html#ref-letham2019" role="doc-biblioref">Letham ほか 2019年</a>; <a href="../references.html#ref-ament2023" role="doc-biblioref">Ament ほか 2023年</a>)</span>。</p>
-<p>三つの条件を同じ1次元合成試験で比べます。<strong>各seed・各条件で初期4点と追加4点</strong>です。既測定点を除いた残りの候補から1点を選びます。ノイズありの二条件では、同一seed・同一温度に同じ誤差を割り当て、モデルにも同じ既知の観測分散 <span class="math inline">\(4\,\mathrm{MPa}^2\)</span> を渡します。ノイズなしの設定では測定は決定論的で、モデルの計算用に第1章と同じ小さな分散 <span class="math inline">\(0.01\,\mathrm{MPa}^2\)</span> を指定します。</p>
+<p>三つの条件を同じ1次元合成試験で比べます。<strong>各seed・各条件で初期4点と追加4点</strong>です。既測定点を除いた残りの候補から1点を選びます。ここでは各手法で「未測定温度をどう選ぶか」を同じ候補集合・予算で比較するためです。実験で誤差が大きい場合は、有望な温度を反復し、個別観測か反復平均とその分散をモデルに渡す方策も候補になります。ノイズありの二条件では、同一seed・同一温度に同じ誤差を割り当て、モデルにも同じ既知の観測分散 <span class="math inline">\(4\,\mathrm{MPa}^2\)</span> を渡します。ノイズなしの設定では測定は決定論的で、モデルの計算用に第1章と同じ小さな分散 <span class="math inline">\(0.01\,\mathrm{MPa}^2\)</span> を指定します。</p>
+<div id="tbl-ch07-1" class="quarto-float quarto-figure quarto-figure-center anchored">
+<figure class="quarto-float quarto-float-tbl figure">
+<figcaption class="quarto-float-caption-top quarto-float-caption quarto-float-tbl" id="tbl-ch07-1-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+表&nbsp;7.1: 測定ノイズと獲得関数の比較条件
+</figcaption>
+<div aria-describedby="tbl-ch07-1-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
 <table class="caption-top table">
 <colgroup>
 <col style="width: 33%">
@@ -446,49 +459,66 @@ I(F_B,F_X)=\max\!\left(0,\ \max F_X-\max F_B\right)
 </tr>
 </tbody>
 </table>
+</div>
+</figure>
+</div>
 <div id="fig-bo-measurement-noise" class="quarto-float quarto-figure quarto-figure-center anchored" data-fig-pos="!ht">
 <figure class="quarto-float quarto-float-fig figure">
 <div aria-describedby="fig-bo-measurement-noise-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
 <img src="../figures/ch07_measurement_noise.svg" class="img-fluid figure-img" style="width:100.0%" data-fig-pos="!ht">
 </div>
 <figcaption class="quarto-float-caption-bottom quarto-float-caption quarto-float-fig" id="fig-bo-measurement-noise-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
-図&nbsp;7.2: 左は測定した点の潜在真値の最良推移。細線は個別seed、太線は4seedの中央値。右は事後平均で選んだ測定済み推薦点の真値と、41候補の最大との差。横線は中央値。
+図&nbsp;7.2: 左は測定した点の潜在真値の最良推移。太線は20シードの中央値、帯は第1〜第3四分位。右は推薦点の真値と41候補の最大との差。横線は中央値、縦棒は第1〜第3四分位。
 </figcaption>
 </figure>
 </div>
+<div id="tbl-ch07-noise" class="quarto-float quarto-figure quarto-figure-center anchored">
+<figure class="quarto-float quarto-float-tbl figure">
+<figcaption class="quarto-float-caption-top quarto-float-caption quarto-float-tbl" id="tbl-ch07-noise-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+表&nbsp;7.2: 測定ノイズの比較結果
+</figcaption>
+<div aria-describedby="tbl-ch07-noise-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
 <table class="caption-top table">
+<colgroup>
+<col style="width: 27%">
+<col style="width: 36%">
+<col style="width: 36%">
+</colgroup>
 <thead>
 <tr class="header">
 <th>条件</th>
 <th style="text-align: right;">最良観測値の中央値 [MPa]</th>
-<th style="text-align: right;">推薦点と最大値の差の中央値 [MPa]</th>
+<th style="text-align: right;">最大値との差の中央値［第1〜第3四分位］ [MPa]</th>
 </tr>
 </thead>
 <tbody>
 <tr class="odd">
 <td>ノイズなし・LogEI</td>
 <td style="text-align: right;">80.36</td>
-<td style="text-align: right;">0.00</td>
+<td style="text-align: right;">0.00［0.00〜0.00］</td>
 </tr>
 <tr class="even">
 <td>ノイズあり・LogEI</td>
-<td style="text-align: right;">81.89</td>
-<td style="text-align: right;">1.02</td>
+<td style="text-align: right;">81.74</td>
+<td style="text-align: right;">1.11［0.68〜1.19］</td>
 </tr>
 <tr class="odd">
 <td>ノイズあり・qLogNEI</td>
-<td style="text-align: right;">82.13</td>
-<td style="text-align: right;">1.02</td>
+<td style="text-align: right;">81.64</td>
+<td style="text-align: right;">0.94［0.68〜1.14］</td>
 </tr>
 </tbody>
 </table>
+</div>
+</figure>
+</div>
 <p>ノイズありでは最良観測値が高く出ても、推薦点と真の最大との間に差が残りました。右列で0は最大値の温度を推薦できたことを示します。</p>
-<p>潜在真値は合成実験の<strong>評価</strong>にだけ使っています。実データでは、推薦候補の再測定や、別に用意した検証データが必要です。4seedの結果にはばらつきがあります。実験を比較するときは、seedごとの値と測定予算を一緒に示し、複数の問題でも同じ傾向が出るかを調べます。</p>
+<p>潜在真値は合成実験の<strong>評価</strong>にだけ使っています。実データでは、推薦候補の再測定や、別に用意した検証データが必要です。20シードによる単一の合成問題での例示です。実験を比較するときは、seedごとの値と測定予算を一緒に示し、複数の問題でも同じ傾向が出るかを調べます。</p>
 </section>
 <section id="gpの仮定と訓練データだけでは見えない誤差" class="level2">
 <h2 class="anchored" data-anchor-id="gpの仮定と訓練データだけでは見えない誤差">7.3 GPの仮定と、訓練データだけでは見えない誤差</h2>
 <p>測定点の近くで予測が合っていても、未知領域の予測が良いとは限りません。例えば、実際には特定温度を境に相変化が起きる材料を、全領域で同じ滑らかさのカーネルで表すと、境界をまたいで過度に平均化することがあります。長さ尺度が極端に短くなると、測った点の近くだけに合わせ、温度の少しの差で予測が大きく変わる場合があります。</p>
-<p>モデルの診断では、学習に使わなかった温度や反復測定で、誤差と区間を確かめます。観測値に対しては、潜在区間に測定ノイズを加えた予測区間を使います。温度域ごとの残差、測定機器の違い、見かけの外れ値を記録すると、どの仮定を変えるべきか判断しやすくなります。比較する前処理や獲得関数を決めるデータと、最終性能を報告するデータの役割も分けます。</p>
+<p>モデルの診断では、学習に使わなかった温度や反復測定で、誤差と区間を確かめます。観測値に対しては、潜在区間に測定ノイズを加えた予測区間を使います。温度によってノイズ分散が違うときは、反復測定からその違いを確認します。測定分散が入力ごとに既知なら <code>train_Yvar</code> に各観測の分散を渡せます。未知なら反復設計や異分散を扱うモデルを検討します。温度域ごとの残差、測定機器の違い、見かけの外れ値を記録すると、どの仮定を変えるべきか判断しやすくなります。比較する前処理や獲得関数を決めるデータと、最終性能を報告するデータの役割も分けます。</p>
 </section>
 <section id="sec-bo-solver" class="level2">
 <h2 class="anchored" data-anchor-id="sec-bo-solver">7.4 局所解と初期点を診断する</h2>
@@ -520,6 +550,12 @@ I(F_B,F_X)=\max\!\left(0,\ \max F_X-\max F_B\right)
 </figcaption>
 </figure>
 </div>
+<div id="tbl-ch07-batch" class="quarto-float quarto-figure quarto-figure-center anchored">
+<figure class="quarto-float quarto-float-tbl figure">
+<figcaption class="quarto-float-caption-top quarto-float-caption quarto-float-tbl" id="tbl-ch07-batch-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+表&nbsp;7.3: 2点を提案する方式の比較
+</figcaption>
+<div aria-describedby="tbl-ch07-batch-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
 <table class="caption-top table">
 <thead>
 <tr class="header">
@@ -541,10 +577,14 @@ I(F_B,F_X)=\max\!\left(0,\ \max F_X-\max F_B\right)
 </tr>
 </tbody>
 </table>
+</div>
+</figure>
+</div>
 <p>この図は2点の獲得値を診断するものです。比較した値には、128個の準モンテカルロサンプルを使う近似の影響が含まれます。測定を実行するなら各組は2回分の評価予算を使います。装置が2台でも準備と検査が直列なら、経過時間は半分とは限りません。実験のログには評価済み点数、提案時間、装置で測定している時間、試料準備などの待ち時間を分けて残します。</p>
+<p>非同期試験では、結果が返った点だけでGPを更新し、測定中の点を獲得関数の <code>X_pending</code> に渡します。BoTorchの <code>qLogExpectedImprovement</code> や <code>qLogNoisyExpectedImprovement</code> では、保留中の入力も候補評価に含められます。例えば2台のうち1台が空いたら、測定中の温度を <code>X_pending</code> として残し、空いた枠に <code>q=1</code> で提案します。保留中の点の結果や状態が変わるたびにリストを更新します <span class="citation" data-cites="botorch-acquisition">(<a href="../references.html#ref-botorch-acquisition" role="doc-biblioref">BoTorch contributors, 日付なし</a>)</span>。</p>
 </section>
-<section id="再現性と演習" class="level2">
-<h2 class="anchored" data-anchor-id="再現性と演習">7.6 再現性と演習</h2>
+<section id="章末演習とまとめ" class="level2">
+<h2 class="anchored" data-anchor-id="章末演習とまとめ">7.6 章末演習とまとめ</h2>
 <p>探索範囲、初期点、測定ノイズ、乱数シード、予算、失敗を記録すると、候補を選んだ理由を追えます。<a href="../chapters/08-active-learning.html">第8章</a>では、同じ材料で合否を予測するために測定点を選びます。</p>
 <ol type="1">
 <li><strong>確認。</strong> 第7.1節の比較で固定した条件を挙げ、入力を物理座標から正規化する式を書いてください。</li>
@@ -555,7 +595,13 @@ I(F_B,F_X)=\max\!\left(0,\ \max F_X-\max F_B\right)
 
 <div id="refs" class="references csl-bib-body hanging-indent" role="list" style="display: none">
 <div id="ref-ament2023" class="csl-entry" role="listitem">
-Ament, Sebastian, Samuel Daulton, David Eriksson, Maximilian Balandat, と Eytan Bakshy. 2023年. <span>「Unexpected Improvements to Expected Improvement for Bayesian Optimization」</span>. <em>Advances in Neural Information Processing Systems</em> 36. <a href="https://doi.org/10.52202/075280-0904">https://doi.org/10.52202/075280-0904</a>.
+Ament, Sebastian, Samuel Daulton, David Eriksson, Maximilian Balandat, と Eytan Bakshy. 2023年. <span>“Unexpected Improvements to Expected Improvement for Bayesian Optimization”</span>. <em>Advances in Neural Information Processing Systems</em> 36. <a href="https://doi.org/10.52202/075280-0904">https://doi.org/10.52202/075280-0904</a>.
+</div>
+<div id="ref-botorch-changelog" class="csl-entry" role="listitem">
+BoTorch contributors. 2024年. <em><span>BoTorch</span> Changelog, Version 0.12.0</em>. <a href="https://github.com/meta-pytorch/botorch/blob/v0.12.0/CHANGELOG.md">https://github.com/meta-pytorch/botorch/blob/v0.12.0/CHANGELOG.md</a>.
+</div>
+<div id="ref-botorch-acquisition" class="csl-entry" role="listitem">
+BoTorch contributors. 日付なし. <em><span>BoTorch</span> Acquisition Function API</em>. <a href="https://botorch.readthedocs.io/en/v0.18.1/acquisition.html">https://botorch.readthedocs.io/en/v0.18.1/acquisition.html</a>.
 </div>
 <div id="ref-botorch-getting-started" class="csl-entry" role="listitem">
 BoTorch Contributors. 日付なし-a. <em>Getting Started</em>. <a href="https://botorch.org/docs/getting_started">https://botorch.org/docs/getting_started</a>.
@@ -564,7 +610,7 @@ BoTorch Contributors. 日付なし-a. <em>Getting Started</em>. <a href="https:/
 BoTorch Contributors. 日付なし-b. <em>Optimization</em>. <a href="https://botorch.org/docs/optimization">https://botorch.org/docs/optimization</a>.
 </div>
 <div id="ref-letham2019" class="csl-entry" role="listitem">
-Letham, Benjamin, Brian Karrer, Guilherme Ottoni, と Eytan Bakshy. 2019年. <span>「Constrained Bayesian Optimization with Noisy Experiments」</span>. <em>Bayesian Analysis</em> 14 (2): 495–519. <a href="https://doi.org/10.1214/18-BA1110">https://doi.org/10.1214/18-BA1110</a>.
+Letham, Benjamin, Brian Karrer, Guilherme Ottoni, と Eytan Bakshy. 2019年. <span>“Constrained Bayesian Optimization with Noisy Experiments”</span>. <em>Bayesian Analysis</em> 14 (2): 495–519. <a href="https://doi.org/10.1214/18-BA1110">https://doi.org/10.1214/18-BA1110</a>.
 </div>
 </div>
 </section>

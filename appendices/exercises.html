@@ -37,7 +37,7 @@ ul.task-list li input[type="checkbox"] {
 <script src="../site_libs/quarto-search/fuse.min.js"></script>
 <script src="../site_libs/quarto-search/quarto-search.js"></script>
 <meta name="quarto:offset" content="../">
-<link href="../appendices/term-index.html" rel="next">
+<link href="../appendices/reproduction.html" rel="next">
 <link href="../references.html" rel="prev">
 <script src="../site_libs/quarto-html/quarto.js" type="module"></script>
 <script src="../site_libs/quarto-html/tabsets/tabsets.js" type="module"></script>
@@ -137,7 +137,7 @@ window.Quarto = {
     <div class="sidebar-title mb-0 py-0">
       <a href="../">Pythonで学ぶベイズ最適化と能動学習</a> 
         <div class="sidebar-tools-main">
-    <a href="../BO_AL_book_vol1_v1.0.0.pdf" title="Download PDF" class="quarto-navigation-tool px-1" aria-label="Download PDF"><i class="bi bi-file-pdf"></i></a>
+    <a href="../BO_AL_book_vol1_v1.0.1.pdf" title="Download PDF" class="quarto-navigation-tool px-1" aria-label="Download PDF"><i class="bi bi-file-pdf"></i></a>
 </div>
     </div>
       </div>
@@ -274,6 +274,12 @@ window.Quarto = {
 </li>
           <li class="sidebar-item">
   <div class="sidebar-item-container"> 
+  <a href="../appendices/reproduction.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">実験の生成式とAPI対応</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
   <a href="../appendices/term-index.html" class="sidebar-item-text sidebar-link">
  <span class="menu-text">索引</span></a>
   </div>
@@ -345,7 +351,7 @@ window.Quarto = {
 <h2 class="anchored" data-anchor-id="第2章">第2章</h2>
 <ol type="1">
 <li>事後分散は <span class="math inline">\(1/(1/25+1/9)=225/34\)</span> です。平均は <span class="math inline">\(70.735\)</span> MPa、標準偏差は <span class="math inline">\(2.572\)</span> MPaです。事前精度 <span class="math inline">\(1/25\)</span> と、1件の観測の精度 <span class="math inline">\(1/9\)</span> を足します。</li>
-<li><code>noise_sd</code> を6にすると1件の精度は <span class="math inline">\(1/36\)</span> となります。4件の事後平均は約71.838 MPa、標準偏差は約2.572 MPaです。標準偏差3 MPaの設定では同じ4件で約72.294 MPa、1.437 MPaです。精度が下がると事前平均により近くなります。</li>
+<li><code>noise_sd</code> を6にすると1件の精度は <span class="math inline">\(1/36\)</span> となります。4件の事後平均は約71.838 MPa、標準偏差は約2.572 MPaです。標準偏差3 MPaの設定では同じ4件で約72.294 MPa、1.437 MPaです。精度が下がると事前平均により近くなります。 観測平均が同じなら、標準偏差6 MPaの測定4件の精度 <span class="math inline">\(4/6^2=1/9\)</span> は、標準偏差3 MPaの測定1件の精度 <span class="math inline">\(1/3^2\)</span> に等しく、同じ事前の下で事後平均と分散は一致します。</li>
 <li><span class="math inline">\(c=\rho(4)(5)\)</span> を条件付き正規分布の式に入れます。<span class="math inline">\(\rho=0\)</span> なら平均75 MPa、分散25 MPa²で周辺分布と一致します。<span class="math inline">\(\rho=-0.7\)</span> なら平均は71.5 MPa、分散は12.75 MPa²です。符号は平均の更新方向に関わり、分散を減らす項には <span class="math inline">\(c^2\)</span> が入ります。</li>
 </ol>
 </section>
@@ -919,8 +925,8 @@ window.Quarto = {
       </a>          
   </div>
   <div class="nav-page nav-page-next">
-      <a href="../appendices/term-index.html" class="pagination-link" aria-label="索引">
-        <span class="nav-page-text">索引</span> <i class="bi bi-arrow-right-short"></i>
+      <a href="../appendices/reproduction.html" class="pagination-link" aria-label="実験の生成式とAPI対応">
+        <span class="nav-page-text">実験の生成式とAPI対応</span> <i class="bi bi-arrow-right-short"></i>
       </a>
   </div>
 </nav>
