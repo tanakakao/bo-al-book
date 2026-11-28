@@ -191,7 +191,7 @@ window.Quarto = {
     <div class="sidebar-title mb-0 py-0">
       <a href="../">Pythonで学ぶベイズ最適化と能動学習</a> 
         <div class="sidebar-tools-main">
-    <a href="../BO_AL_book_vol1_v1.0.0.pdf" title="Download PDF" class="quarto-navigation-tool px-1" aria-label="Download PDF"><i class="bi bi-file-pdf"></i></a>
+    <a href="../BO_AL_book_vol1_v1.0.1.pdf" title="Download PDF" class="quarto-navigation-tool px-1" aria-label="Download PDF"><i class="bi bi-file-pdf"></i></a>
 </div>
     </div>
       </div>
@@ -328,6 +328,12 @@ window.Quarto = {
 </li>
           <li class="sidebar-item">
   <div class="sidebar-item-container"> 
+  <a href="../appendices/reproduction.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">実験の生成式とAPI対応</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
   <a href="../appendices/term-index.html" class="sidebar-item-text sidebar-link">
  <span class="menu-text">索引</span></a>
   </div>
@@ -355,7 +361,7 @@ window.Quarto = {
   <li><a href="#正規分布と多変量正規分布" id="toc-正規分布と多変量正規分布" class="nav-link" data-scroll-target="#正規分布と多変量正規分布">2.3 正規分布と多変量正規分布</a></li>
   <li><a href="#ix-section-2-4" id="toc-ix-section-2-4" class="nav-link" data-scroll-target="#ix-section-2-4">2.4 条件付き確率とベイズの定理</a></li>
   <li><a href="#ix-section-2-5" id="toc-ix-section-2-5" class="nav-link" data-scroll-target="#ix-section-2-5">2.5 正規分布で二つの更新を計算する</a></li>
-  <li><a href="#適用条件と演習" id="toc-適用条件と演習" class="nav-link" data-scroll-target="#適用条件と演習">2.6 適用条件と演習</a></li>
+  <li><a href="#適用条件と章末演習" id="toc-適用条件と章末演習" class="nav-link" data-scroll-target="#適用条件と章末演習">2.6 適用条件と章末演習</a></li>
   </ul>
 </nav>
     </div>
@@ -381,6 +387,7 @@ window.Quarto = {
 </header>
 
 
+<p><strong>学習目標</strong>　測定後の不確かさを確率分布で表し、条件付き正規分布を計算する。</p>
 <p>処理温度を固定して試片を測ると、引張強度にはばらつきが出ます。この章では、繰り返し測った結果を使って未知の平均強度を推定します。さらに、別々の温度での強度を共に考え、一方を知った後のもう一方の分布を計算します。平均・分散・共分散・条件付き確率の意味が分かると、第4章の予測式を読みやすくなります。</p>
 <section id="sec-probability-first-run" class="level2">
 <h2 class="anchored" data-anchor-id="sec-probability-first-run">2.1 測定から未知の平均を推定する</h2>
@@ -523,12 +530,12 @@ V\mid U=u\sim
 </figcaption>
 </figure>
 </div>
-<p>右図では、<span class="math inline">\(V\)</span> の平均が75から <strong>78.50 MPa</strong>、標準偏差が5から <strong>3.57 MPa</strong> に変わりました。条件付き密度の式を、同時密度を周辺密度で割る計算と照合しています。</p>
+<p>図2.2の右では、<span class="math inline">\(V\)</span> の平均が75から <strong>78.50 MPa</strong>、標準偏差が5から <strong>3.57 MPa</strong> に変わりました。条件付き密度の式を、同時密度を周辺密度で割る計算と照合しています。</p>
 <p>この小例では <span class="math inline">\(U\)</span> の値を正確に知ったとしています。実験で <span class="math inline">\(U\)</span> をノイズ付きで測った場合は、条件に使う観測の分散が変わります。<a href="../chapters/04-gp-prediction.html#sec-gp-prediction">第4章</a>は、この条件付けを複数の測定と複数の予測位置へ広げます。</p>
 </section>
 </section>
-<section id="適用条件と演習" class="level2">
-<h2 class="anchored" data-anchor-id="適用条件と演習">2.6 適用条件と演習</h2>
+<section id="適用条件と章末演習" class="level2">
+<h2 class="anchored" data-anchor-id="適用条件と章末演習">2.6 適用条件と章末演習</h2>
 <p>繰り返し測定の例は、誤差の独立性と既知の測定分散を仮定しています。装置の温度がゆっくり変化し、測定誤差が連続して同じ方向に寄るときは、独立として計算した事後分布の幅が狭くなりすぎることがあります。二温度の例の相関は、二つの強度についての同時分布を表します。温度条件を変える介入の効果を相関だけから推定することはできません。</p>
 <ol type="1">
 <li><strong>確認。</strong> 観測が <span class="math inline">\(y_1=71\)</span> の1件であるとき、<a href="#eq-probability-normal-update" class="quarto-xref">式&nbsp;<span>2.2</span></a> から事後平均と標準偏差を求めましょう。</li>

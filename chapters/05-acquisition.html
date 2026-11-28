@@ -191,7 +191,7 @@ window.Quarto = {
     <div class="sidebar-title mb-0 py-0">
       <a href="../">Pythonで学ぶベイズ最適化と能動学習</a> 
         <div class="sidebar-tools-main">
-    <a href="../BO_AL_book_vol1_v1.0.0.pdf" title="Download PDF" class="quarto-navigation-tool px-1" aria-label="Download PDF"><i class="bi bi-file-pdf"></i></a>
+    <a href="../BO_AL_book_vol1_v1.0.1.pdf" title="Download PDF" class="quarto-navigation-tool px-1" aria-label="Download PDF"><i class="bi bi-file-pdf"></i></a>
 </div>
     </div>
       </div>
@@ -328,6 +328,12 @@ window.Quarto = {
 </li>
           <li class="sidebar-item">
   <div class="sidebar-item-container"> 
+  <a href="../appendices/reproduction.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">実験の生成式とAPI対応</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
   <a href="../appendices/term-index.html" class="sidebar-item-text sidebar-link">
  <span class="menu-text">索引</span></a>
   </div>
@@ -383,32 +389,35 @@ window.Quarto = {
 </header>
 
 
+<p><strong>学習目標</strong>　PI・EI・UCBを予測分布から評価し、ノイズや同時に選ぶ点数に応じて使い分ける。</p>
 <p>この章では、<strong>次に一回だけ測れるとき、何を根拠に温度を選ぶか</strong>を考えます。前章のGPから得た同じ予測分布で、改善確率（PI）、期待改善量（EI）、上側信頼限界（UCB）を比較します。EIは期待値の定義から導き、計算機で値がゼロに丸まる領域をLogEIで調べます。</p>
 <section id="sec-acq-first-run" class="level2">
 <h2 class="anchored" data-anchor-id="sec-acq-first-run">5.1 同じ事後で候補を提案する</h2>
 <p>仮想材料の強度を最大化します。使える入力は <a href="../chapters/04-gp-prediction.html#sec-gp-first-run">第4章</a> と同じ正規化温度 <span class="math inline">\(x\in[0,1]\)</span> です。獲得関数 <span class="math inline">\(a(x)\)</span> は、現在の情報を使って、温度 <span class="math inline">\(x\)</span> を<strong>次に測る価値</strong>を数値にしたものです。</p>
 <p>6点の観測データを <span class="math inline">\(\mathcal D=\{(x_i,y_i)\}_{i=1}^6\)</span>、候補温度での潜在強度を <span class="math inline">\(F_x=f(x)\)</span> とします。GPによる単点事後分布は <span class="math inline">\(F_x\mid\mathcal D\sim\mathcal N(\mu(x),\sigma^2(x))\)</span> です。<span class="math inline">\(\mu(x)\)</span> と <span class="math inline">\(\sigma(x)\)</span> は <a href="../chapters/04-gp-prediction.html#sec-gp-observation-interval">第4章の予測区間</a> で青い帯に使った平均と標準偏差です。今回の設定では、例えば次の値を両章で共有しています。</p>
 <p>正規化温度 <span class="math inline">\(x=0.50\)</span>（160 °C）の潜在強度は、事後平均 <strong>75.56 MPa</strong>、標準偏差 <strong>2.00 MPa</strong> です。この二つの値を出発点にすると、同じ温度について予測した強度を次の測定候補の評価に使えます。</p>
-<p>改善の基準値を <span class="math inline">\(b\)</span> と書きます。この例では、観測最大値を固定した <span class="math inline">\(b\)</span> として使います。測定ノイズの影響で観測最大値と測定済み温度の潜在強度の最大値には差が出ることがあります。第5.6節で、この差が候補選びに与える影響を扱います。</p>
+<p>改善の基準値を <span class="math inline">\(b\)</span> と書きます。<strong>観測最大値を潜在強度の基準として使いやすいのは、主に無雑音、またはノイズが候補間の差に比べて小さいとき</strong>です。ここでは計算法を同じ尺度で比べるために、ノイズ付きの6点でも観測最大値を共通の固定閾値にします。これは既測定点における最良の潜在強度の推定とは別の設定です。例えば真の強度が80と79 MPaの点で、誤差が0と+4 MPaなら、観測最大値は83 MPaになります。基準が過大だと改善を見込みにくくなります。第7章では測定済み入力の潜在値も同時事後で扱うqLogNEIを比較します。</p>
 <p><a href="../notebooks/ch05_acquisition.ipynb">第5章のNotebook</a>では、予測分布を渡し、公開の獲得関数で候補を提案します。</p>
 <div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb1"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> torch</span>
 <span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> botorch.acquisition.analytic <span class="im">import</span> (</span>
-<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a>    LogExpectedImprovement, ProbabilityOfImprovement, UpperConfidenceBound,</span>
-<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a>)</span>
-<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> robotorchan.optim <span class="im">import</span> optimize_acqf</span>
-<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> experiment <span class="im">import</span> DTYPE, fit_material_gp, observations, setup</span>
-<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a>setup()</span>
-<span id="cb1-9"><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a>train_x, train_y, train_yvar <span class="op">=</span> observations()</span>
-<span id="cb1-10"><a href="#cb1-10" aria-hidden="true" tabindex="-1"></a>model <span class="op">=</span> fit_material_gp(train_x, train_y, train_yvar)</span>
-<span id="cb1-11"><a href="#cb1-11" aria-hidden="true" tabindex="-1"></a>best_f <span class="op">=</span> train_y.<span class="bu">max</span>()</span>
-<span id="cb1-12"><a href="#cb1-12" aria-hidden="true" tabindex="-1"></a>bounds <span class="op">=</span> torch.tensor([[<span class="fl">0.0</span>], [<span class="fl">1.0</span>]], dtype<span class="op">=</span>DTYPE)</span>
-<span id="cb1-13"><a href="#cb1-13" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb1-14"><a href="#cb1-14" aria-hidden="true" tabindex="-1"></a>acquisitions <span class="op">=</span> {</span>
-<span id="cb1-15"><a href="#cb1-15" aria-hidden="true" tabindex="-1"></a>    <span class="st">"PI"</span>: ProbabilityOfImprovement(model, best_f<span class="op">=</span>best_f),</span>
-<span id="cb1-16"><a href="#cb1-16" aria-hidden="true" tabindex="-1"></a>    <span class="st">"LogEI"</span>: LogExpectedImprovement(model, best_f<span class="op">=</span>best_f),</span>
-<span id="cb1-17"><a href="#cb1-17" aria-hidden="true" tabindex="-1"></a>    <span class="st">"UCB"</span>: UpperConfidenceBound(model, beta<span class="op">=</span><span class="fl">4.0</span>),</span>
-<span id="cb1-18"><a href="#cb1-18" aria-hidden="true" tabindex="-1"></a>}</span></code></pre></div><button title="コピー" class="code-copy-button"><i class="bi"></i></button></div>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a>    LogExpectedImprovement,</span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a>    ProbabilityOfImprovement,</span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a>    UpperConfidenceBound,</span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a>)</span>
+<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> robotorchan.optim <span class="im">import</span> optimize_acqf</span>
+<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> experiment <span class="im">import</span> DTYPE, fit_material_gp, observations, setup</span>
+<span id="cb1-9"><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-10"><a href="#cb1-10" aria-hidden="true" tabindex="-1"></a>setup()</span>
+<span id="cb1-11"><a href="#cb1-11" aria-hidden="true" tabindex="-1"></a>train_x, train_y, train_yvar <span class="op">=</span> observations()</span>
+<span id="cb1-12"><a href="#cb1-12" aria-hidden="true" tabindex="-1"></a>model <span class="op">=</span> fit_material_gp(train_x, train_y, train_yvar)</span>
+<span id="cb1-13"><a href="#cb1-13" aria-hidden="true" tabindex="-1"></a>best_f <span class="op">=</span> train_y.<span class="bu">max</span>()</span>
+<span id="cb1-14"><a href="#cb1-14" aria-hidden="true" tabindex="-1"></a>bounds <span class="op">=</span> torch.tensor([[<span class="fl">0.0</span>], [<span class="fl">1.0</span>]], dtype<span class="op">=</span>DTYPE)</span>
+<span id="cb1-15"><a href="#cb1-15" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-16"><a href="#cb1-16" aria-hidden="true" tabindex="-1"></a>acquisitions <span class="op">=</span> {</span>
+<span id="cb1-17"><a href="#cb1-17" aria-hidden="true" tabindex="-1"></a>    <span class="st">"PI"</span>: ProbabilityOfImprovement(model, best_f<span class="op">=</span>best_f),</span>
+<span id="cb1-18"><a href="#cb1-18" aria-hidden="true" tabindex="-1"></a>    <span class="st">"LogEI"</span>: LogExpectedImprovement(model, best_f<span class="op">=</span>best_f),</span>
+<span id="cb1-19"><a href="#cb1-19" aria-hidden="true" tabindex="-1"></a>    <span class="st">"UCB"</span>: UpperConfidenceBound(model, beta<span class="op">=</span><span class="fl">4.0</span>),</span>
+<span id="cb1-20"><a href="#cb1-20" aria-hidden="true" tabindex="-1"></a>}</span></code></pre></div><button title="コピー" class="code-copy-button"><i class="bi"></i></button></div>
 <p>次に、3つの基準それぞれで測定候補を1点求めます。EIの候補計算には対数スコアのLogEIを使い、図の縦軸は元のEI [MPa] で表示します。</p>
 <div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb2"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="cf">for</span> name, acquisition <span class="kw">in</span> acquisitions.items():</span>
 <span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a>    candidate, _ <span class="op">=</span> optimize_acqf(</span>
@@ -428,6 +437,12 @@ window.Quarto = {
 </figure>
 </div>
 <p>閾値はこの実行で約 <strong>83.063 MPa</strong> です。</p>
+<div id="tbl-ch05-numbers" class="quarto-float quarto-figure quarto-figure-center anchored">
+<figure class="quarto-float quarto-float-tbl figure">
+<figcaption class="quarto-float-caption-top quarto-float-caption quarto-float-tbl" id="tbl-ch05-numbers-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+表&nbsp;5.1: 獲得関数ごとの提案温度
+</figcaption>
+<div aria-describedby="tbl-ch05-numbers-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
 <table class="caption-top table">
 <thead>
 <tr class="header">
@@ -458,6 +473,9 @@ window.Quarto = {
 </tr>
 </tbody>
 </table>
+</div>
+</figure>
+</div>
 <p>この実行では3つとも同じ強度の山を選びました。基準によって判断が分かれる場合は、第5.3節の二候補で確かめます。</p>
 <p>グリッド入力の形は <code>(401, 1, 1)</code> です。先頭の401は比較する候補組の数、二番目の1が同時に選ぶ点数 <span class="math inline">\(q\)</span>、最後の1が入力の列数 <span class="math inline">\(d\)</span> です。一般に、<span class="math inline">\(B\)</span> 組の候補を一度に採点するテンソルは <span class="math inline">\((B,q,d)\)</span> です。APIが返す候補の形はこの例では <code>(1, 1)</code> です。<span class="math inline">\(q=1\)</span> は一つの温度を提案する設定です。候補の微小な差を読むときは、図のグリッド間隔と連続ソルバーの違いにも注意します。</p>
 </section>
@@ -541,6 +559,7 @@ window.Quarto = {
 </tbody>
 </table>
 <p>EIを「改善確率 <span class="math inline">\(\times\)</span> 改善した場合の平均改善量」と考えると、二候補の違いを説明できます。<span class="math inline">\(P(F_x&gt;b\mid\mathcal D)&gt;0\)</span> のとき、期待値を改善の有無で分けると、改善しない場合の項がゼロになるためです。Aは基準を超えやすく、Bは基準を超えた場合の伸びが大きい候補です。Notebookでは、色付き部分の面積を正規分布の右裾確率で計算し、EIは超過量を重みにした数値積分で求めます。</p>
+<p>改善確率による逐次探索の初期の例はKushner、期待改善の初期の定式化はMockusらにさかのぼります <span class="citation" data-cites="kushner1964 mockus1978">(<a href="../references.html#ref-kushner1964" role="doc-biblioref">Kushner 1964年</a>; <a href="../references.html#ref-mockus1978" role="doc-biblioref">Mockus ほか 1978年</a>)</span>。</p>
 </section>
 <section id="数値積分およびbotorchとの照合" class="level3">
 <h3 class="anchored" data-anchor-id="数値積分およびbotorchとの照合">数値積分およびBoTorchとの照合</h3>
@@ -553,7 +572,8 @@ window.Quarto = {
 <p><span id="eq-ucb"><span class="math display">\[
 \mathrm{UCB}_\beta(x)=\mu(x)+\sqrt{\beta}\,\sigma(x),\qquad \beta\ge 0.
 \tag{5.3}\]</span></span></p>
-<p><span class="math inline">\(\beta\)</span> は無次元です。<span class="math inline">\(\beta=0\)</span> なら事後平均の最大を選び、値を大きくすると標準偏差が大きい場所も有力になります。正の標準偏差を持つ単点正規分布では、UCBは分位点 <span class="math inline">\(\Phi(\sqrt{\beta})\)</span> に対応します。<span class="math inline">\(\beta=4\)</span> の <span class="math inline">\(\sqrt{\beta}=2\)</span> は片側で約97.7%に相当します。同時の確率保証や、未知関数が必ずUCBより下にあることをこの解釈から導くことはできません。原著GP-UCBの理論では、<span class="math inline">\(\beta\)</span> の設定や問題の仮定が後悔の評価に関わります <span class="citation" data-cites="srinivas2010">(<a href="../references.html#ref-srinivas2010" role="doc-biblioref">Srinivas ほか 2010年</a>)</span>。</p>
+<p><span class="math inline">\(\beta\)</span> は無次元です。<span class="math inline">\(\beta=0\)</span> なら事後平均の最大を選び、値を大きくすると標準偏差が大きい場所も有力になります。正の標準偏差を持つ単点正規分布では、UCBは分位点 <span class="math inline">\(\Phi(\sqrt{\beta})\)</span> に対応します。<span class="math inline">\(\beta=4\)</span> の <span class="math inline">\(\sqrt{\beta}=2\)</span> は片側で約97.7%に相当します。同時の確率保証や、未知関数が必ずUCBより下にあることをこの解釈から導くことはできません。原著GP-UCBは反復ごとに <span class="math inline">\(\mu_{t-1}(x)+\sqrt{\beta_t}\sigma_{t-1}(x)\)</span> を最大化します。有限候補集合 <span class="math inline">\(\mathcal X\)</span> と原著のGP・観測モデルの仮定の下では、一例として <span class="math inline">\(\beta_t=2\log(|\mathcal X|t^2\pi^2/(6\delta))\)</span> を使います。<span class="math inline">\(\delta\)</span> は許容する失敗確率で、時刻と候補位置をまたいだ信頼域のための選び方です。連続領域や別のノイズ仮定では条件も式も変わります <span class="citation" data-cites="srinivas2010">(<a href="../references.html#ref-srinivas2010" role="doc-biblioref">Srinivas ほか 2010年, 第4節</a>)</span>。</p>
+<p>実装の固定値は、予算と「未測定域もどこまで確認したいか」に合わせて選びます。例えば <span class="math inline">\(\beta\in\{0.25,1,4\}\)</span> を比較し、候補の位置・予測平均・標準偏差、そして同じ予算での最終結果を記録すると、定数の影響を確認できます。本章の <span class="math inline">\(\beta=4\)</span> は片側分位点の読み方と探索の重みを見せる例です。</p>
 <div id="fig-ucb-sensitivity" class="quarto-float quarto-figure quarto-figure-center anchored">
 <figure class="quarto-float quarto-float-fig figure">
 <div aria-describedby="fig-ucb-sensitivity-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
@@ -581,9 +601,16 @@ window.Quarto = {
 </figure>
 </div>
 <p>この実験は入力と事後分布を固定し、閾値だけを変えて <span class="math inline">\(z\in[-50,-1]\)</span> を作りました。ゼロになる境界はdtypeや実装に依存します。図は数値安定性を示す実験であり、特定のベイズ最適化手法が他より優れることを測った比較ではありません。</p>
+<p>理論式や単位を確認するときはEIで読み、BoTorchで候補を最適化するときは数値的に安定した <code>LogExpectedImprovement</code> と、バッチの <code>qLogExpectedImprovement</code> が推奨されています <span class="citation" data-cites="botorch-acquisition ament2023">(<a href="../references.html#ref-botorch-acquisition" role="doc-biblioref">BoTorch contributors, 日付なし</a>; <a href="../references.html#ref-ament2023" role="doc-biblioref">Ament ほか 2023年</a>)</span>。ログ変換は観測最大値の偏りを補正しないので、基準の不確かさには次節のnoisy EI系を使います。</p>
 </section>
 <section id="ix-section-5-6" class="level2">
 <h2 class="anchored" data-anchor-id="ix-section-5-6">5.6 ノイズ、バッチ、最適化の限界</h2>
+<div id="tbl-ch05-1" class="quarto-float quarto-figure quarto-figure-center anchored">
+<figure class="quarto-float quarto-float-tbl figure">
+<figcaption class="quarto-float-caption-top quarto-float-caption quarto-float-tbl" id="tbl-ch05-1-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+表&nbsp;5.2: 実行条件と診断項目
+</figcaption>
+<div aria-describedby="tbl-ch05-1-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
 <table class="caption-top table">
 <colgroup>
 <col style="width: 50%">
@@ -614,9 +641,18 @@ window.Quarto = {
 </tr>
 </tbody>
 </table>
+</div>
+</figure>
+</div>
 <section id="sec-acquisition-selection" class="level3">
 <h3 class="anchored" data-anchor-id="sec-acquisition-selection">実装で最初に決めること</h3>
 <p>目的を最大化し、次に選ぶ点数と、改善の基準に使える情報を決めます。章内の比較では、同じ事後分布を使ったうえで評価基準を変えました。後続の実行では、次のように使い分けます。</p>
+<div id="tbl-ch05-2" class="quarto-float quarto-figure quarto-figure-center anchored">
+<figure class="quarto-float quarto-float-tbl figure">
+<figcaption class="quarto-float-caption-top quarto-float-caption quarto-float-tbl" id="tbl-ch05-2-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+表&nbsp;5.3: 獲得関数を選ぶ目安
+</figcaption>
+<div aria-describedby="tbl-ch05-2-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
 <table class="caption-top table">
 <colgroup>
 <col style="width: 50%">
@@ -643,6 +679,9 @@ window.Quarto = {
 </tr>
 </tbody>
 </table>
+</div>
+</figure>
+</div>
 <p>最小化では改善の向きと <span class="math inline">\(b\)</span> の定義も反転します。本書の材料試験は、最後まで強度の<strong>最大化</strong>で統一します。</p>
 </section>
 </section>
@@ -662,13 +701,22 @@ window.Quarto = {
 
 <div id="refs" class="references csl-bib-body hanging-indent" role="list" style="display: none">
 <div id="ref-ament2023" class="csl-entry" role="listitem">
-Ament, Sebastian, Samuel Daulton, David Eriksson, Maximilian Balandat, と Eytan Bakshy. 2023年. <span>「Unexpected Improvements to Expected Improvement for Bayesian Optimization」</span>. <em>Advances in Neural Information Processing Systems</em> 36. <a href="https://doi.org/10.52202/075280-0904">https://doi.org/10.52202/075280-0904</a>.
+Ament, Sebastian, Samuel Daulton, David Eriksson, Maximilian Balandat, と Eytan Bakshy. 2023年. <span>“Unexpected Improvements to Expected Improvement for Bayesian Optimization”</span>. <em>Advances in Neural Information Processing Systems</em> 36. <a href="https://doi.org/10.52202/075280-0904">https://doi.org/10.52202/075280-0904</a>.
+</div>
+<div id="ref-botorch-acquisition" class="csl-entry" role="listitem">
+BoTorch contributors. 日付なし. <em><span>BoTorch</span> Acquisition Function API</em>. <a href="https://botorch.readthedocs.io/en/v0.18.1/acquisition.html">https://botorch.readthedocs.io/en/v0.18.1/acquisition.html</a>.
 </div>
 <div id="ref-jones1998" class="csl-entry" role="listitem">
-Jones, Donald R., Matthias Schonlau, と William J. Welch. 1998年. <span>「Efficient Global Optimization of Expensive Black-Box Functions」</span>. <em>Journal of Global Optimization</em> 13: 455–92. <a href="https://doi.org/10.1023/A:1008306431147">https://doi.org/10.1023/A:1008306431147</a>.
+Jones, Donald R., Matthias Schonlau, と William J. Welch. 1998年. <span>“Efficient Global Optimization of Expensive Black-Box Functions”</span>. <em>Journal of Global Optimization</em> 13: 455–92. <a href="https://doi.org/10.1023/A:1008306431147">https://doi.org/10.1023/A:1008306431147</a>.
+</div>
+<div id="ref-kushner1964" class="csl-entry" role="listitem">
+Kushner, Harold J. 1964年. <span>“A New Method of Locating the Maximum Point of an Arbitrary Multipeak Curve in the Presence of Noise”</span>. <em>Journal of Basic Engineering</em> 86 (1): 97–106. <a href="https://doi.org/10.1115/1.3653121">https://doi.org/10.1115/1.3653121</a>.
+</div>
+<div id="ref-mockus1978" class="csl-entry" role="listitem">
+Mockus, Jonas, Vytautas Tiesis, と Antanas Zilinskas. 1978年. <span>“The Application of Bayesian Methods for Seeking the Extremum”</span>. <em>Towards Global Optimization 2</em>, 編集者: L. C. W. Dixon と G. P. Szegö. North-Holland.
 </div>
 <div id="ref-srinivas2010" class="csl-entry" role="listitem">
-Srinivas, Niranjan, Andreas Krause, Sham M. Kakade, と Matthias Seeger. 2010年. <span>「Gaussian Process Optimization in the Bandit Setting: No Regret and Experimental Design」</span>. <em>Proceedings of the 27th International Conference on Machine Learning</em>, 1015–22. <a href="https://arxiv.org/abs/0912.3995">https://arxiv.org/abs/0912.3995</a>.
+Srinivas, Niranjan, Andreas Krause, Sham M. Kakade, と Matthias Seeger. 2010年. <span>“Gaussian Process Optimization in the Bandit Setting: No Regret and Experimental Design”</span>. <em>Proceedings of the 27th International Conference on Machine Learning</em>, 1015–22. <a href="https://arxiv.org/abs/0912.3995">https://arxiv.org/abs/0912.3995</a>.
 </div>
 </div>
 </section>

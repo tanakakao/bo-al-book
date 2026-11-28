@@ -107,7 +107,7 @@ ul.task-list li input[type="checkbox"] {
     <div class="sidebar-title mb-0 py-0">
       <a href="../">Pythonで学ぶベイズ最適化と能動学習</a> 
         <div class="sidebar-tools-main">
-    <a href="../BO_AL_book_vol1_v1.0.0.pdf" title="Download PDF" class="quarto-navigation-tool px-1" aria-label="Download PDF"><i class="bi bi-file-pdf"></i></a>
+    <a href="../BO_AL_book_vol1_v1.0.1.pdf" title="Download PDF" class="quarto-navigation-tool px-1" aria-label="Download PDF"><i class="bi bi-file-pdf"></i></a>
 </div>
     </div>
       </div>
@@ -244,6 +244,12 @@ ul.task-list li input[type="checkbox"] {
 </li>
           <li class="sidebar-item">
   <div class="sidebar-item-container"> 
+  <a href="../appendices/reproduction.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">実験の生成式とAPI対応</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
   <a href="../appendices/term-index.html" class="sidebar-item-text sidebar-link">
  <span class="menu-text">索引</span></a>
   </div>
@@ -297,14 +303,14 @@ ul.task-list li input[type="checkbox"] {
 <p><strong>書名</strong>　Pythonで学ぶベイズ最適化と能動学習<br>
 <strong>巻</strong>　第1巻 基礎理論と実践<br>
 <strong>著者・編者</strong>　tanakakao<br>
-<strong>版</strong>　第1版（v1.0.0、2026年）<br>
+<strong>版</strong>　第1版（v1.0.1、2026年）<br>
 <strong>オンライン版</strong>　<a href="https://tanakakao.github.io/bo-al-book/" class="uri">https://tanakakao.github.io/bo-al-book/</a></p>
 <section id="書籍とソフトウェアの引用" class="level2">
 <h2 class="anchored" data-anchor-id="書籍とソフトウェアの引用">書籍とソフトウェアの引用</h2>
 <blockquote class="blockquote">
-<p>tanakakao（2026）『Pythonで学ぶベイズ最適化と能動学習 第1巻 基礎理論と実践』第1版。<a href="https://tanakakao.github.io/bo-al-book/" class="uri">https://tanakakao.github.io/bo-al-book/</a></p>
+<p>tanakakao（2026）『Pythonで学ぶベイズ最適化と能動学習 第1巻 基礎理論と実践』第1版修正版（v1.0.1）。<a href="https://tanakakao.github.io/bo-al-book/" class="uri">https://tanakakao.github.io/bo-al-book/</a></p>
 </blockquote>
-<p>特定の説明や計算結果を参照する場合は、章・節、図番号またはNotebook名を添えます。本書の再現にはrobotorchan 0.1.0、コミット <code>b1bb770</code> を使いました。ソフトウェアを参照する場合は、その引用情報も記録してください。<a href="https://github.com/tanakakao/robotorchan/blob/b1bb77087cd117d83ed21a226a6fce39ccd5b497/CITATION.cff">robotorchanの引用情報</a></p>
+<p>特定の説明や計算結果を参照する場合は、章・節、図番号またはNotebook名を添えます。再現に使った版はPython 3.11、PyTorch 2.9.1（CPU版）、GPyTorch 1.15.2、BoTorch 0.18.1、robotorchan 0.1.0（コミット <code>b1bb770</code>）です。ソフトウェアの引用は、対象コミットにある <a href="https://github.com/tanakakao/robotorchan/blob/b1bb77087cd117d83ed21a226a6fce39ccd5b497/CITATION.cff"><code>CITATION.cff</code></a> を参照してください。</p>
 </section>
 <section id="利用条件" class="level2">
 <h2 class="anchored" data-anchor-id="利用条件">利用条件</h2>
@@ -312,7 +318,7 @@ ul.task-list li input[type="checkbox"] {
 </section>
 <section id="ai利用の開示" class="level2">
 <h2 class="anchored" data-anchor-id="ai利用の開示">AI利用の開示</h2>
-<p>本書の構成の検討、本文およびサンプルコードの草案、図表の作成と検証にChatGPTを使用しました。</p>
+<p>本書の構成の検討、本文およびサンプルコードの草案、図表の作成と検証にChatGPTを使用しました。各章のNotebookを実行し、GPの事後、EI、BALDなどの小例は式から求めた値と公開APIの出力を照合しています。公開後の読者レビューで得た指摘は <a href="https://github.com/tanakakao/bo-al-book/issues/1">Issue #1</a> から確認できます。</p>
 <p>試験データは学習用の合成データです。測定回数、シード、ライブラリの版、図の再生成手順は配布用原稿のREADMEにあります。</p>
 
 

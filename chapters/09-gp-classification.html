@@ -191,7 +191,7 @@ window.Quarto = {
     <div class="sidebar-title mb-0 py-0">
       <a href="../">Pythonで学ぶベイズ最適化と能動学習</a> 
         <div class="sidebar-tools-main">
-    <a href="../BO_AL_book_vol1_v1.0.0.pdf" title="Download PDF" class="quarto-navigation-tool px-1" aria-label="Download PDF"><i class="bi bi-file-pdf"></i></a>
+    <a href="../BO_AL_book_vol1_v1.0.1.pdf" title="Download PDF" class="quarto-navigation-tool px-1" aria-label="Download PDF"><i class="bi bi-file-pdf"></i></a>
 </div>
     </div>
       </div>
@@ -328,6 +328,12 @@ window.Quarto = {
 </li>
           <li class="sidebar-item">
   <div class="sidebar-item-container"> 
+  <a href="../appendices/reproduction.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">実験の生成式とAPI対応</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
   <a href="../appendices/term-index.html" class="sidebar-item-text sidebar-link">
  <span class="menu-text">索引</span></a>
   </div>
@@ -350,13 +356,13 @@ window.Quarto = {
     <h2 id="toc-title">目次</h2>
    
   <ul class="collapse">
-  <li><a href="#ix-section-9-1" id="toc-ix-section-9-1" class="nav-link active" data-scroll-target="#ix-section-9-1">9.1 8件の合否から確率を予測する</a></li>
+  <li><a href="#ix-section-9-1" id="toc-ix-section-9-1" class="nav-link active" data-scroll-target="#ix-section-9-1">9.1 少数の合否から確率を予測する</a></li>
   <li><a href="#ix-section-9-2" id="toc-ix-section-9-2" class="nav-link" data-scroll-target="#ix-section-9-2">9.2 潜在関数とBernoulli尤度</a></li>
   <li><a href="#ix-section-9-3" id="toc-ix-section-9-3" class="nav-link" data-scroll-target="#ix-section-9-3">9.3 この事後分布を近似する理由</a></li>
   <li><a href="#ix-section-9-4" id="toc-ix-section-9-4" class="nav-link" data-scroll-target="#ix-section-9-4">9.4 近似潜在事後から合格確率を計算する</a></li>
   <li><a href="#ix-section-9-5" id="toc-ix-section-9-5" class="nav-link" data-scroll-target="#ix-section-9-5">9.5 ラベルの揺れと、確率についての不確実性</a></li>
   <li><a href="#ix-section-9-6" id="toc-ix-section-9-6" class="nav-link" data-scroll-target="#ix-section-9-6">9.6 合否判定と確率予測を別々に評価する</a></li>
-  <li><a href="#演習とまとめ" id="toc-演習とまとめ" class="nav-link" data-scroll-target="#演習とまとめ">9.7 演習とまとめ</a></li>
+  <li><a href="#章末演習とまとめ" id="toc-章末演習とまとめ" class="nav-link" data-scroll-target="#章末演習とまとめ">9.7 章末演習とまとめ</a></li>
   </ul>
 </nav>
     </div>
@@ -384,37 +390,39 @@ window.Quarto = {
 
 <p><strong>学習目標</strong>　Bernoulli尤度で合否を表し、潜在事後から合格確率とその信用区間を求める。変分下界が何を近似するかを説明し、別に取得したラベルで予測を評価する。</p>
 <section id="ix-section-9-1" class="level2">
-<h2 class="anchored" data-anchor-id="ix-section-9-1">9.1 8件の合否から確率を予測する</h2>
+<h2 class="anchored" data-anchor-id="ix-section-9-1">9.1 少数の合否から確率を予測する</h2>
 <p>第4章では、温度から強度 [MPa] を予測しました。第8章と同じ合成試験を使い、この章では温度ごとの0・1ラベルから次の合格確率を学習します。合否しか保存されていない8件を初期データとし、観測した温度の間で合格確率を予測します。真の強度 <span class="math inline">\(g(x)\)</span> [MPa] はラベルの生成に使い、GP分類器には温度と合否のみを渡します。</p>
 <p><a href="../notebooks/ch09_gp_classification.ipynb">第9章のNotebook</a> と同じフォルダで実行します。<code>predict_proba</code> は最後の軸に <span class="math inline">\(\Pr(Y=0)\)</span> と <span class="math inline">\(\Pr(Y=1)\)</span> をこの順で返します。</p>
 <div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb1"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> torch</span>
 <span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> gpytorch.kernels <span class="im">import</span> MaternKernel, ScaleKernel</span>
-<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> robotorchan.models.classification <span class="im">import</span> BinarySingleTaskGPClassifier</span>
-<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> classification_experiment <span class="im">import</span> reveal_labels, uniforms</span>
-<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> experiment <span class="im">import</span> DTYPE, SEED, setup</span>
-<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a>setup()</span>
-<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a>torch.set_default_dtype(DTYPE)</span>
-<span id="cb1-9"><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a>pool <span class="op">=</span> torch.linspace(<span class="dv">0</span>, <span class="dv">1</span>, <span class="dv">81</span>, dtype<span class="op">=</span>DTYPE).unsqueeze(<span class="op">-</span><span class="dv">1</span>)</span>
-<span id="cb1-10"><a href="#cb1-10" aria-hidden="true" tabindex="-1"></a>indices <span class="op">=</span> torch.tensor([<span class="dv">0</span>, <span class="dv">12</span>, <span class="dv">26</span>, <span class="dv">40</span>, <span class="dv">50</span>, <span class="dv">64</span>, <span class="dv">74</span>, <span class="dv">80</span>])</span>
-<span id="cb1-11"><a href="#cb1-11" aria-hidden="true" tabindex="-1"></a>train_x <span class="op">=</span> pool[indices]</span>
-<span id="cb1-12"><a href="#cb1-12" aria-hidden="true" tabindex="-1"></a>draws <span class="op">=</span> uniforms(pool, SEED <span class="op">+</span> <span class="dv">9</span>)</span>
-<span id="cb1-13"><a href="#cb1-13" aria-hidden="true" tabindex="-1"></a>train_y <span class="op">=</span> reveal_labels(train_x, draws[indices])</span>
-<span id="cb1-14"><a href="#cb1-14" aria-hidden="true" tabindex="-1"></a>torch.manual_seed(SEED <span class="op">+</span> <span class="dv">9</span>)</span>
-<span id="cb1-15"><a href="#cb1-15" aria-hidden="true" tabindex="-1"></a>kernel <span class="op">=</span> ScaleKernel(MaternKernel(nu<span class="op">=</span><span class="fl">2.5</span>))</span>
-<span id="cb1-16"><a href="#cb1-16" aria-hidden="true" tabindex="-1"></a>kernel.base_kernel.lengthscale <span class="op">=</span> <span class="fl">0.18</span></span>
-<span id="cb1-17"><a href="#cb1-17" aria-hidden="true" tabindex="-1"></a>inducing <span class="op">=</span> torch.linspace(<span class="dv">0</span>, <span class="dv">1</span>, <span class="dv">9</span>, dtype<span class="op">=</span>DTYPE).unsqueeze(<span class="op">-</span><span class="dv">1</span>)</span>
-<span id="cb1-18"><a href="#cb1-18" aria-hidden="true" tabindex="-1"></a>model <span class="op">=</span> BinarySingleTaskGPClassifier(</span>
-<span id="cb1-19"><a href="#cb1-19" aria-hidden="true" tabindex="-1"></a>    train_x, train_y, covar_module<span class="op">=</span>kernel, inducing_points<span class="op">=</span>inducing,</span>
-<span id="cb1-20"><a href="#cb1-20" aria-hidden="true" tabindex="-1"></a>    learn_inducing_points<span class="op">=</span><span class="va">False</span>,</span>
-<span id="cb1-21"><a href="#cb1-21" aria-hidden="true" tabindex="-1"></a>)</span>
-<span id="cb1-22"><a href="#cb1-22" aria-hidden="true" tabindex="-1"></a>model.fit(epochs<span class="op">=</span><span class="dv">120</span>, lr<span class="op">=</span><span class="fl">0.03</span>)</span>
-<span id="cb1-23"><a href="#cb1-23" aria-hidden="true" tabindex="-1"></a>test_x <span class="op">=</span> (torch.arange(<span class="dv">120</span>, dtype<span class="op">=</span>DTYPE) <span class="op">+</span> <span class="fl">0.37</span>).unsqueeze(<span class="op">-</span><span class="dv">1</span>) <span class="op">/</span> <span class="dv">120</span></span>
-<span id="cb1-24"><a href="#cb1-24" aria-hidden="true" tabindex="-1"></a><span class="cf">with</span> torch.no_grad():</span>
-<span id="cb1-25"><a href="#cb1-25" aria-hidden="true" tabindex="-1"></a>    p <span class="op">=</span> model.predict_proba(test_x)[..., <span class="dv">1</span>]</span>
-<span id="cb1-26"><a href="#cb1-26" aria-hidden="true" tabindex="-1"></a>    labels <span class="op">=</span> model.predict_class(test_x, threshold<span class="op">=</span><span class="fl">0.5</span>)</span></code></pre></div><button title="コピー" class="code-copy-button"><i class="bi"></i></button></div>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> robotorchan.models.classification <span class="im">import</span> (</span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a>    BinarySingleTaskGPClassifier,</span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a>)</span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> classification_experiment <span class="im">import</span> reveal_labels, uniforms</span>
+<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> experiment <span class="im">import</span> DTYPE, SEED, setup</span>
+<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-9"><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a>setup()</span>
+<span id="cb1-10"><a href="#cb1-10" aria-hidden="true" tabindex="-1"></a>torch.set_default_dtype(DTYPE)</span>
+<span id="cb1-11"><a href="#cb1-11" aria-hidden="true" tabindex="-1"></a>pool <span class="op">=</span> torch.linspace(<span class="dv">0</span>, <span class="dv">1</span>, <span class="dv">81</span>, dtype<span class="op">=</span>DTYPE).unsqueeze(<span class="op">-</span><span class="dv">1</span>)</span>
+<span id="cb1-12"><a href="#cb1-12" aria-hidden="true" tabindex="-1"></a>indices <span class="op">=</span> torch.tensor([<span class="dv">0</span>, <span class="dv">12</span>, <span class="dv">26</span>, <span class="dv">40</span>, <span class="dv">50</span>, <span class="dv">64</span>, <span class="dv">74</span>, <span class="dv">80</span>])</span>
+<span id="cb1-13"><a href="#cb1-13" aria-hidden="true" tabindex="-1"></a>train_x <span class="op">=</span> pool[indices]</span>
+<span id="cb1-14"><a href="#cb1-14" aria-hidden="true" tabindex="-1"></a>draws <span class="op">=</span> uniforms(pool, SEED <span class="op">+</span> <span class="dv">9</span>)</span>
+<span id="cb1-15"><a href="#cb1-15" aria-hidden="true" tabindex="-1"></a>train_y <span class="op">=</span> reveal_labels(train_x, draws[indices])</span>
+<span id="cb1-16"><a href="#cb1-16" aria-hidden="true" tabindex="-1"></a>torch.manual_seed(SEED <span class="op">+</span> <span class="dv">9</span>)</span>
+<span id="cb1-17"><a href="#cb1-17" aria-hidden="true" tabindex="-1"></a>kernel <span class="op">=</span> ScaleKernel(MaternKernel(nu<span class="op">=</span><span class="fl">2.5</span>))</span>
+<span id="cb1-18"><a href="#cb1-18" aria-hidden="true" tabindex="-1"></a>kernel.base_kernel.lengthscale <span class="op">=</span> <span class="fl">0.18</span></span>
+<span id="cb1-19"><a href="#cb1-19" aria-hidden="true" tabindex="-1"></a>inducing <span class="op">=</span> torch.linspace(<span class="dv">0</span>, <span class="dv">1</span>, <span class="dv">9</span>, dtype<span class="op">=</span>DTYPE).unsqueeze(<span class="op">-</span><span class="dv">1</span>)</span>
+<span id="cb1-20"><a href="#cb1-20" aria-hidden="true" tabindex="-1"></a>model <span class="op">=</span> BinarySingleTaskGPClassifier(</span>
+<span id="cb1-21"><a href="#cb1-21" aria-hidden="true" tabindex="-1"></a>    train_x, train_y, covar_module<span class="op">=</span>kernel, inducing_points<span class="op">=</span>inducing,</span>
+<span id="cb1-22"><a href="#cb1-22" aria-hidden="true" tabindex="-1"></a>    learn_inducing_points<span class="op">=</span><span class="va">False</span>,</span>
+<span id="cb1-23"><a href="#cb1-23" aria-hidden="true" tabindex="-1"></a>)</span>
+<span id="cb1-24"><a href="#cb1-24" aria-hidden="true" tabindex="-1"></a>model.fit(epochs<span class="op">=</span><span class="dv">120</span>, lr<span class="op">=</span><span class="fl">0.03</span>)</span>
+<span id="cb1-25"><a href="#cb1-25" aria-hidden="true" tabindex="-1"></a>test_x <span class="op">=</span> (torch.arange(<span class="dv">120</span>, dtype<span class="op">=</span>DTYPE) <span class="op">+</span> <span class="fl">0.37</span>).unsqueeze(<span class="op">-</span><span class="dv">1</span>) <span class="op">/</span> <span class="dv">120</span></span>
+<span id="cb1-26"><a href="#cb1-26" aria-hidden="true" tabindex="-1"></a><span class="cf">with</span> torch.no_grad():</span>
+<span id="cb1-27"><a href="#cb1-27" aria-hidden="true" tabindex="-1"></a>    p <span class="op">=</span> model.predict_proba(test_x)[..., <span class="dv">1</span>]</span>
+<span id="cb1-28"><a href="#cb1-28" aria-hidden="true" tabindex="-1"></a>    labels <span class="op">=</span> model.predict_class(test_x, threshold<span class="op">=</span><span class="fl">0.5</span>)</span></code></pre></div><button title="コピー" class="code-copy-button"><i class="bi"></i></button></div>
 <p>最初の評価点 <strong>140.12 °C</strong> での予測合格確率は <strong>0.468</strong> でした。</p>
-<p>図の上段は無次元の潜在スコア、下段はそのスコアから得る合格確率です。合格確率の青線は、「新しい試験片1個の合否」を繰り返し予測するときの合格の確率です。青い帯は合格確率そのものについての不確実性を表します。例えば帯が狭く、予測が0.5付近なら、「合否は五分五分だとかなり分かっている」という読み方になります。</p>
+<p>図の上段は無次元の潜在スコア、下段はそのスコアから得る合格確率です。合格確率の青線は、「新しい試験片1個の合否」を繰り返し予測するときの合格の確率です。青い帯は合格確率そのものについての不確実性を表します。この図では、平均は0.5付近に集まり、帯は広く残ります。8件から合格率が五分五分だと正確に分かった、とは読めません。温度ごとの真の合格率の強弱を、このデータとモデルの組合せでは表現しきれていません。</p>
 <div id="fig-gp-classification-probability" class="quarto-float quarto-figure quarto-figure-center anchored" data-fig-pos="!ht">
 <figure class="quarto-float quarto-float-fig figure">
 <div aria-describedby="fig-gp-classification-probability-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
@@ -433,6 +441,12 @@ window.Quarto = {
 p(y_i\mid f_i)=s(f_i)^{y_i}\{1-s(f_i)\}^{1-y_i}
 \]</span></p>
 <p>です。例えば <span class="math inline">\(y_i=1\)</span> なら <span class="math inline">\(s(f_i)\)</span>、<span class="math inline">\(y_i=0\)</span> なら <span class="math inline">\(1-s(f_i)\)</span> が尤度になります。条件付き独立は、<span class="math inline">\(f\)</span> を積分した後のラベル同士の独立を意味しません。近い温度のスコアはGPのカーネルを通じて相関します <span class="citation" data-cites="rasmussen2006">(<a href="../references.html#ref-rasmussen2006" role="doc-biblioref">Rasmussen と Williams 2006年, 第3章</a>)</span>。</p>
+<div id="tbl-ch09-1" class="quarto-float quarto-figure quarto-figure-center anchored">
+<figure class="quarto-float quarto-float-tbl figure">
+<figcaption class="quarto-float-caption-top quarto-float-caption quarto-float-tbl" id="tbl-ch09-1-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+表&nbsp;9.1: ProbitとLogitのリンク
+</figcaption>
+<div aria-describedby="tbl-ch09-1-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
 <table class="caption-top table">
 <thead>
 <tr class="header">
@@ -454,6 +468,9 @@ p(y_i\mid f_i)=s(f_i)^{y_i}\{1-s(f_i)\}^{1-y_i}
 </tr>
 </tbody>
 </table>
+</div>
+</figure>
+</div>
 <p>表の同じ <span class="math inline">\(t\)</span> は同一の潜在尺度で逆リンクの形を比べるための値です。学習した各モデルでは潜在関数の尺度も推定されます。教材の公開API <code>robotorchan.models.classification.BinarySingleTaskGPClassifier</code> は、GPyTorchの <code>BernoulliLikelihood</code> を使用し、逆リンクはProbitです <span class="citation" data-cites="robotorchan gpytorch-likelihoods">(<a href="../references.html#ref-robotorchan" role="doc-biblioref"><span class="nocase">robotorchan contributors</span> 2026年</a>; <a href="../references.html#ref-gpytorch-likelihoods" role="doc-biblioref">GPyTorch contributors, 日付なし-a</a>)</span>。</p>
 </section>
 <section id="ix-section-9-3" class="level2">
@@ -465,6 +482,47 @@ p(\mathbf f\mid X,\mathbf y)
        {p(\mathbf y\mid X)}
 \]</span></p>
 <p>です。分母は分子を <span class="math inline">\(\mathbf f\)</span> について積分した周辺尤度です。第4章のガウス回帰では、事前と尤度の対数が <span class="math inline">\(\mathbf f\)</span> の二次式なので、積を正規分布として平方完成できました。ここでは、例えば合格の寄与が <span class="math inline">\(\log\Phi(f_i)\)</span> となり、<span class="math inline">\(f_i\)</span> の二次式ではありません。事後は一般に非ガウスで、正規分布の条件付き公式だけでは得られません。Laplace近似、期待値伝播、変分推論、モンテカルロ法などが候補になります <span class="citation" data-cites="rasmussen2006">(<a href="../references.html#ref-rasmussen2006" role="doc-biblioref">Rasmussen と Williams 2006年, 第3章</a>)</span>。</p>
+<div id="tbl-ch09-2" class="quarto-float quarto-figure quarto-figure-center anchored">
+<figure class="quarto-float quarto-float-tbl figure">
+<figcaption class="quarto-float-caption-top quarto-float-caption quarto-float-tbl" id="tbl-ch09-2-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+表&nbsp;9.2: GP回帰とGP分類の事後推論
+</figcaption>
+<div aria-describedby="tbl-ch09-2-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+<table class="caption-top table">
+<colgroup>
+<col style="width: 33%">
+<col style="width: 33%">
+<col style="width: 33%">
+</colgroup>
+<thead>
+<tr class="header">
+<th>推論の段階</th>
+<th>第4章のGP回帰</th>
+<th>第9章のGP分類</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>観測</td>
+<td>実数の強度</td>
+<td>合格・不合格</td>
+</tr>
+<tr class="even">
+<td>GP事前に掛ける尤度</td>
+<td>ガウス。対数は潜在値の二次式</td>
+<td>Bernoulli。対数は一般に二次式にならない</td>
+</tr>
+<tr class="odd">
+<td>潜在事後を得る方法</td>
+<td>ハイパーパラメータを固定すれば条件付き正規分布で解析的に計算</td>
+<td>一般には数値近似。例として変分推論やLaplace近似</td>
+</tr>
+</tbody>
+</table>
+</div>
+</figure>
+</div>
+<p>Laplace近似は事後のモードを求め、その近くの対数事後を二次式で近似します。この章の変分推論は、誘導変数に対する分布を選び、ELBOで分布全体を調整します。どちらも近似事後を返しますが、近似する位置と計算方法が異なります。</p>
 <section id="変分下界を作る" class="level3">
 <h3 class="anchored" data-anchor-id="変分下界を作る">変分下界を作る</h3>
 <p>変分推論では計算しやすい分布の族を決め、その中で事後を近似する分布を探します。補助の入力 <span class="math inline">\(Z=(z_1,\dots,z_M)\)</span> における潜在値 <span class="math inline">\(\mathbf u=f(Z)\)</span> を<strong>誘導変数</strong>と呼びます。<span class="math inline">\(M\)</span> は誘導点数です。訓練入力の事前と同じGPから、結合事前を <span class="math inline">\(p(\mathbf f,\mathbf u)=p(\mathbf f\mid\mathbf u)p(\mathbf u)\)</span> と分解します。式では固定した <span class="math inline">\(X,Z,\theta\)</span> を省略します。</p>
@@ -481,6 +539,18 @@ p(\mathbf f\mid X,\mathbf y)
 \tag{9.1}\]</span></span></p>
 <p>第一式は、KLの定義に <span class="math inline">\(p(\mathbf f,\mathbf u\mid\mathbf y)=p(\mathbf y,\mathbf f,\mathbf u)/p(\mathbf y)\)</span> を入れ、<span class="math inline">\(\log p(\mathbf y)\)</span> を期待値の外に出して得ます。残る <span class="math inline">\(\mathbb E_Q[\log p(\mathbf y,\mathbf f,\mathbf u)-\log Q(\mathbf f,\mathbf u)]\)</span> が <span class="math inline">\(\mathcal L\)</span> です。第二式では、尤度がラベルごとに積に分かれることと、<span class="math inline">\(Q/p\)</span> の比から <span class="math inline">\(p(\mathbf f\mid\mathbf u)\)</span> が消えることを使いました。<span class="math inline">\(\mathcal L\)</span> は対数周辺尤度の下界なので、<strong>ELBO</strong>（evidence lower bound）と呼びます。第一項は既知ラベルへの適合、第二項は誘導変数の近似分布が事前から離れることへの罰則です。同じモデルのもとでは、下界を上げるほど制約した分布族での事後へのKLが小さくなります。ハイパーパラメータも同時に変える場合は、近似とモデルの両方が更新されます <span class="citation" data-cites="hensman2015 gpytorch-elbo">(<a href="../references.html#ref-hensman2015" role="doc-biblioref">Hensman ほか 2015年</a>; <a href="../references.html#ref-gpytorch-elbo" role="doc-biblioref">GPyTorch contributors, 日付なし-b</a>)</span>。</p>
 <p>この教材では誘導入力を <span class="math inline">\([0,1]\)</span> の等間隔9点に固定します。Matérn 5/2カーネルの長さ尺度の初期値を0.18として、カーネルのパラメータと変分分布をAdamで学習します。小例の初回学習は全8件を使って120エポックです。<code>fit(epochs=120, lr=0.03)</code> が、<code>make_mll</code> で構築した公開API <code>VariationalELBO</code> を使います。期待対数尤度は数値求積で評価します。誘導点の配置や数、学習率、最適化の停止位置で結果は変わります。誘導点の数が訓練数より少ないことは、この定式化を使う必須条件ではありません。</p>
+<p>同じ初期化でエポック数だけ変えて学習し、各停止時点の学習データ上のELBOを比較しました。<a href="#fig-classification-fit-diagnostics" class="quarto-xref">図&nbsp;<span>9.2</span></a> の左がその結果です。横軸の各点は同じシードから学習し直した値です。学習ELBOが改善しても、保留データで確率が較正されるとは限りません。</p>
+<div id="fig-classification-fit-diagnostics" class="quarto-float quarto-figure quarto-figure-center anchored" data-fig-pos="!ht">
+<figure class="quarto-float quarto-float-fig figure">
+<div aria-describedby="fig-classification-fit-diagnostics-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+<img src="../figures/ch09_fit_diagnostics.svg" class="img-fluid figure-img" style="width:94.0%" data-fig-pos="!ht">
+</div>
+<figcaption class="quarto-float-caption-bottom quarto-float-caption quarto-float-fig" id="fig-classification-fit-diagnostics-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+図&nbsp;9.2: 左はエポック数ごとの1件当たりの学習ELBO。右は120件の保留ラベルを、予測確率の固定幅0.2の区間に分けた信頼性図。点の件数を表示し、空の区間は描いていない。
+</figcaption>
+</figure>
+</div>
+<p>この例の1件当たりの学習ELBOは120エポックで <strong>-0.704</strong>、480エポックで <strong>-0.695</strong> でした。120回以降も改善は続きますが、初期の大きな変化に比べると小さくなります。120回で学習したモデルの予測は <strong>0.415〜0.589</strong>、未測定温度でのBALDは <strong>0.053〜0.057 nat</strong> に集中します。信頼性図では120件が一つの区間に入り、平均予測は0.507、観測合格率は0.567です。温度域ごとの較正はこの図からは評価できません。少数ラベル、カーネル・近似の仮定、最適化の影響をこの結果だけから分離することもできません。</p>
 </section>
 </section>
 <section id="ix-section-9-4" class="level2">
@@ -511,7 +581,7 @@ p(\mathbf f\mid X,\mathbf y)
 <img src="../figures/ch09_uncertainty_queries.svg" class="img-fluid figure-img" style="width:93.0%" data-fig-pos="!ht">
 </div>
 <figcaption class="quarto-float-caption-bottom quarto-float-caption quarto-float-fig" id="fig-classification-uncertainty-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
-図&nbsp;9.2: 上段はBernoulli予測分散とその2成分。下段の丸と菱形は、それぞれ予測エントロピーとBALDで選ぶ候補。線は未測定候補のスコアを結んだ。
+図&nbsp;9.3: 上段はBernoulli予測分散とその2成分。下段の丸と菱形は、それぞれ予測エントロピーとBALDで選ぶ候補。線は未測定候補のスコアを結んだ。
 </figcaption>
 </figure>
 </div>
@@ -521,6 +591,12 @@ p(\mathbf f\mid X,\mathbf y)
 <h2 class="anchored" data-anchor-id="ix-section-9-6">9.6 合否判定と確率予測を別々に評価する</h2>
 <p>確率を判定に変えるとき、<span class="math inline">\(\bar p_x\ge0.5\)</span> は二つの誤りを同じ費用とした場合の閾値です。誤って合格とする費用を <span class="math inline">\(c_{\mathrm{FP}}&gt;0\)</span>、誤って不合格とする費用を <span class="math inline">\(c_{\mathrm{FN}}&gt;0\)</span>、正しい判定の費用を0とします。合格と判定するときの期待費用は <span class="math inline">\((1-\bar p_x)c_{\mathrm{FP}}\)</span>、不合格と判定するときは <span class="math inline">\(\bar p_xc_{\mathrm{FN}}\)</span> です。前者が後者以下になる条件から、合格判定の閾値は <span class="math inline">\(c_{\mathrm{FP}}/(c_{\mathrm{FP}}+c_{\mathrm{FN}})\)</span> になります。これは試験片の強度を合否に変える74 MPaの規格値とは役割が異なります。</p>
 <p>独立な評価点 <span class="math inline">\(x_j\)</span> とそのラベル <span class="math inline">\(y_j\)</span> に対し、合格確率の予測を <span class="math inline">\(p_j\)</span> とします。誤分類率は閾値に依存します。Brier損失と対数損失は確率を直接評価します。</p>
+<div id="tbl-ch09-3" class="quarto-float quarto-figure quarto-figure-center anchored">
+<figure class="quarto-float quarto-float-tbl figure">
+<figcaption class="quarto-float-caption-top quarto-float-caption quarto-float-tbl" id="tbl-ch09-3-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+表&nbsp;9.3: 合否と確率を評価する損失
+</figcaption>
+<div aria-describedby="tbl-ch09-3-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
 <table class="caption-top table">
 <thead>
 <tr class="header">
@@ -543,7 +619,16 @@ p(\mathbf f\mid X,\mathbf y)
 </tr>
 </tbody>
 </table>
+</div>
+</figure>
+</div>
 <p>評価点で各損失を平均します。Notebookの対数損失は、浮動小数点で <span class="math inline">\(\log 0\)</span> を評価しないよう、確率を <span class="math inline">\([10^{-12},1-10^{-12}]\)</span> に丸め込みます。評価温度120点は候補グリッドと重ならず、ラベルも別の乱数で発生させます。BALDの候補を1件測り、同じ設定で再学習しても、個々の評価指標の改善は保証されません。</p>
+<div id="tbl-ch09-scores" class="quarto-float quarto-figure quarto-figure-center anchored">
+<figure class="quarto-float quarto-float-tbl figure">
+<figcaption class="quarto-float-caption-top quarto-float-caption quarto-float-tbl" id="tbl-ch09-scores-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+表&nbsp;9.4: ラベル追加の前後の評価
+</figcaption>
+<div aria-describedby="tbl-ch09-scores-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
 <table class="caption-top table">
 <thead>
 <tr class="header">
@@ -568,10 +653,13 @@ p(\mathbf f\mid X,\mathbf y)
 </tr>
 </tbody>
 </table>
+</div>
+</figure>
+</div>
 <p>希少な不良では、全件を合格と判定しても誤分類率が低く見える場合があります。運用ではクラス別の誤りや判定コストを見ます。例えば「0.8と予測した試験片のうち約8割が合格するか」を点検するのが確率の<strong>較正</strong>の考え方です。少数データでは温度域ごとに評価のばらつきも大きく、ラベルを取得した候補だけで較正や実用性能を判断すると、選択方策の偏りが影響します。</p>
 </section>
-<section id="演習とまとめ" class="level2">
-<h2 class="anchored" data-anchor-id="演習とまとめ">9.7 演習とまとめ</h2>
+<section id="章末演習とまとめ" class="level2">
+<h2 class="anchored" data-anchor-id="章末演習とまとめ">9.7 章末演習とまとめ</h2>
 <ol type="1">
 <li><strong>確認。</strong> <span class="math inline">\(m_x=1\)</span> を固定して <span class="math inline">\(s_x^2=0,3,8\)</span> の合格確率を計算してください。次に <span class="math inline">\(m_x=0\)</span> で <span class="math inline">\(s_x^2\)</span> を変えて、確率の平均と信用区間の両方を考えてください。</li>
 <li><strong>操作。</strong> Notebookの判定閾値を0.5から0.8へ変え、誤分類率と、Brier損失・対数損失を比較してください。同じモデルのままならどの指標が変わらないでしょうか。</li>
@@ -590,7 +678,7 @@ GPyTorch contributors. 日付なし-a. <em><span>GPyTorch 1.15.2</span>: Likelih
 GPyTorch contributors. 日付なし-b. <em><span>GPyTorch 1.15.2</span>: Marginal Log Likelihoods</em>. <a href="https://docs.gpytorch.ai/en/v1.15.2/marginal_log_likelihoods.html">https://docs.gpytorch.ai/en/v1.15.2/marginal_log_likelihoods.html</a>.
 </div>
 <div id="ref-hensman2015" class="csl-entry" role="listitem">
-Hensman, James, Alexander Matthews, と Zoubin Ghahramani. 2015年. <span>「Scalable Variational Gaussian Process Classification」</span>. <em>Proceedings of the Eighteenth International Conference on Artificial Intelligence and Statistics</em>, Proceedings of Machine Learning Research, vol. 38: 351–60. <a href="https://proceedings.mlr.press/v38/hensman15.html">https://proceedings.mlr.press/v38/hensman15.html</a>.
+Hensman, James, Alexander Matthews, と Zoubin Ghahramani. 2015年. <span>“Scalable Variational Gaussian Process Classification”</span>. <em>Proceedings of the Eighteenth International Conference on Artificial Intelligence and Statistics</em>, Proceedings of Machine Learning Research, vol. 38: 351–60. <a href="https://proceedings.mlr.press/v38/hensman15.html">https://proceedings.mlr.press/v38/hensman15.html</a>.
 </div>
 <div id="ref-rasmussen2006" class="csl-entry" role="listitem">
 Rasmussen, Carl Edward, と Christopher K. I. Williams. 2006年. <em>Gaussian Processes for Machine Learning</em>. MIT Press. <a href="https://doi.org/10.7551/mitpress/3206.001.0001">https://doi.org/10.7551/mitpress/3206.001.0001</a>.

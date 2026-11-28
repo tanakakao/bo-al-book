@@ -191,7 +191,7 @@ window.Quarto = {
     <div class="sidebar-title mb-0 py-0">
       <a href="../">Pythonで学ぶベイズ最適化と能動学習</a> 
         <div class="sidebar-tools-main">
-    <a href="../BO_AL_book_vol1_v1.0.0.pdf" title="Download PDF" class="quarto-navigation-tool px-1" aria-label="Download PDF"><i class="bi bi-file-pdf"></i></a>
+    <a href="../BO_AL_book_vol1_v1.0.1.pdf" title="Download PDF" class="quarto-navigation-tool px-1" aria-label="Download PDF"><i class="bi bi-file-pdf"></i></a>
 </div>
     </div>
       </div>
@@ -328,6 +328,12 @@ window.Quarto = {
 </li>
           <li class="sidebar-item">
   <div class="sidebar-item-container"> 
+  <a href="../appendices/reproduction.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">実験の生成式とAPI対応</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
   <a href="../appendices/term-index.html" class="sidebar-item-text sidebar-link">
  <span class="menu-text">索引</span></a>
   </div>
@@ -356,7 +362,7 @@ window.Quarto = {
   <li><a href="#ix-section-11-4" id="toc-ix-section-11-4" class="nav-link" data-scroll-target="#ix-section-11-4">11.4 Mixed・Discrete BOとTrust Region BO　探索空間から考える</a></li>
   <li><a href="#ix-section-11-5" id="toc-ix-section-11-5" class="nav-link" data-scroll-target="#ix-section-11-5">11.5 Multi-Fidelity・Transfer・Preference　観測の形式を広げる</a></li>
   <li><a href="#ix-section-11-6" id="toc-ix-section-11-6" class="nav-link" data-scroll-target="#ix-section-11-6">11.6 Contextual BOとCausal BO　状況と介入</a></li>
-  <li><a href="#演習とまとめ" id="toc-演習とまとめ" class="nav-link" data-scroll-target="#演習とまとめ">11.7 演習とまとめ</a></li>
+  <li><a href="#章末演習とまとめ" id="toc-章末演習とまとめ" class="nav-link" data-scroll-target="#章末演習とまとめ">11.7 章末演習とまとめ</a></li>
   </ul>
 </nav>
     </div>
@@ -386,6 +392,12 @@ window.Quarto = {
 <section id="何が複雑になったかを特定する" class="level2">
 <h2 class="anchored" data-anchor-id="何が複雑になったかを特定する">11.1 何が複雑になったかを特定する</h2>
 <p>第10章では、温度と保持時間を選び、一つの強度測定を受け取りました。装置や原料が増えたときは、データ構造と最終判断を先に書き出します。例えば電力も下げたいなら目的が二つになり、受領した原料ロットを変更できず、ロットを確認してから温度を決めるなら、操作は状況に応じて選びます。第5章の獲得基準や第8章の情報量を一般化するには、何の改善や何についての情報を評価するのかを定義します。</p>
+<div id="tbl-ch11-1" class="quarto-float quarto-figure quarto-figure-center anchored">
+<figure class="quarto-float quarto-float-tbl figure">
+<figcaption class="quarto-float-caption-top quarto-float-caption quarto-float-tbl" id="tbl-ch11-1-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+表&nbsp;11.1: 問題の条件に応じた手法の入口
+</figcaption>
+<div aria-describedby="tbl-ch11-1-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
 <table class="caption-top table">
 <thead>
 <tr class="header">
@@ -436,10 +448,13 @@ window.Quarto = {
 </tr>
 </tbody>
 </table>
+</div>
+</figure>
+</div>
 </section>
 <section id="ix-section-11-2" class="level2">
 <h2 class="anchored" data-anchor-id="ix-section-11-2">11.2 多目的BO　強度と消費エネルギー</h2>
-<p>目的が強度 <span class="math inline">\(s(x)\)</span> [MPa] の最大化とエネルギー <span class="math inline">\(e(x)\)</span> [kWh] の最小化だとします。<span class="math inline">\(x\)</span> は操作条件のベクトルです。まとめて最大化するため、目的ベクトルを <span class="math inline">\(F(x)=(s(x),-e(x))\)</span> とします。ある点 <span class="math inline">\(a\)</span> の目的が点 <span class="math inline">\(b\)</span> 以上で全成分が揃い、少なくとも一成分で上回れば、<span class="math inline">\(a\)</span> が <span class="math inline">\(b\)</span> を<strong>支配</strong>します。どの候補にも支配されない目的ベクトルの集合が、この候補集合での<strong>Paretoフロント</strong>です。</p>
+<p>目的が強度 <span class="math inline">\(s(x)\)</span> [MPa] の最大化とエネルギー <span class="math inline">\(e(x)\)</span> [kWh] の最小化だとします。<span class="math inline">\(x\)</span> は操作条件のベクトルです。まとめて最大化するため、目的ベクトルを <span class="math inline">\(F(x)=(s(x),-e(x))\)</span> とします。目的ベクトル <span class="math inline">\(\mathbf v\)</span> が <span class="math inline">\(\mathbf w\)</span> 以上で全成分が揃い、少なくとも一成分で上回れば、<span class="math inline">\(\mathbf v\)</span> が <span class="math inline">\(\mathbf w\)</span> を<strong>支配</strong>します。どの候補にも支配されない目的ベクトルの集合が、この候補集合での<strong>Paretoフロント</strong>です。</p>
 <p><strong>ハイパーボリューム</strong>（HV）は、基準となる参照点 <span class="math inline">\(\mathbf r\)</span> より全成分で良い点 <span class="math inline">\(\mathbf v\)</span> に対し、<span class="math inline">\(\mathbf r\)</span> と <span class="math inline">\(\mathbf v\)</span> が張る軸平行な箱の和集合の体積です。二目的では面積なので、強度とエネルギーの単位を使うこの例では MPa·kWh です。重なった面積は一度だけ数えます。比較するときは目的の向き、目的の尺度、参照点を揃えます。参照点はどの範囲でトレードオフを評価したいかを表します。</p>
 <p><a href="../notebooks/ch11_advanced_topics.ipynb">第11章のNotebook</a> では、既知の目的値が5点ある題材を手計算と公開APIで照合します。</p>
 <div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb1"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> torch</span>
@@ -462,7 +477,8 @@ window.Quarto = {
 </figcaption>
 </figure>
 </div>
-<p>非支配点は <strong>A、B、D、E</strong> です。参照点は（75 MPa、14 kWh）で、面積は <strong>37 MPa·kWh</strong> です。強度の区間を75–77、77–80、80–81、81–82 MPaに分けると、各帯の面積は <span class="math inline">\(2(7),3(6),1(4),1(1)\)</span> となります。Dを追加する前の集合に対して、Dは <strong>6 MPa·kWh</strong> の面積を加えます。</p>
+<p>非支配点は <strong>A、B、D、E</strong> です。参照点は（75 MPa、14 kWh）で、面積は <strong>37 MPa·kWh</strong> です。強度の区間を75–77、77–80、80–81、81–82 MPaに分けると、各帯の面積は <span class="math inline">\(2(7),3(6),1(4),1(1)\)</span> となります。A・B・Eの集合にDを加えると <strong>6 MPa·kWh</strong>、A・B・C・Eに加えると <strong>4 MPa·kWh</strong> 増えます。CがDに支配されるのはDを加えた後です。</p>
+<p>非支配点の<strong>点数</strong>は、候補の数を表します。例えばA・B・EとA・D・Eはどちらも3点の非支配集合ですが、同じ参照点からのHVはそれぞれ31、34 MPa·kWhです。HVは、点がどれだけ良い値に達したかと、トレードオフの範囲をどれだけ覆うかの両方を反映します。比較では参照点と尺度を共通にします。</p>
 <p>未知の目的値を測る前に、第5章のEIと同じ発想で、面積増分の事後期待値を最大化できます。これが期待ハイパーボリューム改善（EHVI）です。観測ノイズがあると既存点のフロントにも不確実性があるため、NEHVIはその不確実性も積分します。意思決定者が価値の重みを既に決めている場合は、各目的を同じ評価尺度にし、単一の効用を定義する選択肢もあります <span class="citation" data-cites="daulton2021">(<a href="../references.html#ref-daulton2021" role="doc-biblioref">Daulton ほか 2021年</a>)</span>。</p>
 </section>
 <section id="ix-section-11-3" class="level2">
@@ -472,7 +488,7 @@ window.Quarto = {
 \alpha(x)=\mathbb E\!\left[(F_x-b)_+\,\mathbf 1\{G_x\ge0\}\mid\mathcal D\right]
 \]</span></p>
 <p>と書けます。<span class="math inline">\(\mathbf 1\)</span> は条件が成り立つとき1です。目的と制約の事後が条件付きで独立であれば、EIと適合確率の積に分けられます。相関する場合は、同時事後から積の期待値を評価します。適合済みの基準値がまだない場合は、適合点を見つけるための規則を別に定めます <span class="citation" data-cites="gardner2014">(<a href="../references.html#ref-gardner2014" role="doc-biblioref">Gardner ほか 2014年</a>)</span>。</p>
-<p>評価そのものが基準を逸脱してはならない場合は、Safe BOの設定です。代表的な方法は、確認済みの安全な初期点から始め、安全信号の事後下限が基準を満たすと判断できる候補を選び、得た観測で既知の範囲を広げます。保証は観測モデル、信頼域、初期安全集合などの仮定に依存します。モデル上の適合確率を、安全設備や承認手順の代わりに用いることはできません <span class="citation" data-cites="sui2015">(<a href="../references.html#ref-sui2015" role="doc-biblioref">Sui ほか 2015年</a>)</span>。</p>
+<p>評価する条件が安全基準の範囲内に限られる場合は、Safe BOの設定です。代表的な方法は、確認済みの安全な初期点から始め、安全信号の事後下限が基準を満たすと判断できる候補を選び、得た観測で既知の範囲を広げます。保証は観測モデル、信頼域、初期安全集合などの仮定に依存します。モデル上の適合確率を、安全設備や承認手順の代わりに用いることはできません <span class="citation" data-cites="sui2015">(<a href="../references.html#ref-sui2015" role="doc-biblioref">Sui ほか 2015年</a>)</span>。</p>
 </section>
 <section id="ix-section-11-4" class="level2">
 <h2 class="anchored" data-anchor-id="ix-section-11-4">11.4 Mixed・Discrete BOとTrust Region BO　探索空間から考える</h2>
@@ -481,9 +497,9 @@ window.Quarto = {
 </section>
 <section id="ix-section-11-5" class="level2">
 <h2 class="anchored" data-anchor-id="ix-section-11-5">11.5 Multi-Fidelity・Transfer・Preference　観測の形式を広げる</h2>
-<p><strong>Multi-Fidelity BO</strong>では、同じ設定で、安い近似評価と高価な本評価を選べます。例えば粗い計算格子と細かい格子でシミュレーションを回す場合、入力 <span class="math inline">\(x\)</span> に評価の忠実度 <span class="math inline">\(\ell\)</span> を加えた <span class="math inline">\(f(x,\ell)\)</span> を考え、最終推薦は本評価の <span class="math inline">\(\ell_\star\)</span> で比較します。粗い計算が本結果に与える情報と費用の両方を考える必要があります。粗い試験で設定の順位が逆転する領域があるなら、粗い観測の件数だけを増やしても目標での精度が上がるとは限りません。本評価での確認と、忠実度をまたぐ対になる試験を計画します <span class="citation" data-cites="kandasamy2017">(<a href="../references.html#ref-kandasamy2017" role="doc-biblioref">Kandasamy ほか 2017年</a>)</span>。</p>
+<p><strong>Multi-Fidelity BO</strong>では、同じ設定で、安い近似評価と高価な本評価を選べます。例えば粗い計算格子と細かい格子でシミュレーションを回す場合、入力 <span class="math inline">\(x\)</span> に評価の忠実度 <span class="math inline">\(m\)</span> を加えた <span class="math inline">\(f(x,m)\)</span> を考え、最終推薦は本評価の <span class="math inline">\(m_\star\)</span> で比較します。粗い計算が本結果に与える情報と費用の両方を考える必要があります。粗い試験で設定の順位が逆転する領域があるなら、粗い観測の件数だけを増やしても目標での精度が上がるとは限りません。本評価での確認と、忠実度をまたぐ対になる試験を計画します <span class="citation" data-cites="kandasamy2017">(<a href="../references.html#ref-kandasamy2017" role="doc-biblioref">Kandasamy ほか 2017年</a>)</span>。</p>
 <p><strong>Transfer BO</strong>では、前製品のデータや同系統の装置を情報源として、新しい課題の試験数を減らせるか検討します。始め方には、過去に有望だった条件から測るウォームスタート、タスク間の共分散を使うモデル、情報源ごとのモデルを重み付きで使うアンサンブルがあります。温度の意味や目的値の定義が揃っているか、新しい課題に対して過去モデルの順位がどの程度当たるかを小規模に点検します。関係の弱いデータが判断を悪くする場合は<strong>負の転移</strong>と呼びます。対象タスクだけを使う方法を比較の起点にできます <span class="citation" data-cites="feurer2018">(<a href="../references.html#ref-feurer2018" role="doc-biblioref">Feurer ほか 2018年</a>)</span>。</p>
-<p><strong>Preference BO</strong>では、絶対点の代わりに、条件 <span class="math inline">\(a\)</span> と <span class="math inline">\(b\)</span> のどちらを好むかを測ります。潜在効用 <span class="math inline">\(u(a),u(b)\)</span> と比較誤差の尺度 <span class="math inline">\(\tau&gt;0\)</span> を用い、例えば <span class="math inline">\(a\)</span> が選ばれる確率を <span class="math inline">\(\Phi((u(a)-u(b))/\tau)\)</span> と置きます。第9章とのつながりは、二値ラベルを生むのが単独の潜在値から<strong>二つの効用差</strong>に変わる点です。効用に同じ定数を足しても効用差は変わりません。比較する相手、評価者、提示順を記録し、複数の評価者や同順位の扱いも観測設計に入れます <span class="citation" data-cites="gonzalez2017">(<a href="../references.html#ref-gonzalez2017" role="doc-biblioref">González ほか 2017年</a>)</span>。</p>
+<p><strong>Preference BO</strong>では、絶対点の代わりに、条件 <span class="math inline">\(x_1\)</span> と <span class="math inline">\(x_2\)</span> のどちらを好むかを測ります。潜在効用 <span class="math inline">\(u(x_1),u(x_2)\)</span> と比較誤差の尺度 <span class="math inline">\(\tau&gt;0\)</span> を用い、例えば <span class="math inline">\(x_1\)</span> が選ばれる確率を <span class="math inline">\(\Phi((u(x_1)-u(x_2))/\tau)\)</span> と置きます。第9章とのつながりは、二値ラベルを生むのが単独の潜在値から<strong>二つの効用差</strong>に変わる点です。効用に同じ定数を足しても効用差は変わりません。比較する相手、評価者、提示順を記録し、複数の評価者や同順位の扱いも観測設計に入れます <span class="citation" data-cites="gonzalez2017">(<a href="../references.html#ref-gonzalez2017" role="doc-biblioref">González ほか 2017年</a>)</span>。</p>
 </section>
 <section id="ix-section-11-6" class="level2">
 <h2 class="anchored" data-anchor-id="ix-section-11-6">11.6 Contextual BOとCausal BO　状況と介入</h2>
@@ -501,11 +517,75 @@ window.Quarto = {
 </figcaption>
 </figure>
 </div>
-<p>合成観測データ5,000件を単回帰した傾きは <strong>0.518</strong> でした。観測の傾きの理論値0.5と、構造方程式から計算した介入の傾き−1を比べます。</p>
+<p>合成観測データ5,000件を単回帰した傾きは <strong>0.518</strong> でした。観測の傾きの理論値 <span class="math inline">\(0.5\)</span> と、構造方程式から計算した介入の傾き（-1）を比べます。</p>
 <p>この二本の直線は、設定と応答の相関からだけでは区別できません。何を操作でき、どの変数が交絡し、どの仮定で介入効果を判断できるかを明示します。状況を事前に観測して操作を選ぶ問題と、観測ログから介入効果を求める問題は、同じデータに両方現れることもあります。</p>
+<p>次の例では、候補を計算するコードと入力・出力を確認できます。</p>
+<div id="tbl-ch11-2" class="quarto-float quarto-figure quarto-figure-center anchored">
+<figure class="quarto-float quarto-float-tbl figure">
+<figcaption class="quarto-float-caption-top quarto-float-caption quarto-float-tbl" id="tbl-ch11-2-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+表&nbsp;11.2: 発展手法の実装例
+</figcaption>
+<div aria-describedby="tbl-ch11-2-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+<table class="caption-top table">
+<thead>
+<tr class="header">
+<th>手法</th>
+<th>実装例</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>多目的BO</td>
+<td><a href="https://github.com/tanakakao/robotorchan/blob/b1bb77087cd117d83ed21a226a6fce39ccd5b497/examples/notebooks/33_multiobjective_acquisition.ipynb">多目的の獲得関数</a></td>
+</tr>
+<tr class="even">
+<td>制約付きBO</td>
+<td><a href="https://archive.botorch.org/tutorials/closed_loop_botorch_only">制約付きqEI</a></td>
+</tr>
+<tr class="odd">
+<td>Safe BO</td>
+<td><a href="https://github.com/tanakakao/robotorchan/blob/b1bb77087cd117d83ed21a226a6fce39ccd5b497/examples/notebooks/50_safe_bo_usage_guide.ipynb">安全集合の更新</a></td>
+</tr>
+<tr class="even">
+<td>Mixed・Discrete BO</td>
+<td><a href="https://github.com/tanakakao/robotorchan/blob/b1bb77087cd117d83ed21a226a6fce39ccd5b497/examples/notebooks/02_mixed_single_task_gp.ipynb">混合変数の候補提案</a></td>
+</tr>
+<tr class="odd">
+<td>組合せ最適化</td>
+<td><a href="https://github.com/tanakakao/robotorchan/blob/b1bb77087cd117d83ed21a226a6fce39ccd5b497/examples/notebooks/53_combinatorial_bayesian_optimization.ipynb">組合せ候補の検索</a></td>
+</tr>
+<tr class="even">
+<td>Trust Region BO</td>
+<td><a href="https://github.com/tanakakao/robotorchan/blob/b1bb77087cd117d83ed21a226a6fce39ccd5b497/examples/notebooks/47_turbo_trust_region.ipynb">信頼領域の更新</a></td>
+</tr>
+<tr class="odd">
+<td>Multi-Fidelity BO</td>
+<td><a href="https://github.com/tanakakao/robotorchan/blob/b1bb77087cd117d83ed21a226a6fce39ccd5b497/examples/notebooks/49_multifidelity_cost_aware.ipynb">忠実度と費用</a></td>
+</tr>
+<tr class="even">
+<td>Transfer BO</td>
+<td><a href="https://github.com/tanakakao/robotorchan/blob/b1bb77087cd117d83ed21a226a6fce39ccd5b497/examples/notebooks/52_transfer_bayesian_optimization.ipynb">過去タスクを利用</a></td>
+</tr>
+<tr class="odd">
+<td>Preference BO</td>
+<td><a href="https://github.com/tanakakao/robotorchan/blob/b1bb77087cd117d83ed21a226a6fce39ccd5b497/examples/notebooks/25_mixed_preference_bo.ipynb">比較結果でのBO</a></td>
+</tr>
+<tr class="even">
+<td>Contextual BO</td>
+<td><a href="https://github.com/tanakakao/robotorchan/blob/b1bb77087cd117d83ed21a226a6fce39ccd5b497/examples/notebooks/60_contextual_bayesian_optimization.ipynb">状況を固定して候補を提案</a></td>
+</tr>
+<tr class="odd">
+<td>Causal BO</td>
+<td><a href="https://github.com/tanakakao/robotorchan/blob/b1bb77087cd117d83ed21a226a6fce39ccd5b497/examples/notebooks/58_causal_bayesian_optimization.ipynb">介入の候補を提案</a></td>
+</tr>
+</tbody>
+</table>
+</div>
+</figure>
+</div>
 </section>
-<section id="演習とまとめ" class="level2">
-<h2 class="anchored" data-anchor-id="演習とまとめ">11.7 演習とまとめ</h2>
+<section id="章末演習とまとめ" class="level2">
+<h2 class="anchored" data-anchor-id="章末演習とまとめ">11.7 章末演習とまとめ</h2>
 <ol type="1">
 <li><strong>確認。</strong> 多目的の小例でCを除いてもHVが変わらない理由を説明してください。参照点を強度76 MPa、エネルギー14 kWhへ変えた面積も求めてください。</li>
 <li><strong>操作。</strong> Notebookの状況0が使われる確率を0.75にして、状況ありで決めるときと固定操作を使うときの平均効用をそれぞれ求めてください。</li>
@@ -516,34 +596,34 @@ window.Quarto = {
 
 <div id="refs" class="references csl-bib-body hanging-indent" role="list" style="display: none">
 <div id="ref-aglietti2020" class="csl-entry" role="listitem">
-Aglietti, Virginia, Xiaoyu Lu, Andrei Paleyes, と Javier González. 2020年. <span>「Causal Bayesian Optimization」</span>. <em>Proceedings of the Twenty Third International Conference on Artificial Intelligence and Statistics</em>, Proceedings of Machine Learning Research, vol. 108: 3155–64. <a href="https://proceedings.mlr.press/v108/aglietti20a.html">https://proceedings.mlr.press/v108/aglietti20a.html</a>.
+Aglietti, Virginia, Xiaoyu Lu, Andrei Paleyes, と Javier González. 2020年. <span>“Causal Bayesian Optimization”</span>. <em>Proceedings of the Twenty Third International Conference on Artificial Intelligence and Statistics</em>, Proceedings of Machine Learning Research, vol. 108: 3155–64. <a href="https://proceedings.mlr.press/v108/aglietti20a.html">https://proceedings.mlr.press/v108/aglietti20a.html</a>.
 </div>
 <div id="ref-daulton2021" class="csl-entry" role="listitem">
-Daulton, Samuel, Maximilian Balandat, と Eytan Bakshy. 2021年. <span>「Parallel Bayesian Optimization of Multiple Noisy Objectives with Expected Hypervolume Improvement」</span>. <em>Advances in Neural Information Processing Systems</em> 34. <a href="https://papers.nips.cc/paper/2021/hash/11704817e347269b7254e744b5e22dac-Abstract.html">https://papers.nips.cc/paper/2021/hash/11704817e347269b7254e744b5e22dac-Abstract.html</a>.
+Daulton, Samuel, Maximilian Balandat, と Eytan Bakshy. 2021年. <span>“Parallel Bayesian Optimization of Multiple Noisy Objectives with Expected Hypervolume Improvement”</span>. <em>Advances in Neural Information Processing Systems</em> 34. <a href="https://papers.nips.cc/paper/2021/hash/11704817e347269b7254e744b5e22dac-Abstract.html">https://papers.nips.cc/paper/2021/hash/11704817e347269b7254e744b5e22dac-Abstract.html</a>.
 </div>
 <div id="ref-eriksson2019" class="csl-entry" role="listitem">
-Eriksson, David, Michael Pearce, Jacob R. Gardner, Ryan Turner, と Matthias Poloczek. 2019年. <span>「Scalable Global Optimization via Local Bayesian Optimization」</span>. <em>Advances in Neural Information Processing Systems</em> 32. <a href="https://proceedings.neurips.cc/paper_files/paper/2019/hash/6c990b7aca7bc7058f5e98ea909e924b-Abstract.html">https://proceedings.neurips.cc/paper_files/paper/2019/hash/6c990b7aca7bc7058f5e98ea909e924b-Abstract.html</a>.
+Eriksson, David, Michael Pearce, Jacob R. Gardner, Ryan Turner, と Matthias Poloczek. 2019年. <span>“Scalable Global Optimization via Local Bayesian Optimization”</span>. <em>Advances in Neural Information Processing Systems</em> 32. <a href="https://proceedings.neurips.cc/paper_files/paper/2019/hash/6c990b7aca7bc7058f5e98ea909e924b-Abstract.html">https://proceedings.neurips.cc/paper_files/paper/2019/hash/6c990b7aca7bc7058f5e98ea909e924b-Abstract.html</a>.
 </div>
 <div id="ref-feurer2018" class="csl-entry" role="listitem">
 Feurer, Matthias, Benjamin Letham, Frank Hutter, と Eytan Bakshy. 2018年. <em>Practical Transfer Learning for Bayesian Optimization</em>. <a href="https://arxiv.org/abs/1802.02219">https://arxiv.org/abs/1802.02219</a>.
 </div>
 <div id="ref-gardner2014" class="csl-entry" role="listitem">
-Gardner, Jacob R., Matt J. Kusner, Zhixiang Eddie Xu, Kilian Q. Weinberger, と John P. Cunningham. 2014年. <span>「Bayesian Optimization with Inequality Constraints」</span>. <em>Proceedings of the 31st International Conference on Machine Learning</em>, Proceedings of Machine Learning Research, vol. 32: 937–45. <a href="https://proceedings.mlr.press/v32/gardner14.html">https://proceedings.mlr.press/v32/gardner14.html</a>.
+Gardner, Jacob R., Matt J. Kusner, Zhixiang Eddie Xu, Kilian Q. Weinberger, と John P. Cunningham. 2014年. <span>“Bayesian Optimization with Inequality Constraints”</span>. <em>Proceedings of the 31st International Conference on Machine Learning</em>, Proceedings of Machine Learning Research, vol. 32: 937–45. <a href="https://proceedings.mlr.press/v32/gardner14.html">https://proceedings.mlr.press/v32/gardner14.html</a>.
 </div>
 <div id="ref-gonzalez2017" class="csl-entry" role="listitem">
-González, Javier, Zhenwen Dai, Andreas Damianou, と Neil D. Lawrence. 2017年. <span>「Preferential Bayesian Optimization」</span>. <em>Proceedings of the 34th International Conference on Machine Learning</em>, Proceedings of Machine Learning Research, vol. 70: 1282–91. <a href="https://proceedings.mlr.press/v70/gonzalez17a.html">https://proceedings.mlr.press/v70/gonzalez17a.html</a>.
+González, Javier, Zhenwen Dai, Andreas Damianou, と Neil D. Lawrence. 2017年. <span>“Preferential Bayesian Optimization”</span>. <em>Proceedings of the 34th International Conference on Machine Learning</em>, Proceedings of Machine Learning Research, vol. 70: 1282–91. <a href="https://proceedings.mlr.press/v70/gonzalez17a.html">https://proceedings.mlr.press/v70/gonzalez17a.html</a>.
 </div>
 <div id="ref-kandasamy2017" class="csl-entry" role="listitem">
-Kandasamy, Kirthevasan, Gautam Dasarathy, Jeff Schneider, と Barnabás Póczos. 2017年. <span>「Multi-fidelity Bayesian Optimisation with Continuous Approximations」</span>. <em>Proceedings of the 34th International Conference on Machine Learning</em>, Proceedings of Machine Learning Research, vol. 70: 1799–808. <a href="https://proceedings.mlr.press/v70/kandasamy17a.html">https://proceedings.mlr.press/v70/kandasamy17a.html</a>.
+Kandasamy, Kirthevasan, Gautam Dasarathy, Jeff Schneider, と Barnabás Póczos. 2017年. <span>“Multi-fidelity Bayesian Optimisation with Continuous Approximations”</span>. <em>Proceedings of the 34th International Conference on Machine Learning</em>, Proceedings of Machine Learning Research, vol. 70: 1799–808. <a href="https://proceedings.mlr.press/v70/kandasamy17a.html">https://proceedings.mlr.press/v70/kandasamy17a.html</a>.
 </div>
 <div id="ref-krause2011" class="csl-entry" role="listitem">
-Krause, Andreas, と Cheng S. Ong. 2011年. <span>「Contextual Gaussian Process Bandit Optimization」</span>. <em>Advances in Neural Information Processing Systems</em> 24. <a href="https://proceedings.neurips.cc/paper_files/paper/2011/hash/f3f1b7fc5a8779a9e618e1f23a7b7860-Abstract.html">https://proceedings.neurips.cc/paper_files/paper/2011/hash/f3f1b7fc5a8779a9e618e1f23a7b7860-Abstract.html</a>.
+Krause, Andreas, と Cheng S. Ong. 2011年. <span>“Contextual Gaussian Process Bandit Optimization”</span>. <em>Advances in Neural Information Processing Systems</em> 24. <a href="https://proceedings.neurips.cc/paper_files/paper/2011/hash/f3f1b7fc5a8779a9e618e1f23a7b7860-Abstract.html">https://proceedings.neurips.cc/paper_files/paper/2011/hash/f3f1b7fc5a8779a9e618e1f23a7b7860-Abstract.html</a>.
 </div>
 <div id="ref-ru2020" class="csl-entry" role="listitem">
-Ru, Binxin, Ahsan Alvi, Vu Nguyen, Michael A. Osborne, と Stephen Roberts. 2020年. <span>「Bayesian Optimisation over Multiple Continuous and Categorical Inputs」</span>. <em>Proceedings of the 37th International Conference on Machine Learning</em>, Proceedings of Machine Learning Research, vol. 119: 8276–85. <a href="https://proceedings.mlr.press/v119/ru20a.html">https://proceedings.mlr.press/v119/ru20a.html</a>.
+Ru, Binxin, Ahsan Alvi, Vu Nguyen, Michael A. Osborne, と Stephen Roberts. 2020年. <span>“Bayesian Optimisation over Multiple Continuous and Categorical Inputs”</span>. <em>Proceedings of the 37th International Conference on Machine Learning</em>, Proceedings of Machine Learning Research, vol. 119: 8276–85. <a href="https://proceedings.mlr.press/v119/ru20a.html">https://proceedings.mlr.press/v119/ru20a.html</a>.
 </div>
 <div id="ref-sui2015" class="csl-entry" role="listitem">
-Sui, Yanan, Alkis Gotovos, Joel Burdick, と Andreas Krause. 2015年. <span>「Safe Exploration for Optimization with Gaussian Processes」</span>. <em>Proceedings of the 32nd International Conference on Machine Learning</em>, Proceedings of Machine Learning Research, vol. 37: 997–1005. <a href="https://proceedings.mlr.press/v37/sui15.html">https://proceedings.mlr.press/v37/sui15.html</a>.
+Sui, Yanan, Alkis Gotovos, Joel Burdick, と Andreas Krause. 2015年. <span>“Safe Exploration for Optimization with Gaussian Processes”</span>. <em>Proceedings of the 32nd International Conference on Machine Learning</em>, Proceedings of Machine Learning Research, vol. 37: 997–1005. <a href="https://proceedings.mlr.press/v37/sui15.html">https://proceedings.mlr.press/v37/sui15.html</a>.
 </div>
 </div>
 </section>

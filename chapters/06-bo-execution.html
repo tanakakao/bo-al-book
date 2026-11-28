@@ -191,7 +191,7 @@ window.Quarto = {
     <div class="sidebar-title mb-0 py-0">
       <a href="../">Pythonで学ぶベイズ最適化と能動学習</a> 
         <div class="sidebar-tools-main">
-    <a href="../BO_AL_book_vol1_v1.0.0.pdf" title="Download PDF" class="quarto-navigation-tool px-1" aria-label="Download PDF"><i class="bi bi-file-pdf"></i></a>
+    <a href="../BO_AL_book_vol1_v1.0.1.pdf" title="Download PDF" class="quarto-navigation-tool px-1" aria-label="Download PDF"><i class="bi bi-file-pdf"></i></a>
 </div>
     </div>
       </div>
@@ -328,6 +328,12 @@ window.Quarto = {
 </li>
           <li class="sidebar-item">
   <div class="sidebar-item-container"> 
+  <a href="../appendices/reproduction.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">実験の生成式とAPI対応</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
   <a href="../appendices/term-index.html" class="sidebar-item-text sidebar-link">
  <span class="menu-text">索引</span></a>
   </div>
@@ -355,7 +361,7 @@ window.Quarto = {
   <li><a href="#ix-section-6-3" id="toc-ix-section-6-3" class="nav-link" data-scroll-target="#ix-section-6-3">6.3 どの結果を最後に使うか</a></li>
   <li><a href="#sec-study-ask-tell" id="toc-sec-study-ask-tell" class="nav-link" data-scroll-target="#sec-study-ask-tell">6.4 StudyでAsk-and-Tellを実行する</a></li>
   <li><a href="#停止条件と失敗の扱い" id="toc-停止条件と失敗の扱い" class="nav-link" data-scroll-target="#停止条件と失敗の扱い">6.5 停止条件と失敗の扱い</a></li>
-  <li><a href="#演習と次章" id="toc-演習と次章" class="nav-link" data-scroll-target="#演習と次章">6.6 演習と次章</a></li>
+  <li><a href="#章末演習とまとめ" id="toc-章末演習とまとめ" class="nav-link" data-scroll-target="#章末演習とまとめ">6.6 章末演習とまとめ</a></li>
   </ul>
 </nav>
     </div>
@@ -381,10 +387,11 @@ window.Quarto = {
 </header>
 
 
+<p><strong>学習目標</strong>　手動とStudyで提案から測定・登録までを繰り返し、最良観測と最終推薦を区別する。</p>
 <p>第5章では、現在のデータから次に測る点を一つ選びました。実際の最適化では、その点を測ってデータを更新し、残りの予算で同じ操作を繰り返します。この章では、測定の回数と試行の状態を管理しながら、最初の実験から最終推薦までを実行します。</p>
 <section id="sec-bo-initial-design" class="level2">
 <h2 class="anchored" data-anchor-id="sec-bo-initial-design">6.1 初期実験計画と評価予算</h2>
-<p>仮想材料の強度を最大化します。第1章の合成関数を使い、今回は温度を <span class="math inline">\(140\)</span> ～ <span class="math inline">\(180\,^\circ\mathrm C\)</span> の連続範囲から選べるとします。コードは正規化した <span class="math inline">\(x\in[0,1]\)</span> を使い、測定のときに °C へ換算します。測定は決定論的です。GPは既定のモデルで観測分散を推定します。</p>
+<p>仮想材料の強度を最大化します。第1章の合成関数を使い、今回は温度を 140〜180 °C の連続範囲から選べるとします。コードは正規化した <span class="math inline">\(x\in[0,1]\)</span> を使い、測定のときに °C へ換算します。測定は決定論的です。GPは既定のモデルで観測分散を推定します。</p>
 <p>評価予算は<strong>初期4回と追加4回の計8回</strong>です。最初の4点はSobol点列から選びます。Sobol点列は領域に点を広げることを狙った低食い違い点列です。ここではスクランブルを使い、シードを固定して再現できます。4点は <span class="math inline">\(2^2\)</span> なので <code>draw_base2(2)</code> を使います <span class="citation" data-cites="pytorch-sobol garnett2023">(<a href="../references.html#ref-pytorch-sobol" role="doc-biblioref">PyTorch Contributors 2025年</a>; <a href="../references.html#ref-garnett2023" role="doc-biblioref">Garnett 2023年</a>)</span>。</p>
 <p><a href="../notebooks/ch06_bo_execution.ipynb">第6章のNotebook</a>で、初期点を作り、学習・提案・測定を1回行います。<code>material_strength</code> が実験を代替する関数です。実機では、この1行に相当する箇所で装置に条件を渡し、結果が返るのを待ちます。</p>
 <div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb1"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> torch</span>
@@ -408,7 +415,7 @@ window.Quarto = {
 <span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a>measured <span class="op">=</span> material_strength(suggestion)</span>
 <span id="cb2-6"><a href="#cb2-6" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="dv">140</span> <span class="op">+</span> <span class="dv">40</span> <span class="op">*</span> suggestion.item(), measured.item())</span></code></pre></div><button title="コピー" class="code-copy-button"><i class="bi"></i></button></div>
 <p>この実行の初期温度は <strong>151.78、164.55、176.38、149.79 °C</strong> でした。最初の追加候補は <strong>140.00 °C</strong> で、その1回の測定で <strong>74.00 MPa</strong> を得ました。</p>
-<p><code>raw_samples=64</code> と <code>num_restarts=6</code> は候補を計算するソルバーの設定です。装置で試片を測るのは、採用した候補を評価する段階です。GPを学習するたびにも装置は使いません。</p>
+<p><code>raw_samples=64</code> と <code>num_restarts=6</code> は候補を計算するソルバーの設定です。装置で試片を測るのは、採用した候補を評価する段階です。GPを学習するたびにも装置は使いません。第1章は合成試験が無雑音であることを利用し、計算用の小さい観測分散を固定しました。この章は手動とStudyの既定の回帰モデルを同じ条件で比べるため、両方で観測分散も学習します。合成データを生成する関数そのものはここでも決定論的です。</p>
 </section>
 <section id="sec-bo-manual-loop" class="level2">
 <h2 class="anchored" data-anchor-id="sec-bo-manual-loop">6.2 提案・測定・登録を繰り返す</h2>
@@ -424,6 +431,12 @@ window.Quarto = {
 <span id="cb3-9"><a href="#cb3-9" aria-hidden="true" tabindex="-1"></a>    train_x <span class="op">=</span> torch.cat((train_x, point))</span>
 <span id="cb3-10"><a href="#cb3-10" aria-hidden="true" tabindex="-1"></a>    train_y <span class="op">=</span> torch.cat((train_y, response))</span></code></pre></div><button title="コピー" class="code-copy-button"><i class="bi"></i></button></div>
 <p>以下の順でログを追うと、動作を切り分けやすくなります。</p>
+<div id="tbl-ch06-1" class="quarto-float quarto-figure quarto-figure-center anchored">
+<figure class="quarto-float quarto-float-tbl figure">
+<figcaption class="quarto-float-caption-top quarto-float-caption quarto-float-tbl" id="tbl-ch06-1-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+表&nbsp;6.1: 各反復の試行ログで点検すること
+</figcaption>
+<div aria-describedby="tbl-ch06-1-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
 <table class="caption-top table">
 <colgroup>
 <col style="width: 50%">
@@ -454,6 +467,9 @@ window.Quarto = {
 </tr>
 </tbody>
 </table>
+</div>
+</figure>
+</div>
 </section>
 <section id="ix-section-6-3" class="level2">
 <h2 class="anchored" data-anchor-id="ix-section-6-3">6.3 どの結果を最後に使うか</h2>
@@ -465,10 +481,16 @@ window.Quarto = {
 <img src="../figures/ch06_bo_loop.svg" class="img-fluid figure-img" style="width:94.0%" data-fig-pos="!ht">
 </div>
 <figcaption class="quarto-float-caption-bottom quarto-float-caption quarto-float-fig" id="fig-bo-closed-loop-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
-図&nbsp;6.1: 上は手動ループ（線）とStudy（丸印）の最良観測値。薄青は初期4件。下は手動ループの終了時に学習したGPの事後平均で、最良観測と最終推薦の位置を示す。
+図&nbsp;6.1: 上は手動ループ（線）とStudy（丸印）の最良観測値。薄青は初期4件。下は終了時のGPの事後平均と既知の合成関数。上段の破線は連続温度範囲での合成関数の最大。
 </figcaption>
 </figure>
 </div>
+<div id="tbl-ch06-results" class="quarto-float quarto-figure quarto-figure-center anchored">
+<figure class="quarto-float quarto-float-tbl figure">
+<figcaption class="quarto-float-caption-top quarto-float-caption quarto-float-tbl" id="tbl-ch06-results-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+表&nbsp;6.2: 最良観測と最終推薦
+</figcaption>
+<div aria-describedby="tbl-ch06-results-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
 <table class="caption-top table">
 <thead>
 <tr class="header">
@@ -490,7 +512,11 @@ window.Quarto = {
 </tr>
 </tbody>
 </table>
+</div>
+</figure>
+</div>
 <p>初期と追加を含め、手動もStudyも実測は <strong>8回</strong> です。Studyの最良観測値は <strong>79.76 MPa</strong> でした。下段の推薦は最後のGPから計算した温度です。</p>
+<p>連続温度範囲の合成関数の最大値は <strong>80.37 MPa</strong> です。手動の最良観測値との差は <strong>0.61 MPa</strong>、最終推薦を真の関数で評価した単純リグレットは <strong>0.72 MPa</strong> です。第1章の最大値は1 °C刻みの候補、第6章は連続温度について求めています。</p>
 </section>
 <section id="sec-study-ask-tell" class="level2">
 <h2 class="anchored" data-anchor-id="sec-study-ask-tell">6.4 StudyでAsk-and-Tellを実行する</h2>
@@ -506,7 +532,7 @@ window.Quarto = {
 <span id="cb4-9"><a href="#cb4-9" aria-hidden="true" tabindex="-1"></a>    seed<span class="op">=</span>SEED,</span>
 <span id="cb4-10"><a href="#cb4-10" aria-hidden="true" tabindex="-1"></a>    optimizer_kwargs<span class="op">=</span>solver,</span>
 <span id="cb4-11"><a href="#cb4-11" aria-hidden="true" tabindex="-1"></a>)</span></code></pre></div><button title="コピー" class="code-copy-button"><i class="bi"></i></button></div>
-<p><code>acquisition=LogExpectedImprovement</code> は手動版と揃えるために明示しました。参照版のStudyの既定値は <code>qLogExpectedImprovement</code> です。<code>seed</code> と候補最適化のオプションを揃え、初期設計を照合します。</p>
+<p><code>acquisition=LogExpectedImprovement</code> は手動版と揃えるために明示しました。本書が使用するrobotorchan 0.1.0では、Studyの獲得関数の既定値は <code>qLogExpectedImprovement</code> です。<code>seed</code> と候補最適化のオプションを揃え、初期設計を照合します。</p>
 <div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb5"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a><span class="cf">for</span> _ <span class="kw">in</span> <span class="bu">range</span>(<span class="dv">8</span>):</span>
 <span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a>    trial <span class="op">=</span> study.ask()</span>
 <span id="cb5-3"><a href="#cb5-3" aria-hidden="true" tabindex="-1"></a>    x <span class="op">=</span> torch.tensor([[trial.params[<span class="st">"x"</span>]]], dtype<span class="op">=</span>DTYPE)</span>
@@ -514,15 +540,15 @@ window.Quarto = {
 <span id="cb5-5"><a href="#cb5-5" aria-hidden="true" tabindex="-1"></a>    study.tell(trial, y)</span>
 <span id="cb5-6"><a href="#cb5-6" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb5-7"><a href="#cb5-7" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(study.best_params, study.best_value)</span></code></pre></div><button title="コピー" class="code-copy-button"><i class="bi"></i></button></div>
-<p><code>trial.params["x"]</code> は正規化温度です。実機で測るときには <span class="math inline">\(140+40x\)</span> を °C の数値として渡します。提案を出した時点ではまだ測定値がないので、結果が返ってから <code>tell()</code> を呼びます。実機で再現するときは、試行番号・温度・結果・欠測理由を装置の記録と照合します。参照版の <code>Study</code> はメモリ上に状態を保持するため、プロセスをまたいで使う場合は運用側で試行ログを管理します。</p>
+<p><code>trial.params["x"]</code> は正規化温度です。実機で測るときには <span class="math inline">\(140+40x\)</span> を °C の数値として渡します。提案を出した時点ではまだ測定値がないので、結果が返ってから <code>tell()</code> を呼びます。実機で再現するときは、試行番号・温度・結果・欠測理由を装置の記録と照合します。この小例の <code>Study</code> はメモリ上に状態を保持するため、プロセスをまたいで使う場合は運用側で試行ログを管理します。</p>
 </section>
 <section id="停止条件と失敗の扱い" class="level2">
 <h2 class="anchored" data-anchor-id="停止条件と失敗の扱い">6.5 停止条件と失敗の扱い</h2>
 <p>この章は8回で止めます。実験費用に上限がある場合は、次の試行に先立って残予算を確認します。他には、許容する強度に達した、確認測定を含む時間上限に達した、一定回数以上にわたり改善が小さい、といった停止条件があります。改善による停止は、測定のばらつきや未探索領域も考慮して決めます。小さな変化が続いたことだけで最適性を保証することはできません。</p>
 <p>装置のタイムアウトは、試行を完了する値が得られなかった例です。外部実験なら <code>tell(trial, state=TrialState.FAIL)</code> とし、測定値を登録しません。目的関数をPythonから直接呼べる場合は <code>study.optimize(objective, n_trials=4, catch=(TimeoutError,))</code> が逐次実行します。Notebookではタイムアウトを1回起こし、4試行のうち学習に使える観測が3件になることを確かめます。この例では失敗も実験枠を使うため、試行予算に含めます。装置停止を必要とするエラーは、継続を指定する例外と分けます。</p>
 </section>
-<section id="演習と次章" class="level2">
-<h2 class="anchored" data-anchor-id="演習と次章">6.6 演習と次章</h2>
+<section id="章末演習とまとめ" class="level2">
+<h2 class="anchored" data-anchor-id="章末演習とまとめ">6.6 章末演習とまとめ</h2>
 <ol type="1">
 <li><strong>確認。</strong> 初期4点と追加4点で、GPを学習し獲得関数を計算する操作は、何回の装置測定を追加しますか。最終推薦の確認測定も数えてください。</li>
 <li><strong>操作。</strong> Notebookの失敗例で <code>fail_number</code> を0に変更し、状態の並びと学習に登録された件数を確認してください。</li>

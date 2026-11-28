@@ -28,7 +28,26 @@ ul.task-list li input[type="checkbox"] {
   margin: 0 0.8em 0.2em -1em; /* quarto-specific, see https://github.com/quarto-dev/quarto-cli/issues/4556 */ 
   vertical-align: middle;
 }
-</style>
+/* CSS for citations */
+div.csl-bib-body { }
+div.csl-entry {
+  clear: both;
+}
+.hanging-indent div.csl-entry {
+  margin-left:2em;
+  text-indent:-2em;
+}
+div.csl-left-margin {
+  min-width:2em;
+  float:left;
+}
+div.csl-right-inline {
+  margin-left:2em;
+  padding-left:1em;
+}
+div.csl-indent {
+  margin-left: 2em;
+}</style>
 
 
 <script src="site_libs/quarto-nav/quarto-nav.js"></script>
@@ -137,7 +156,7 @@ window.Quarto = {
     <div class="sidebar-title mb-0 py-0">
       <a href="./">Pythonで学ぶベイズ最適化と能動学習</a> 
         <div class="sidebar-tools-main">
-    <a href="./BO_AL_book_vol1_v1.0.0.pdf" title="Download PDF" class="quarto-navigation-tool px-1" aria-label="Download PDF"><i class="bi bi-file-pdf"></i></a>
+    <a href="./BO_AL_book_vol1_v1.0.1.pdf" title="Download PDF" class="quarto-navigation-tool px-1" aria-label="Download PDF"><i class="bi bi-file-pdf"></i></a>
 </div>
     </div>
       </div>
@@ -274,6 +293,12 @@ window.Quarto = {
 </li>
           <li class="sidebar-item">
   <div class="sidebar-item-container"> 
+  <a href="./appendices/reproduction.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">実験の生成式とAPI対応</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
   <a href="./appendices/term-index.html" class="sidebar-item-text sidebar-link">
  <span class="menu-text">索引</span></a>
   </div>
@@ -309,7 +334,7 @@ window.Quarto = {
 <header id="title-block-header" class="quarto-title-block default">
 <div class="quarto-title">
 <h1 class="title">Pythonで学ぶベイズ最適化と能動学習</h1>
-<p class="subtitle lead">第1巻 基礎理論と実践 · 第1版</p>
+<p class="subtitle lead">第1巻 基礎理論と実践 · 第1版（修正版）</p>
 </div>
 
 <div>
@@ -339,9 +364,9 @@ window.Quarto = {
 
 <section id="はじめに" class="level1 unnumbered">
 <h1 class="unnumbered">はじめに</h1>
-<p>新しい材料の強度を高めるために、次はどの条件で試験をするべきでしょうか。この本では、限られた回数で強度を調べる合成材料試験を例に、Pythonで候補を選ぶところから始めます。Pythonで関数と配列を使ったことがあれば、第1章から読み進められます。</p>
-<p><a href="./appendices/term-index.html">索引</a>から用語を探せます。<a href="./appendices/exercises.html">演習の解答</a>と<a href="./appendices/colophon.html">奥付・引用方法</a>は巻末にあります。</p>
-<p><a href="BO_AL_book_vol1_v1.0.0.pdf">PDF版</a> · <a href="downloads/BO_AL_book_vol1_materials.zip">Notebookと合成CSVの一括ダウンロード</a> · <a href="CITATION.cff">引用データ</a></p>
+<p>新しい材料の強度を高めるために、次はどの条件で試験をするべきでしょうか。この本では、限られた回数で強度を調べる合成材料試験を例に、Pythonで候補を選ぶところから始めます。第1章はPythonで関数と配列を操作できれば始められます。第2章以降の導出を追うには、正規分布と条件付き確率、ベクトルと行列の積の基礎があると読みやすくなります。復習には第2章と、式を行列で追う第3・4章の例を使ってください。確率・線形代数を補う資料としてDeisenrothらの教科書も参照できます <span class="citation" data-cites="deisenroth2020">(<a href="references.html#ref-deisenroth2020" role="doc-biblioref">Deisenroth ほか 2020年</a>)</span>。</p>
+<p><a href="./appendices/term-index.html">索引</a>から用語を探せます。<a href="./appendices/exercises.html">演習の解答</a>、<a href="./appendices/reproduction.html">生成式とAPI対応</a>、<a href="./appendices/colophon.html">奥付・引用方法</a>は巻末にあります。</p>
+<p><a href="BO_AL_book_vol1_v1.0.1.pdf">PDF版</a> · <a href="downloads/BO_AL_book_vol1_materials.zip">Notebookと合成CSVの一括ダウンロード</a> · <a href="CITATION.cff">引用データ</a></p>
 <table class="caption-top table">
 <thead>
 <tr class="header">
@@ -400,7 +425,7 @@ window.Quarto = {
 </tr>
 </tbody>
 </table>
-<p>実験の問いから始め、短いコードを動かして図と数式を読みます。各章のNotebookでは図の再生成まで実行できます。章末演習は「確認」「操作」「発展」の順で、解答は付録にあります。図と式の番号は章番号と章内の連番で示します。例えば図4.1は第4章の最初の図です。</p>
+<p>実験の問いから始め、短いコードを動かして図と数式を読みます。各章のNotebookでは図の再生成まで実行できます。章末演習では「確認」「操作」「発展」を軸に、式を導く問題も扱います。解答は付録にあります。図・表・式の番号は章番号と章内の連番で示します。例えば図4.1は第4章の最初の図です。</p>
 <p>教材はPyTorch、GPyTorch、BoTorchとrobotorchanの公開APIを使用します。依存関係、データ生成、図の再現方法は、ソース一式のREADMEにあります。</p>
 <section id="実験と記号の読み方" class="level2">
 <h2 class="anchored" data-anchor-id="実験と記号の読み方">実験と記号の読み方</h2>
@@ -438,11 +463,29 @@ window.Quarto = {
 <td><span class="math inline">\(b\)</span>、<span class="math inline">\(\hat x\)</span></td>
 <td><span class="math inline">\(b\)</span> は改善を数える基準値、<span class="math inline">\(\hat x\)</span> は実験終了時に推薦する入力</td>
 </tr>
+<tr class="even">
+<td><span class="math inline">\(r\)</span></td>
+<td>距離（第3章）、予測点数（第4章）、添加比（第7章）、真の合格確率 <span class="math inline">\(r(x)\)</span>（第8章）</td>
+</tr>
+<tr class="odd">
+<td><span class="math inline">\(z\)</span></td>
+<td>標準化した改善量（第5章）、評価位置（第8章）、誘導入力（第9章）、正規化保持時間（第10章）</td>
+</tr>
+<tr class="even">
+<td><span class="math inline">\(s\)</span>、<span class="math inline">\(\ell\)</span></td>
+<td><span class="math inline">\(s_f\)</span> は信号標準偏差（第3章）、<span class="math inline">\(s\)</span> は逆リンク（第9章）や強度（第11章）。<span class="math inline">\(\ell\)</span> は長さ尺度。第11章の忠実度は <span class="math inline">\(m\)</span></td>
+</tr>
 </tbody>
 </table>
+<p>潜在事後分散は一点の値を <span class="math inline">\(\sigma_*^2\)</span>（第4章）や <span class="math inline">\(\sigma^2(x)\)</span>（第5章）、評価位置や潜在スコアを明示して <span class="math inline">\(s^2(z)\)</span>（第8章）や <span class="math inline">\(s_x^2\)</span>（第9章）と書きます。観測ノイズの分散 <span class="math inline">\(\tau^2\)</span> とは別の量です。</p>
 <p>同じ材料を題材にしていても、比較条件は章によって変わります。第1・6章の合成試験は強度が決定論的です。第4・5章の主例では同じノイズ付き6点を共有します。第8・9章では強度を合否に変換し、ラベルを返します。第10章では保持時間も選びます。結果を並べるときは、観測の種類と予算が同じ比較かを確認します。</p>
 
 
+<div id="refs" class="references csl-bib-body hanging-indent" role="list" style="display: none">
+<div id="ref-deisenroth2020" class="csl-entry" role="listitem">
+Deisenroth, Marc Peter, A. Aldo Faisal, と Cheng Soon Ong. 2020年. <em>Mathematics for Machine Learning</em>. Cambridge University Press. <a href="https://mml-book.github.io/">https://mml-book.github.io/</a>.
+</div>
+</div>
 </section>
 </section>
 

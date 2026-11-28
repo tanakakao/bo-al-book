@@ -191,7 +191,7 @@ window.Quarto = {
     <div class="sidebar-title mb-0 py-0">
       <a href="../">Pythonで学ぶベイズ最適化と能動学習</a> 
         <div class="sidebar-tools-main">
-    <a href="../BO_AL_book_vol1_v1.0.0.pdf" title="Download PDF" class="quarto-navigation-tool px-1" aria-label="Download PDF"><i class="bi bi-file-pdf"></i></a>
+    <a href="../BO_AL_book_vol1_v1.0.1.pdf" title="Download PDF" class="quarto-navigation-tool px-1" aria-label="Download PDF"><i class="bi bi-file-pdf"></i></a>
 </div>
     </div>
       </div>
@@ -328,6 +328,12 @@ window.Quarto = {
 </li>
           <li class="sidebar-item">
   <div class="sidebar-item-container"> 
+  <a href="../appendices/reproduction.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">実験の生成式とAPI対応</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
   <a href="../appendices/term-index.html" class="sidebar-item-text sidebar-link">
  <span class="menu-text">索引</span></a>
   </div>
@@ -381,6 +387,7 @@ window.Quarto = {
 </header>
 
 
+<p><strong>学習目標</strong>　共分散行列を作り、カーネルの種類と長さ尺度が事前の関数に及ぼす影響を読む。</p>
 <p>まだ測定していない複数の温度で、材料の強度は一緒にどう変わるでしょうか。第2章の二変量正規分布を出発点に、任意の有限個の温度での強度をまとめて扱う<strong>ガウス過程</strong>を学びます。カーネルから共分散を作り、測定前の関数を何本かサンプルし、長さ尺度やカーネルを変えたときの違いを調べます。</p>
 <section id="少数点の関数値を一緒に発生させる" class="level2">
 <h2 class="anchored" data-anchor-id="少数点の関数値を一緒に発生させる">3.1 少数点の関数値を一緒に発生させる</h2>
@@ -453,7 +460,7 @@ k_{\mathrm{Mat\acute ern}\,3/2}(x,x')
 </section>
 <section id="ix-section-3-5" class="level2">
 <h2 class="anchored" data-anchor-id="ix-section-3-5">3.5 長さ尺度、振幅と入力の単位</h2>
-<p><span class="math inline">\(\ell\)</span> を小さくすると、同じ距離 <span class="math inline">\(r\)</span> でも <span class="math inline">\(r/\ell\)</span> が大きくなり、共分散が小さくなります。例えばRBFで <span class="math inline">\(\ell=0.20\)</span> とした場合、ここでの温度変換では <span class="math inline">\(8\,^\circ\mathrm C\)</span> が一つの長さ尺度に当たります。温度を °C のまま使うと数値の長さ尺度も40倍になります。入力を正規化する際は、範囲や単位を記録します。</p>
+<p><span class="math inline">\(\ell\)</span> を小さくすると、同じ距離 <span class="math inline">\(r\)</span> でも <span class="math inline">\(r/\ell\)</span> が大きくなり、共分散が小さくなります。例えばRBFで <span class="math inline">\(\ell=0.20\)</span> とした場合、ここでの温度変換では 8 °C が一つの長さ尺度に当たります。温度を °C のまま使うと数値の長さ尺度も40倍になります。入力を正規化する際は、範囲や単位を記録します。</p>
 <p><span class="math inline">\(s_f\)</span> は各点の潜在強度の事前標準偏差です。第3.1節の図は一つの値 <span class="math inline">\(s_f=12\)</span> MPaに固定して、<span class="math inline">\(\ell\)</span> とカーネルだけを変えました。振幅だけ変えるなら曲線の縦方向の偏差が変わります。二つの温度の変化幅も、共分散から予想できます。各点の分散が <span class="math inline">\(s_f^2\)</span> なら</p>
 <p><span class="math display">\[
 \mathrm{Var}\{f(x)-f(x')\} = 2\{s_f^2-k(x,x')\}.
