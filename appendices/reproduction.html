@@ -27,6 +27,41 @@ ul.task-list li input[type="checkbox"] {
   margin: 0 0.8em 0.2em -1em; /* quarto-specific, see https://github.com/quarto-dev/quarto-cli/issues/4556 */ 
   vertical-align: middle;
 }
+/* CSS for syntax highlighting */
+html { -webkit-text-size-adjust: 100%; }
+pre > code.sourceCode { white-space: pre; position: relative; }
+pre > code.sourceCode > span { display: inline-block; line-height: 1.25; }
+pre > code.sourceCode > span:empty { height: 1.2em; }
+.sourceCode { overflow: visible; }
+code.sourceCode > span { color: inherit; text-decoration: inherit; }
+div.sourceCode { margin: 1em 0; }
+pre.sourceCode { margin: 0; }
+@media screen {
+div.sourceCode { overflow: auto; }
+}
+@media print {
+pre > code.sourceCode { white-space: pre-wrap; }
+pre > code.sourceCode > span { text-indent: -5em; padding-left: 5em; }
+}
+pre.numberSource code
+  { counter-reset: source-line 0; }
+pre.numberSource code > span
+  { position: relative; left: -4em; counter-increment: source-line; }
+pre.numberSource code > span > a:first-child::before
+  { content: counter(source-line);
+    position: relative; left: -1em; text-align: right; vertical-align: baseline;
+    border: none; display: inline-block;
+    -webkit-touch-callout: none; -webkit-user-select: none;
+    -khtml-user-select: none; -moz-user-select: none;
+    -ms-user-select: none; user-select: none;
+    padding: 0 4px; width: 4em;
+  }
+pre.numberSource { margin-left: 3em;  padding-left: 4px; }
+div.sourceCode
+  {   }
+@media screen {
+pre > code.sourceCode > span > a:first-child::before { text-decoration: underline; }
+}
 </style>
 
 
@@ -342,9 +377,9 @@ g(x)=70+12\sin(2\pi x)+4\cos(4\pi x)+5x
 <h2 class="anchored" data-anchor-id="robotorchanとbotorchで同じ試験を組む">robotorchanとBoTorchで同じ試験を組む</h2>
 <table class="caption-top table">
 <colgroup>
-<col style="width: 33%">
-<col style="width: 33%">
-<col style="width: 33%">
+<col style="width: 21%">
+<col style="width: 32%">
+<col style="width: 46%">
 </colgroup>
 <thead>
 <tr class="header">
@@ -355,27 +390,38 @@ g(x)=70+12\sin(2\pi x)+4\cos(4\pi x)+5x
 </thead>
 <tbody>
 <tr class="odd">
-<td>ガウス尤度のGPを学習</td>
-<td><code>SingleTaskGP(...).fit()</code></td>
-<td>BoTorchの <code>SingleTaskGP</code> とGPyTorchの <code>ExactMarginalLogLikelihood(model.likelihood, model)</code> を組み立て、BoTorchの <code>fit_gpytorch_mll</code> に渡す</td>
+<td>GP回帰を学習</td>
+<td><code>SingleTaskGP</code> の <code>fit()</code></td>
+<td>GPと厳密周辺尤度を組み立て、<code>fit_gpytorch_mll</code> で学習</td>
 </tr>
 <tr class="even">
-<td>改善量やUCBで点を選ぶ</td>
-<td><code>robotorchan.optim.optimize_acqf</code></td>
-<td>本書の獲得関数はBoTorchの <code>LogExpectedImprovement</code> など。BoTorchの <code>botorch.optim.optimize_acqf</code> に獲得関数、境界、候補数を渡す</td>
+<td>次の測定点を選ぶ</td>
+<td><code>optimize_acqf</code></td>
+<td><code>optimize_acqf</code> に獲得関数、境界、候補数を渡す</td>
 </tr>
 <tr class="odd">
 <td>合否のGPを学習</td>
-<td><code>BinarySingleTaskGPClassifier</code> と <code>fit()</code></td>
-<td>GPyTorchの変分GP、<code>BernoulliLikelihood</code>、<code>VariationalELBO</code> を組み合わせる</td>
+<td>二値GP分類器の <code>fit()</code></td>
+<td>変分GP、Bernoulli尤度、変分下界を組み合わせる</td>
 </tr>
 <tr class="even">
-<td>測定・登録を繰り返す</td>
+<td>測定と登録を反復</td>
 <td><code>create_study</code>、<code>ask</code>、<code>tell</code></td>
-<td>実行側が測定データと状態を持ち、学習、獲得関数生成、候補の最適化、測定と追記を繰り返す</td>
+<td>自分で試行履歴を保持し、学習・候補提案・測定・追記を繰り返す</td>
 </tr>
 </tbody>
 </table>
+<p>候補を選ぶ <code>optimize_acqf</code> は両ライブラリにあります。以下の別名で読み込むと、呼び出し元を区別できます。第5・6章で使う <code>LogExpectedImprovement</code> などの獲得関数はBoTorchから読み込みます。</p>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb1"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> robotorchan.optim <span class="im">import</span> (</span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a>    optimize_acqf <span class="im">as</span> optimize_with_robotorchan,</span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a>)</span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> botorch.optim <span class="im">import</span> optimize_acqf <span class="im">as</span> optimize_with_botorch</span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> robotorchan.models.classification <span class="im">import</span> (</span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a>    BinarySingleTaskGPClassifier,</span>
+<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a>)</span>
+<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> gpytorch.likelihoods <span class="im">import</span> BernoulliLikelihood</span>
+<span id="cb1-9"><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> gpytorch.mlls <span class="im">import</span> ExactMarginalLogLikelihood, VariationalELBO</span></code></pre></div><button title="コピー" class="code-copy-button"><i class="bi"></i></button></div>
+<p>BoTorchでGP回帰を学習するときは、尤度とモデルから <code>ExactMarginalLogLikelihood</code> を作り、<code>fit_gpytorch_mll</code> に渡します。合否の分類をGPyTorchで組むときは、変分GPと <code>BernoulliLikelihood</code> を使い、<code>VariationalELBO</code> を最大化します。</p>
 <p>試行を発行して評価結果を後から返す形は <a href="https://optuna.readthedocs.io/en/stable/reference/generated/optuna.study.Study.html">OptunaのStudy</a> の <code>ask</code>／<code>tell</code> にもあります。第6・10章ではモデル、獲得関数、候補最適化の構成を指定するrobotorchanのStudyを使います。Optunaへ移す場合は、探索空間、試行を選ぶサンプラー、状態や永続化の扱いをそれぞれのAPIで確認します。</p>
 
 
